@@ -66,10 +66,10 @@ public class DungeonBot extends AbilityBot {
     public Ability showMap() {
         return Ability.builder()
                 .name("map")
-                .info("Shows map")
+                .info("Generates level one map [debug]")
                 .locality(Locality.USER)
                 .privacy(Privacy.PUBLIC)
-                .action(this::displayMap)
+                .action(this::generateMap)
                 .build();
     }
 
@@ -244,8 +244,8 @@ public class DungeonBot extends AbilityBot {
         return true;
     }
 
-    private void displayMap(MessageContext messageContext) {
-        val level = currentLevelsMap.get(messageContext.chatId());
+    private void generateMap(MessageContext messageContext) {
+        val level = new Level(1);
         val levelMap = printMap(level.getGrid());
         sendMapMessage(messageContext.chatId(), levelMap);
     }

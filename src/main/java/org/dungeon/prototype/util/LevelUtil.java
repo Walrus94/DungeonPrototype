@@ -5,6 +5,7 @@ import lombok.val;
 import org.dungeon.prototype.model.Point;
 import org.dungeon.prototype.model.Room;
 import org.dungeon.prototype.model.ui.level.GridSection;
+import org.dungeon.prototype.model.ui.level.WalkerIterator;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -26,16 +27,14 @@ public class LevelUtil {
     public enum Direction {
         N, E, S, W
     }
-    private static final Integer LEVEL_ONE_GRID_SIZE = 7;
+    private static final Integer LEVEL_ONE_GRID_SIZE = 10;
     private static final Integer GRID_SIZE_INCREMENT = 1;
     private static final Integer INCREMENT_STEP = 10;
-    private static final Integer MAX_RECURSION_LEVEL = 1;
     //TODO adjust according to level depth
-
     private static final Double MONSTER_RATIO = 30.0;
     private static final Double TREASURE_RATIO = 20.0;
     private static final Double ROOMS_RATIO = 0.6;
-    private static final Double MAX_LENGTH_RATIO = 0.8;
+    private static final Double MAX_LENGTH_RATIO = 0.4;
     private static final Double MIN_LENGTH_RATIO = 0.2;
     private static final Integer MIN_LENGTH = 2;
     private static final Double DEAD_ENDS_RATIO = 0.1;
@@ -89,8 +88,7 @@ public class LevelUtil {
     }
 
     public static int calculateDeadEndsCount(int roomTotal) {
-        return 1; //TODO fix crossroads processing
-        //return (int) (roomTotal * DEAD_ENDS_RATIO);
+        return (int) (roomTotal * DEAD_ENDS_RATIO);
     }
 
     public static int calculateAmountOfTreasures(int roomTotal) {
@@ -108,6 +106,14 @@ public class LevelUtil {
     public static Integer calculateMinLength(Integer gridSize) {
         return (int) (gridSize * MIN_LENGTH_RATIO) < MIN_LENGTH ? MIN_LENGTH :
                 (int) (gridSize * MIN_LENGTH_RATIO);
+    }
+
+    public static boolean isPossibleCrossroad(WalkerIterator walkerIterator, int minLength, int gridLength) {
+        return (walkerIterator.getPathFromStart() > 0) &&
+                (walkerIterator.getCurrentPoint().getPoint().getX() < gridLength - minLength) &&
+                (walkerIterator.getCurrentPoint().getPoint().getX() > minLength) &&
+                (walkerIterator.getCurrentPoint().getPoint().getY() < gridLength - minLength) &&
+                (walkerIterator.getCurrentPoint().getPoint().getY() > minLength);
     }
 
     public static NavigableMap<Double, Room.Type> getRoomTypeWeights() {

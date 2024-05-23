@@ -13,14 +13,16 @@ import static org.dungeon.prototype.util.LevelUtil.getIcon;
 public class GridSection {
     private Boolean visited;
     private Boolean deadEnd;
+    private Boolean crossroad;
     private Integer stepsFromStart;
-    private Point coordinates;
+    private Point point;
     private String emoji;
 
     public GridSection(Integer x, Integer y) {
-        this.coordinates = Point.of(x, y);
+        this.point = Point.of(x, y);
         this.stepsFromStart = 0;
         this.visited = false;
+        this.crossroad = false;
         this.emoji = getIcon(Optional.empty());
     }
 }
