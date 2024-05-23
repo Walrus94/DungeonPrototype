@@ -2,39 +2,95 @@ package org.dungeon.prototype.util;
 
 import lombok.experimental.UtilityClass;
 import lombok.val;
-import org.dungeon.prototype.model.Level;
 import org.dungeon.prototype.model.Point;
 import org.dungeon.prototype.model.Room;
 import org.dungeon.prototype.model.ui.level.GridSection;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.NavigableMap;
 import java.util.Optional;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
+
+import static org.dungeon.prototype.util.LevelUtil.Direction.E;
+import static org.dungeon.prototype.util.LevelUtil.Direction.N;
+import static org.dungeon.prototype.util.LevelUtil.Direction.S;
+import static org.dungeon.prototype.util.LevelUtil.Direction.W;
 
 @UtilityClass
 public class LevelUtil {
-    private static final Integer LEVEL_ONE_GRID_SIZE = 10;
+
+
+    public enum Direction {
+        N, E, S, W
+    }
+    private static final Integer LEVEL_ONE_GRID_SIZE = 7;
     private static final Integer GRID_SIZE_INCREMENT = 1;
     private static final Integer INCREMENT_STEP = 10;
     private static final Integer MAX_RECURSION_LEVEL = 1;
-
     //TODO adjust according to level depth
+
     private static final Double MONSTER_RATIO = 30.0;
     private static final Double TREASURE_RATIO = 20.0;
-    private static final Double ROOMS_RATIO = 0.4;
-    private static final Double MAX_LENGTH_RATIO = 0.7;
+    private static final Double ROOMS_RATIO = 0.6;
+    private static final Double MAX_LENGTH_RATIO = 0.8;
+    private static final Double MIN_LENGTH_RATIO = 0.2;
+    private static final Integer MIN_LENGTH = 2;
     private static final Double DEAD_ENDS_RATIO = 0.1;
-
-    public static Room buildRoom(Room previousRoom, Point nextPoint, Room.Type type) {
+    public static Room buildRoom(Point nextPoint, Room.Type type) {
         return Room.builder()
-                .entrance(previousRoom)
                 .type(type)
                 .point(nextPoint)
                 .build();
     }
 
+    public static List<Direction> getAvailableDirections(Direction oldDirection) {
+        if (oldDirection == null) {
+            return randomizeDirections(Arrays.asList(Direction.values()));
+        }
+        return randomizeDirections(
+                Arrays.stream(Direction.values())
+                        .filter(dir -> !dir.equals(oldDirection) && ! dir.equals(getOppositeDirection(oldDirection)))
+                        .collect(Collectors.toList()));
+    }
+
+    public static List<Direction> randomizeDirections(List<Direction> directions) {
+        Collections.shuffle(directions);
+        return directions;
+    }
+
+    public static Direction getOppositeDirection(Direction direction) {
+        return switch (direction) {
+            case N -> S;
+            case E -> W;
+            case S -> N;
+            case W -> E;
+        };
+    }
+
+    public static Direction turnLeft(Direction direction) {
+        return switch (direction) {
+            case N -> W;
+            case W -> S;
+            case S -> E;
+            case E -> N;
+        };
+    }
+
+    public static Direction turnRight(Direction direction) {
+        return switch (direction) {
+            case N -> E;
+            case E -> S;
+            case S -> W;
+            case W -> N;
+        };
+    }
+
     public static int calculateDeadEndsCount(int roomTotal) {
-        return (int) (roomTotal * DEAD_ENDS_RATIO);
+        return 1; //TODO fix crossroads processing
+        //return (int) (roomTotal * DEAD_ENDS_RATIO);
     }
 
     public static int calculateAmountOfTreasures(int roomTotal) {
@@ -49,6 +105,11 @@ public class LevelUtil {
         return (int) (gridSize * MAX_LENGTH_RATIO);
     }
 
+    public static Integer calculateMinLength(Integer gridSize) {
+        return (int) (gridSize * MIN_LENGTH_RATIO) < MIN_LENGTH ? MIN_LENGTH :
+                (int) (gridSize * MIN_LENGTH_RATIO);
+    }
+
     public static NavigableMap<Double, Room.Type> getRoomTypeWeights() {
         NavigableMap<Double, Room.Type> roomTypesWeights = new TreeMap<>();
         roomTypesWeights.put(MONSTER_RATIO, Room.Type.MONSTER);
@@ -60,10 +121,9 @@ public class LevelUtil {
 
     public static String printMap(GridSection[][] map) {
         StringBuilder result = new StringBuilder();
-        for (int x = map.length - 1; x >= 0; x--) {
-            GridSection[] row = map[x];
-            for (GridSection s : row) {
-                result.append(s.getEmoji());
+        for (int y = map.length - 1; y >= 0; y--) {
+            for (int x = 0; x < map.length; x++) {
+                result.append(map[x][y].getEmoji());
             }
             result.append("\n");
         }
@@ -80,36 +140,6 @@ public class LevelUtil {
             grid[x] = row;
         }
         return grid;
-    }
-
-    public static String buildLevelMap(Level level) {
-        String[][] resultingMap = new String[level.getGrid().length][level.getGrid().length];
-        for (int x = 0; x < resultingMap.length; x++) {
-            for (int y = 0; y < resultingMap.length; y++) {
-                resultingMap[x][y] = getIcon(Optional.empty());
-            }
-        }
-        setLevelRoom(level.getStart(), resultingMap);
-
-        StringBuilder stringBuilder = new StringBuilder();
-        for (int x = 0; x < resultingMap.length; x++) {
-            for (int y = 0; y < resultingMap.length; y++) {
-                stringBuilder.append(resultingMap[x][y]);
-            }
-            stringBuilder.append("\n");
-        }
-        return stringBuilder.toString();
-    }
-
-    private static void setLevelRoom(Room room, String[][] resultingMap) {
-        if (room == null) {
-            return;
-        }
-        val currentPoint = room.getPoint();
-        resultingMap[currentPoint.getX()][currentPoint.getY()] = getIcon(Optional.ofNullable(room.getType()));
-        setLevelRoom(room.getLeft(), resultingMap);
-        setLevelRoom(room.getRight(), resultingMap);
-        setLevelRoom(room.getMiddle(), resultingMap);
     }
 
     public static Integer calculateGridSize(Integer levelNumber) {
