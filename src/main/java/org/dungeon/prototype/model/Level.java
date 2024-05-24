@@ -12,9 +12,7 @@ import java.util.*;
 import static java.lang.Math.min;
 import static org.dungeon.prototype.util.LevelUtil.Direction;
 import static org.dungeon.prototype.util.LevelUtil.buildRoom;
-import static org.dungeon.prototype.util.LevelUtil.calculateAmountOfMonsters;
 import static org.dungeon.prototype.util.LevelUtil.calculateAmountOfRooms;
-import static org.dungeon.prototype.util.LevelUtil.calculateAmountOfTreasures;
 import static org.dungeon.prototype.util.LevelUtil.calculateDeadEndsCount;
 import static org.dungeon.prototype.util.LevelUtil.calculateGridSize;
 import static org.dungeon.prototype.util.LevelUtil.calculateMaxLength;
@@ -34,10 +32,11 @@ public class Level {
     }
     @Getter
     private Room start;
-    private WeightedRandomRoomTypeGenerator roomTypeWeightsGenerator = new WeightedRandomRoomTypeGenerator();
+    private WeightedRandomRoomTypeGenerator roomTypeWeightsGenerator;
     @Getter
     private GridSection[][] grid;
-    private final Queue<WalkerIterator> waitingWalkers = new PriorityQueue<>(Comparator.comparing(WalkerIterator::getPathFromStart));
+    private final Queue<WalkerIterator> waitingWalkers =
+            new PriorityQueue<>(Comparator.comparing(WalkerIterator::getPathFromStart));
     @Getter
     private final Map<Integer, Room> deadEndsMap = new TreeMap<>();
     private int deadEnds;
@@ -51,7 +50,12 @@ public class Level {
         return roomsMap.get(currentPoint);
     }
 
-    private Level generateLevel(Integer levelNumber) {
+    public void updateRoomType(Point point, Room.Type type) {
+        getRoomByCoordinates(point).setType(type);
+        grid[point.getX()][point.getY()].setEmoji(getIcon(Optional.of(type)));
+    }
+
+    private void generateLevel(Integer levelNumber) {
         log.debug("Generating level {}", levelNumber);
         val gridSize = calculateGridSize(levelNumber);
         log.debug("Grid size {}", gridSize);
@@ -63,12 +67,11 @@ public class Level {
 
         grid = generateEmptyMapGrid(gridSize);
 
-        val roomMonsters = calculateAmountOfMonsters(roomTotal);
-        val roomTreasures = calculateAmountOfTreasures(roomTotal);
-        roomTypeWeightsGenerator = new WeightedRandomRoomTypeGenerator();//TODO refactor to configure depending on level
+        roomTypeWeightsGenerator = new WeightedRandomRoomTypeGenerator(roomTotal);
 
         val startPoint = Point.of(random.nextInt(gridSize), random.nextInt(gridSize));
         start = buildRoom(startPoint, Room.Type.START);
+        start.setVisitedByPlayer(true);
         roomsMap.put(startPoint, start);
         var currentSection = setStartSection(startPoint);
         log.debug("Successfully built start room, x:{} y:{}", startPoint.getX(), startPoint.getY());
@@ -76,8 +79,6 @@ public class Level {
         var walkerIterator = WalkerIterator.builder()
                 .currentPoint(currentSection)
                 .previousRoom(start)
-                .roomMonsters(roomMonsters)
-                .roomTreasures(roomTreasures)
                 .build();
         waitingWalkers.add(walkerIterator);
         log.debug("WalkerIterator initialized: {}", walkerIterator);
@@ -92,7 +93,6 @@ public class Level {
         endRoom.setType(Room.Type.END);
         grid[endRoom.getPoint().getX()][endRoom.getPoint().getY()].setEmoji(getIcon(Optional.of(Room.Type.END)));
         log.debug("Current map state\n{}", printMap(grid));
-        return this;
     }
 
     private WalkerIterator processNextStep(WalkerIterator walkerIterator) {
@@ -117,17 +117,11 @@ public class Level {
                         log.debug("Current map state\n{}", printMap(grid));
                         walkerIterator.getCurrentPoint().setCrossroad(true);
                         log.debug("Processing next step for new walker...");
-                        val secondWalkerMonsterRooms = walkerIterator.getRoomMonsters() / 2;
-                        val secondWalkerTreasureRooms = walkerIterator.getRoomTreasures() / 2;
                         var secondWalkerIterator = WalkerIterator.builder()
                                 .currentPoint(walkerIterator.getCurrentPoint())
                                 .direction(walkerIterator.getDirection())
                                 .previousRoom(walkerIterator.getPreviousRoom())
-                                .roomMonsters(secondWalkerMonsterRooms)
-                                .roomTreasures(secondWalkerTreasureRooms)
                                 .build();
-                        walkerIterator.setRoomMonsters(walkerIterator.getRoomMonsters() - secondWalkerMonsterRooms);
-                        walkerIterator.setRoomTreasures(walkerIterator.getRoomTreasures() - secondWalkerTreasureRooms);
                         waitingWalkers.add(walkerIterator);
                         waitingWalkers.add(secondWalkerIterator);
                         deadEnds--;
@@ -154,11 +148,10 @@ public class Level {
         val deadEndSection = walkerIterator.getCurrentPoint();
         log.debug("Processing dead end for point x:{}, y:{}", deadEndSection.getPoint().getX(), deadEndSection.getPoint().getY());
         if (!deadEndSection.getCrossroad()) {
-//            val previousRoom = walkerIterator.getPreviousRoom(); todo: fix walkerIterator to store previous room after building path
             val previousRoom = getRoomByCoordinates(getNextSectionInDirection(deadEndSection, getOppositeDirection(walkerIterator.getDirection())).getPoint());
             log.debug("Previous room: {}", previousRoom);
             log.debug("Building dead end room...");
-            val deadEndRoom = buildRoom(deadEndSection.getPoint(), generateRoomType(walkerIterator));
+            val deadEndRoom = buildRoom(deadEndSection.getPoint(), generateRoomType());
             deadEndRoom.addAdjacentRoom(getOppositeDirection(walkerIterator.getDirection()), previousRoom);
             deadEndSection.setEmoji(getIcon(Optional.ofNullable(deadEndRoom.getType())));
             deadEndSection.setVisited(true);
@@ -220,7 +213,7 @@ public class Level {
                             walkerIterator.getCurrentPoint().getPoint().getY());
             };
             log.debug("Building next room [x:{}, y;{}]...", nextPoint.getX(), nextPoint.getY());
-            nextRoom = buildRoom(nextPoint, generateRoomType(walkerIterator));
+            nextRoom = buildRoom(nextPoint, generateRoomType());
             previousRoom = walkerIterator.getPreviousRoom();
             roomsMap.put(nextPoint, nextRoom);
             log.debug("Rooms count: {} out of {} total rooms", roomsMap.size(), roomTotal);
@@ -237,24 +230,11 @@ public class Level {
         return walkerIterator;
     }
 
-    private Room.Type generateRoomType(WalkerIterator walkerIterator) {
+    private Room.Type generateRoomType() {
         log.debug("Generating room type...");
-        log.debug("Monster room left: {}, Treasures room left: {}", walkerIterator.getRoomTreasures(), walkerIterator.getRoomMonsters());
-        List<Room.Type> exclude = new ArrayList<>();
-        if (walkerIterator.getRoomMonsters() == 0) {
-            exclude.add(Room.Type.MONSTER);
-        }
-        if (walkerIterator.getRoomTreasures() == 0) {
-            exclude.add(Room.Type.TREASURE);
-        }
-        val roomType = roomTypeWeightsGenerator.nextRoomType(exclude);
+        log.debug("Monster room left: {}, Treasures room left: {}", roomTypeWeightsGenerator.getRoomTreasures(), roomTypeWeightsGenerator.getRoomMonsters());
+        val roomType = roomTypeWeightsGenerator.nextRoomType();
         log.debug("Room type: {}", roomType);
-        if (roomType == Room.Type.MONSTER) {
-            walkerIterator.setRoomMonsters(walkerIterator.getRoomMonsters() - 1);
-        }
-        if (roomType == Room.Type.TREASURE) {
-            walkerIterator.setRoomTreasures(walkerIterator.getRoomTreasures() - 1);
-        }
         return roomType;
     }
 

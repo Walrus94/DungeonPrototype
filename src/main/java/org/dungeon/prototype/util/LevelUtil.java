@@ -31,8 +31,8 @@ public class LevelUtil {
     private static final Integer GRID_SIZE_INCREMENT = 1;
     private static final Integer INCREMENT_STEP = 10;
     //TODO adjust according to level depth
-    private static final Double MONSTER_RATIO = 30.0;
-    private static final Double TREASURE_RATIO = 20.0;
+    private static final Double MONSTER_RATIO = 50.0;
+    private static final Double TREASURE_RATIO = 30.0;
     private static final Double ROOMS_RATIO = 0.6;
     private static final Double MAX_LENGTH_RATIO = 0.4;
     private static final Double MIN_LENGTH_RATIO = 0.2;
@@ -136,6 +136,21 @@ public class LevelUtil {
         return result.toString();
     }
 
+    public static String printMap(GridSection[][] map, Point position) {
+        StringBuilder result = new StringBuilder();
+        for (int y = map.length - 1; y >= 0; y--) {
+            for (int x = 0; x < map.length; x++) {
+                if (x == position.getX() && y == position.getY()) {
+                    result.append(getPointerIcon());
+                } else {
+                    result.append(map[x][y].getEmoji());
+                }
+            }
+            result.append("\n");
+        }
+        return result.toString();
+    }
+
     public static GridSection[][] generateEmptyMapGrid(Integer gridSize) {
         GridSection[][] grid = new GridSection[gridSize][gridSize];
         for (int x = 0; x < gridSize; x++) {
@@ -162,8 +177,14 @@ public class LevelUtil {
             case NORMAL -> "\uD83D\uDFE7";
             case START -> "\uD83D\uDEAA";
             case MONSTER -> "\uD83D\uDC7E";
+            case MONSTER_KILLED -> "\uD83D\uDC80";
             case TREASURE -> "\uD83D\uDCB0";
+            case TREASURE_LOOTED -> "\uD83D\uDDD1";
             case END -> "\uD83C\uDFC1";
         }).orElse("\uD83D\uDFEB");
+    }
+
+    public static String getPointerIcon() {
+        return "\uD83D\uDD34";
     }
 }

@@ -19,7 +19,7 @@ public class Room {
 
 
     public enum Type {
-        NORMAL, START, END, MONSTER, TREASURE
+        NORMAL, START, END, MONSTER, TREASURE, MONSTER_KILLED, TREASURE_LOOTED
     }
     @Builder.Default
     private Map<LevelUtil.Direction, Optional<Room>> adjacentRooms = getDefaultAdjacentRooms();
@@ -35,6 +35,8 @@ public class Room {
 
     @Builder.Default
     private Type type = Type.NORMAL;
+    @Builder.Default
+    private boolean visitedByPlayer = false;
     private Point point;
     public void addAdjacentRoom(LevelUtil.Direction direction, Room nextRoom) {
         adjacentRooms.put(direction, Optional.of(nextRoom));

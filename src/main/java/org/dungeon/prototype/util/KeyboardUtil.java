@@ -20,8 +20,8 @@ public class KeyboardUtil {
                         InlineKeyboardButton.builder()
                                 .text("Start Game!")
                                 .callbackData("start_game")
-                                .build()
-                ))).build();
+                                .build())))
+                .build();
     }
     public static InlineKeyboardMarkup getRoomInlineKeyboardMarkup(Room room, LevelUtil.Direction direction) {
         InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup();
@@ -33,19 +33,19 @@ public class KeyboardUtil {
                     .callbackData("btn_next_level")
                     .build());
         }
-        if (room.getAdjacentRooms().get(turnLeft(direction)).isPresent()) {
+        if (room.getAdjacentRooms().get(turnLeft(direction)).isPresent() && !Room.Type.MONSTER.equals(room.getType())) {
             row1.add(InlineKeyboardButton.builder()
                     .text("Left")
                     .callbackData("btn_left")
                     .build());
         }
-        if (room.getAdjacentRooms().get(direction).isPresent()) {
+        if (room.getAdjacentRooms().get(direction).isPresent() && !Room.Type.MONSTER.equals(room.getType())) {
             row1.add(InlineKeyboardButton.builder()
                     .text("Middle")
                     .callbackData("btn_middle")
                     .build());
         }
-        if (room.getAdjacentRooms().get(turnRight(direction)).isPresent()) {
+        if (room.getAdjacentRooms().get(turnRight(direction)).isPresent() && !Room.Type.MONSTER.equals(room.getType())) {
             row1.add(InlineKeyboardButton.builder()
                     .text("Right")
                     .callbackData("btn_right")
@@ -56,11 +56,18 @@ public class KeyboardUtil {
                 .text("Map")
                 .callbackData("btn_map")
                 .build());
-        row2.add(InlineKeyboardButton.builder()
-                .text("Action")
-                .callbackData("btn_action")
-                .build());
-        if (room.getAdjacentRooms().get(getOppositeDirection(direction)).isPresent()) {
+        switch (room.getType()) {
+            case TREASURE -> row2.add(InlineKeyboardButton.builder()
+                    .text("Collect")
+                    .callbackData("btn_collect")
+                    .build());
+            case MONSTER -> row2.add(InlineKeyboardButton.builder()
+                    .text("Attack!")
+                    .callbackData("btn_attack")
+                    .build());
+        }
+        if (room.getAdjacentRooms().get(getOppositeDirection(direction)).isPresent()
+                && !Room.Type.MONSTER.equals(room.getType())) {
             row2.add(InlineKeyboardButton.builder()
                     .text("Turn Back")
                     .callbackData("btn_turn_back")

@@ -15,12 +15,16 @@ public class FileUtil {
 
     private static final String DEFAULT_ROOM_ASSET = "static/images/room/default.png";
     private static final String MONSTER_ROOM_ASSET = "static/images/room/monster.png";
+    private static final String MONSTER_KILLED_ROOM_ASSET = "static/images/room/monster_killed.png";
     private static final String TREASURE_ROOM_ASSET = "static/images/room/treasure.png";
+    private static final String TREASURE_LOOTED_ROOM_ASSET = "static/images/room/treasure_looted.png";
 
-    public static String getRoomAsset(Room room) {
-        return switch (room.getType()) {
+    public static String getRoomAsset(Room.Type roomType) {
+        return switch (roomType) {
             case MONSTER -> MONSTER_ROOM_ASSET;
+            case MONSTER_KILLED -> MONSTER_KILLED_ROOM_ASSET;
             case TREASURE -> TREASURE_ROOM_ASSET;
+            case TREASURE_LOOTED -> TREASURE_LOOTED_ROOM_ASSET;
             default -> DEFAULT_ROOM_ASSET;
         };
     }

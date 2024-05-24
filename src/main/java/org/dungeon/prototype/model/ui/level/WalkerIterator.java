@@ -17,8 +17,6 @@ public class WalkerIterator {
     private GridSection currentPoint;
     private LevelUtil.Direction direction;
     private Room previousRoom;
-    private Integer roomMonsters;
-    private Integer roomTreasures;
 
     public Integer getPathFromStart() {
         return currentPoint.getStepsFromStart();
@@ -35,14 +33,12 @@ public class WalkerIterator {
         return this.id.equals(walkerIterator.getId()) &&
                 this.currentPoint.equals(walkerIterator.getCurrentPoint()) &&
                 this.direction.equals(walkerIterator.getDirection()) &&
-                this.previousRoom.equals(walkerIterator.getPreviousRoom()) &&
-                this.roomMonsters.equals(walkerIterator.getRoomMonsters()) &&
-                this.roomTreasures.equals(walkerIterator.getRoomTreasures());
+                this.previousRoom.equals(walkerIterator.getPreviousRoom());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, currentPoint, direction, previousRoom, roomMonsters, roomTreasures);
+        return Objects.hash(id, currentPoint, direction, previousRoom);
     }
 
     @Override
@@ -50,8 +46,6 @@ public class WalkerIterator {
         return "id=" + id +
                 ", currentPoint=" + currentPoint +
                 ", direction=" + direction +
-                ", previousRoom=" + previousRoom +
-                ", roomMonsters=" + roomMonsters +
-                ", roomTreasures=" + roomTreasures;
+                ", previousRoom=" + previousRoom;
     }
 }
