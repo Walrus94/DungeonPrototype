@@ -202,6 +202,7 @@ public class DungeonBot extends AbilityBot {
             }
             playersMap.put(chatId, player);
             sendRoomMessage(nextRoom, player, chatId);
+            level.getLevelMap().addRoom(level.getGrid()[nextRoom.getPoint().getX()][nextRoom.getPoint().getY()]);
             log.debug("Moving back to {}, updated direction: {}", nextRoom.getPoint(), player.getDirection());
             return true;
         } else {
@@ -228,6 +229,7 @@ public class DungeonBot extends AbilityBot {
                 monster = new Monster(5, 10, 100);
             }
             playersMap.put(chatId, player);
+            level.getLevelMap().addRoom(level.getGrid()[nextRoom.getPoint().getX()][nextRoom.getPoint().getY()]);
             sendRoomMessage(nextRoom, player, chatId);
             log.debug("Moving to middle door: {}, updated direction: {}", nextRoom.getPoint(), player.getDirection());
             return true;
@@ -257,6 +259,7 @@ public class DungeonBot extends AbilityBot {
                 monster = new Monster(5, 10, 100);
             }
             playersMap.put(chatId, player);
+            level.getLevelMap().addRoom(level.getGrid()[nextRoom.getPoint().getX()][nextRoom.getPoint().getY()]);
             sendRoomMessage(nextRoom, player, chatId);
             log.debug("Moving to right door: {}, updated direction: {}", nextRoom.getPoint(), player.getDirection());
             return true;
@@ -286,6 +289,7 @@ public class DungeonBot extends AbilityBot {
                 monster = new Monster(5, 10, 100);
             }
             playersMap.put(chatId, player);
+            level.getLevelMap().addRoom(level.getGrid()[nextRoom.getPoint().getX()][nextRoom.getPoint().getY()]);
             sendRoomMessage(nextRoom, player, chatId);
             log.debug("Moving to left door: {}, updated direction: {}", nextRoom.getPoint(), player.getDirection());
             return true;
@@ -338,9 +342,11 @@ public class DungeonBot extends AbilityBot {
     }
 
     public static String getRoomMessageCaption(Player player, Monster monster) {
-        return "\uD83D\uDC9F: " + player.getHp() + " / " + player.getMaxHp() + (monster != null ? " -> \uD83D\uDDA4 " + monster.getHp() + " / " + monster.getMaxHp() : "") + "\n" +
+        return "\uD83D\uDC9F: " + player.getHp() + " / " + player.getMaxHp() +
+                (monster != null ? " -> \uD83D\uDDA4 " + monster.getHp() + " / " + monster.getMaxHp() : "") + "\n" +
                 "\uD83D\uDC8E: " + player.getMana() + " / " + player.getMaxMana() + "\n" +
-                "\uD83D\uDC4A: " + player.getAttack() + (monster != null ? " -> \uD83E\uDE93" + monster.getAttack() : "") + "\n" +
+                "\uD83D\uDC4A: " + player.getAttack() +
+                (monster != null ? " -> \uD83E\uDE93" + monster.getAttack() : "") + "\n" +
                 "\uD83D\uDEE1: " + player.getDefense() + "\n" +
                 "\uD83D\uDCC8: " + player.getXp() + "\n" +
                 "\uD83E\uDD11: " + player.getGold();
@@ -349,7 +355,7 @@ public class DungeonBot extends AbilityBot {
     private boolean sendMapMessage(Long chatId) {
         val level = currentLevelsMap.get(chatId);
         val player = playersMap.get(chatId);
-        val levelMap = printMap(level.getGrid(), player.getCurrentRoom());
+        val levelMap = printMap(level.getGrid(), level.getLevelMap(), player.getCurrentRoom());
         val message = SendMessage.builder()
                 .chatId(chatId)
                 .text(levelMap)

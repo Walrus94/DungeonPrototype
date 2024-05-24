@@ -5,6 +5,7 @@ import lombok.val;
 import org.dungeon.prototype.model.Point;
 import org.dungeon.prototype.model.Room;
 import org.dungeon.prototype.model.ui.level.GridSection;
+import org.dungeon.prototype.model.ui.level.LevelMap;
 import org.dungeon.prototype.model.ui.level.WalkerIterator;
 
 import java.util.Arrays;
@@ -130,6 +131,25 @@ public class LevelUtil {
         for (int y = map.length - 1; y >= 0; y--) {
             for (int x = 0; x < map.length; x++) {
                 result.append(map[x][y].getEmoji());
+            }
+            result.append("\n");
+        }
+        return result.toString();
+    }
+
+    public static String printMap(GridSection[][] grid, LevelMap levelMap, Point position) {
+        StringBuilder result = new StringBuilder();
+        for (int y = levelMap.getMaxY(); y >= levelMap.getMinY(); y--) {
+            for (int x = levelMap.getMinX(); x <= levelMap.getMaxX(); x++) {
+                if (levelMap.isContainsRoom(x, y)) {
+                    if (x == position.getX() && y == position.getY()) {
+                        result.append(getPointerIcon());
+                    } else {
+                        result.append(grid[x][y].getEmoji());
+                    }
+                } else {
+                    result.append("\uD83D\uDFEB");
+                }
             }
             result.append("\n");
         }

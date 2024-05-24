@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.model.ui.level.GridSection;
+import org.dungeon.prototype.model.ui.level.LevelMap;
 import org.dungeon.prototype.model.ui.level.WalkerIterator;
 import org.dungeon.prototype.service.WeightedRandomRoomTypeGenerator;
 
@@ -37,9 +38,11 @@ public class Level {
     private GridSection[][] grid;
     private final Queue<WalkerIterator> waitingWalkers =
             new PriorityQueue<>(Comparator.comparing(WalkerIterator::getPathFromStart));
+    private int deadEnds;
+    @Getter
+    private LevelMap levelMap;
     @Getter
     private final Map<Integer, Room> deadEndsMap = new TreeMap<>();
-    private int deadEnds;
     private int roomTotal;
     private int maxLength;
     private int minLength;
@@ -93,6 +96,7 @@ public class Level {
         endRoom.setType(Room.Type.END);
         grid[endRoom.getPoint().getX()][endRoom.getPoint().getY()].setEmoji(getIcon(Optional.of(Room.Type.END)));
         log.debug("Current map state\n{}", printMap(grid));
+        levelMap = new LevelMap(grid[start.getPoint().getX()][start.getPoint().getY()]);
     }
 
     private WalkerIterator processNextStep(WalkerIterator walkerIterator) {
