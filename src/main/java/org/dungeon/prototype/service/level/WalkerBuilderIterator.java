@@ -1,17 +1,17 @@
-package org.dungeon.prototype.model.ui.level;
+package org.dungeon.prototype.service.level;
 
 import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
-import org.dungeon.prototype.model.Room;
+import lombok.Data;
+import org.dungeon.prototype.model.room.Room;
+import org.dungeon.prototype.model.ui.level.GridSection;
+import org.dungeon.prototype.service.WalkerUniqueIdFactory;
 import org.dungeon.prototype.util.LevelUtil;
 
 import java.util.Objects;
 
-@Setter
-@Getter
+@Data
 @Builder
-public class WalkerIterator {
+public class WalkerBuilderIterator {
     @Builder.Default
     private Long id = WalkerUniqueIdFactory.getInstance().getNextId();
     private GridSection currentPoint;
@@ -24,16 +24,16 @@ public class WalkerIterator {
 
     @Override
     public boolean equals(Object obj) {
-        if (!(obj instanceof WalkerIterator walkerIterator)) {
+        if (!(obj instanceof WalkerBuilderIterator walkerBuilderIterator)) {
             return false;
         }
         if (obj == this) {
             return true;
         }
-        return this.id.equals(walkerIterator.getId()) &&
-                this.currentPoint.equals(walkerIterator.getCurrentPoint()) &&
-                this.direction.equals(walkerIterator.getDirection()) &&
-                this.previousRoom.equals(walkerIterator.getPreviousRoom());
+        return this.id.equals(walkerBuilderIterator.getId()) &&
+                this.currentPoint.equals(walkerBuilderIterator.getCurrentPoint()) &&
+                this.direction.equals(walkerBuilderIterator.getDirection()) &&
+                this.previousRoom.equals(walkerBuilderIterator.getPreviousRoom());
     }
 
     @Override

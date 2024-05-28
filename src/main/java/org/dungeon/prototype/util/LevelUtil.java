@@ -1,13 +1,15 @@
 package org.dungeon.prototype.util;
 
 import lombok.experimental.UtilityClass;
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.model.Point;
-import org.dungeon.prototype.model.Room;
+import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.ui.level.GridSection;
 import org.dungeon.prototype.model.ui.level.LevelMap;
-import org.dungeon.prototype.model.ui.level.WalkerIterator;
+import org.dungeon.prototype.service.level.WalkerBuilderIterator;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -21,6 +23,7 @@ import static org.dungeon.prototype.util.LevelUtil.Direction.N;
 import static org.dungeon.prototype.util.LevelUtil.Direction.S;
 import static org.dungeon.prototype.util.LevelUtil.Direction.W;
 
+@Slf4j
 @UtilityClass
 public class LevelUtil {
 
@@ -32,9 +35,10 @@ public class LevelUtil {
     private static final Integer GRID_SIZE_INCREMENT = 1;
     private static final Integer INCREMENT_STEP = 10;
     //TODO adjust according to level depth
-    private static final Double MONSTER_RATIO = 50.0;
-    private static final Double TREASURE_RATIO = 30.0;
-    private static final Double ROOMS_RATIO = 0.6;
+    private static final Integer MONSTER_RATIO = 40;
+    private static final Integer TREASURE_RATIO = 30;
+    private static final Integer MERCHANT_RATIO = 10;
+    private static final Integer SHRINE_RATIO = 1;
     private static final Double MAX_LENGTH_RATIO = 0.4;
     private static final Double MIN_LENGTH_RATIO = 0.2;
     private static final Integer MIN_LENGTH = 2;
@@ -42,6 +46,11 @@ public class LevelUtil {
     public static Room buildRoom(Point nextPoint, Room.Type type) {
         return Room.builder()
                 .type(type)
+                .point(nextPoint)
+                .build();
+    }
+    public static Room buildRoom(Point nextPoint) {
+        return Room.builder()
                 .point(nextPoint)
                 .build();
     }
@@ -88,16 +97,15 @@ public class LevelUtil {
         };
     }
 
-    public static int calculateDeadEndsCount(int roomTotal) {
-        return (int) (roomTotal * DEAD_ENDS_RATIO);
+    public static int calculateDeadEndsCount(int gridSize) {
+        return (int) (gridSize * gridSize * DEAD_ENDS_RATIO);
     }
 
     public static int calculateAmountOfTreasures(int roomTotal) {
-        return (int) (roomTotal * TREASURE_RATIO / 100);
+        return roomTotal * TREASURE_RATIO / 100;
     }
-
     public static int calculateAmountOfMonsters(int roomTotal) {
-        return (int) (roomTotal * MONSTER_RATIO / 100);
+        return roomTotal * MONSTER_RATIO / 100;
     }
 
     public static Integer calculateMaxLength(Integer gridSize) {
@@ -109,61 +117,37 @@ public class LevelUtil {
                 (int) (gridSize * MIN_LENGTH_RATIO);
     }
 
-    public static boolean isPossibleCrossroad(WalkerIterator walkerIterator, int minLength, int gridLength) {
-        return (walkerIterator.getPathFromStart() > 0) &&
-                (walkerIterator.getCurrentPoint().getPoint().getX() < gridLength - minLength) &&
-                (walkerIterator.getCurrentPoint().getPoint().getX() > minLength) &&
-                (walkerIterator.getCurrentPoint().getPoint().getY() < gridLength - minLength) &&
-                (walkerIterator.getCurrentPoint().getPoint().getY() > minLength);
+    public static boolean isPossibleCrossroad(WalkerBuilderIterator walkerBuilderIterator, int minLength, int gridLength) {
+        return (walkerBuilderIterator.getPathFromStart() > 0) &&
+                (walkerBuilderIterator.getCurrentPoint().getPoint().getX() < gridLength - minLength) &&
+                (walkerBuilderIterator.getCurrentPoint().getPoint().getX() > minLength) &&
+                (walkerBuilderIterator.getCurrentPoint().getPoint().getY() < gridLength - minLength) &&
+                (walkerBuilderIterator.getCurrentPoint().getPoint().getY() > minLength);
     }
 
-    public static NavigableMap<Double, Room.Type> getRoomTypeWeights() {
-        NavigableMap<Double, Room.Type> roomTypesWeights = new TreeMap<>();
+    public static NavigableMap<Integer, Room.Type> getRoomTypeWeights() {
+        NavigableMap<Integer, Room.Type> roomTypesWeights = new TreeMap<>();
         roomTypesWeights.put(MONSTER_RATIO, Room.Type.MONSTER);
         roomTypesWeights.put(TREASURE_RATIO, Room.Type.TREASURE);
-        roomTypesWeights.put(Double.sum(100.0, -Double.sum(MONSTER_RATIO, TREASURE_RATIO)), Room.Type.NORMAL);
+        roomTypesWeights.put(SHRINE_RATIO, Room.Type.SHRINE);
+        roomTypesWeights.put(MERCHANT_RATIO, Room.Type.MERCHANT);
+        roomTypesWeights.put(100 - MONSTER_RATIO - TREASURE_RATIO - SHRINE_RATIO - MERCHANT_RATIO, Room.Type.NORMAL);
         return roomTypesWeights;
     }
 
 
-    public static String printMap(GridSection[][] map) {
-        StringBuilder result = new StringBuilder();
-        for (int y = map.length - 1; y >= 0; y--) {
-            for (int x = 0; x < map.length; x++) {
-                result.append(map[x][y].getEmoji());
-            }
-            result.append("\n");
-        }
-        return result.toString();
-    }
-
-    public static String printMap(GridSection[][] grid, LevelMap levelMap, Point position) {
+    public static String printMap(GridSection[][] grid, LevelMap levelMap, Point position, Direction direction) {
         StringBuilder result = new StringBuilder();
         for (int y = levelMap.getMaxY(); y >= levelMap.getMinY(); y--) {
             for (int x = levelMap.getMinX(); x <= levelMap.getMaxX(); x++) {
                 if (levelMap.isContainsRoom(x, y)) {
                     if (x == position.getX() && y == position.getY()) {
-                        result.append(getPointerIcon());
+                        result.append(getPointerIcon(direction));
                     } else {
                         result.append(grid[x][y].getEmoji());
                     }
                 } else {
-                    result.append("\uD83D\uDFEB");
-                }
-            }
-            result.append("\n");
-        }
-        return result.toString();
-    }
-
-    public static String printMap(GridSection[][] map, Point position) {
-        StringBuilder result = new StringBuilder();
-        for (int y = map.length - 1; y >= 0; y--) {
-            for (int x = 0; x < map.length; x++) {
-                if (x == position.getX() && y == position.getY()) {
-                    result.append(getPointerIcon());
-                } else {
-                    result.append(map[x][y].getEmoji());
+                    result.append(getBlankIcon());
                 }
             }
             result.append("\n");
@@ -188,10 +172,6 @@ public class LevelUtil {
         return LEVEL_ONE_GRID_SIZE + increments * GRID_SIZE_INCREMENT;
     }
 
-    public static int calculateAmountOfRooms(Integer gridSize) {
-        return (int) (gridSize * gridSize * ROOMS_RATIO);
-    }
-
     public static String getIcon(Optional<Room.Type> roomType) {
         return roomType.map(type -> switch (type) {
             case NORMAL -> "\uD83D\uDFE7";
@@ -200,11 +180,65 @@ public class LevelUtil {
             case MONSTER_KILLED -> "\uD83D\uDC80";
             case TREASURE -> "\uD83D\uDCB0";
             case TREASURE_LOOTED -> "\uD83D\uDDD1";
+            case SHRINE -> "\uD83D\uDD2E";
+            case SHRINE_DRAINED -> "\uD83E\uDEA6";
             case END -> "\uD83C\uDFC1";
-        }).orElse("\uD83D\uDFEB");
+            case MERCHANT -> "\uD83E\uDDD9";
+        }).orElseGet(LevelUtil::getBlankIcon);
     }
 
-    public static String getPointerIcon() {
-        return "\uD83D\uDD34";
+    public static String getPointerIcon(Direction direction) {
+        String icon = switch (direction) {
+            case N -> "⏫";
+            case E -> "⏩";
+            case S -> "⏬";
+            case W -> "⏪";
+        };
+        byte[] bytes = icon.getBytes(StandardCharsets.UTF_8);
+        return new String(bytes, StandardCharsets.UTF_8);
+    }
+
+    public static String getBlankIcon() {
+        return "\uD83D\uDFEB";
+    }
+
+    //FOR DEBUGGING
+
+    public static String printMap(GridSection[][] map) {
+        StringBuilder result = new StringBuilder();
+        for (int y = map.length - 1; y >= 0; y--) {
+            for (int x = 0; x < map.length; x++) {
+                if (map[x][y].getDeadEnd() || map[x][y].getCrossroad()) {
+                    if (map[x][y].getDeadEnd() && !map[x][y].getCrossroad()) {
+                        result.append(getIcon(Optional.of(Room.Type.END)).equals(map[x][y].getEmoji()) ?
+                                map[x][y].getEmoji() :
+                                getDeadEndIcon());
+                    }
+                    if (!map[x][y].getDeadEnd() && map[x][y].getCrossroad()) {
+                        result.append(getCrossroadIcon());
+                    }
+                    if (map[x][y].getDeadEnd() && map[x][y].getCrossroad()) {
+                        log.warn("Warning! Point (x:{}, y:{}) marked as BOTH crossroad and dead end!", x, y);
+                        result.append(getCrossroadAndDeadEndWarningIcon());
+                    }
+                } else {
+                    result.append(map[x][y].getEmoji());
+                }
+            }
+            result.append("\n");
+        }
+        return result.toString();
+    }
+
+    public static String getDeadEndIcon() {
+        return "\uD83D\uDED1";
+    }
+
+    public static String getCrossroadIcon() {
+        return "\uD83D\uDD04";
+    }
+
+    public static String getCrossroadAndDeadEndWarningIcon() {
+        return "\uD83D\uDEAB";
     }
 }

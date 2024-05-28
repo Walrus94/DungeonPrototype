@@ -8,17 +8,17 @@ import java.io.Serializable;
 
 @Data
 public class Player implements Serializable {
-    public Player(Point currentRoom, LevelUtil.Direction direction, Integer gold, Long xp, Integer attack, Integer defense, Integer maxHp, int maxMana) {
+    public Player(Point currentRoom, LevelUtil.Direction direction) {
         this.currentRoom = currentRoom;
         this.direction = direction;
-        this.gold = gold;
-        this.attack = attack;
-        this.defense = defense;
-        this.xp = xp;
-        this.hp = maxHp;
-        this.maxHp = maxHp;
-        this.mana = maxMana;
-        this.maxMana = maxMana;
+        this.gold = 100;
+        this.attack = 5;
+        this.defense = 2;
+        this.xp = 0L;
+        this.hp = 500;
+        this.maxHp = 500;
+        this.mana = 10;
+        this.maxMana = 10;
     }
 
     @Serial
@@ -48,5 +48,13 @@ public class Player implements Serializable {
 
     public void addGold(int amount) {
         gold += amount;
+    }
+
+    public void refillHp() {
+        hp = maxHp;
+    }
+
+    public void refillMana() {
+        mana = maxMana;
     }
 }

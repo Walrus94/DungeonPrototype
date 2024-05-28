@@ -1,9 +1,10 @@
-package org.dungeon.prototype.model;
+package org.dungeon.prototype.model.room;
 
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.dungeon.prototype.model.Point;
 import org.dungeon.prototype.util.LevelUtil;
 
 import java.util.HashMap;
@@ -16,10 +17,8 @@ import java.util.Optional;
 @Setter
 @Builder(toBuilder = true)
 public class Room {
-
-
     public enum Type {
-        NORMAL, START, END, MONSTER, TREASURE, MONSTER_KILLED, TREASURE_LOOTED
+        NORMAL, START, END, MONSTER, TREASURE, MONSTER_KILLED, TREASURE_LOOTED, SHRINE, SHRINE_DRAINED, MERCHANT
     }
     @Builder.Default
     private Map<LevelUtil.Direction, Optional<Room>> adjacentRooms = getDefaultAdjacentRooms();
@@ -35,8 +34,7 @@ public class Room {
 
     @Builder.Default
     private Type type = Type.NORMAL;
-    @Builder.Default
-    private boolean visitedByPlayer = false;
+    private RoomContent roomContent;
     private Point point;
     public void addAdjacentRoom(LevelUtil.Direction direction, Room nextRoom) {
         adjacentRooms.put(direction, Optional.of(nextRoom));

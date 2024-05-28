@@ -1,4 +1,4 @@
-package org.dungeon.prototype.model.ui.level;
+package org.dungeon.prototype.service;
 
 import java.util.concurrent.atomic.AtomicLong;
 

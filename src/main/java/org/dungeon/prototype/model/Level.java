@@ -3,51 +3,47 @@ package org.dungeon.prototype.model;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.dungeon.prototype.model.room.Room;
+import org.dungeon.prototype.model.room.RoomContent;
 import org.dungeon.prototype.model.ui.level.GridSection;
 import org.dungeon.prototype.model.ui.level.LevelMap;
-import org.dungeon.prototype.model.ui.level.WalkerIterator;
-import org.dungeon.prototype.service.WeightedRandomRoomTypeGenerator;
+import org.dungeon.prototype.service.level.WalkerBuilderIterator;
+import org.dungeon.prototype.service.room.RandomRoomTypeGenerator;
+import org.dungeon.prototype.service.room.RoomTypesCluster;
+import org.dungeon.prototype.service.room.WalkerDistributeIterator;
 
 import java.util.*;
 
 import static java.lang.Math.min;
-import static org.dungeon.prototype.util.LevelUtil.Direction;
-import static org.dungeon.prototype.util.LevelUtil.buildRoom;
-import static org.dungeon.prototype.util.LevelUtil.calculateAmountOfRooms;
-import static org.dungeon.prototype.util.LevelUtil.calculateDeadEndsCount;
-import static org.dungeon.prototype.util.LevelUtil.calculateGridSize;
-import static org.dungeon.prototype.util.LevelUtil.calculateMaxLength;
-import static org.dungeon.prototype.util.LevelUtil.calculateMinLength;
-import static org.dungeon.prototype.util.LevelUtil.generateEmptyMapGrid;
-import static org.dungeon.prototype.util.LevelUtil.getAvailableDirections;
-import static org.dungeon.prototype.util.LevelUtil.getIcon;
-import static org.dungeon.prototype.util.LevelUtil.getOppositeDirection;
-import static org.dungeon.prototype.util.LevelUtil.isPossibleCrossroad;
-import static org.dungeon.prototype.util.LevelUtil.printMap;
+import static org.dungeon.prototype.util.LevelUtil.*;
 
 @Slf4j
 public class Level {
+    private static final Integer MAX_CROSSROAD_RECURSION_LEVEL = 1;
 
     public Level(Integer levelNumber) {
         generateLevel(levelNumber);
     }
     @Getter
+    private Integer number;
+    @Getter
     private Room start;
-    private WeightedRandomRoomTypeGenerator roomTypeWeightsGenerator;
+    private RandomRoomTypeGenerator randomRoomTypeGenerator;
     @Getter
     private GridSection[][] grid;
-    private final Queue<WalkerIterator> waitingWalkers =
-            new PriorityQueue<>(Comparator.comparing(WalkerIterator::getPathFromStart));
+    private final Queue<WalkerBuilderIterator> waitingWalkers =
+            new PriorityQueue<>(Comparator.comparing(WalkerBuilderIterator::getPathFromStart));
     private int deadEnds;
     @Getter
     private LevelMap levelMap;
     @Getter
     private final Map<Integer, Room> deadEndsMap = new TreeMap<>();
-    private int roomTotal;
     private int maxLength;
     private int minLength;
     private final Map<Point, Room> roomsMap = new HashMap<>();
     private final Random random = new Random();
+
+    private final Queue<WalkerDistributeIterator> pathStarts = new LinkedList<>();
 
     public Room getRoomByCoordinates(Point currentPoint) {
         return roomsMap.get(currentPoint);
@@ -60,122 +56,127 @@ public class Level {
 
     private void generateLevel(Integer levelNumber) {
         log.debug("Generating level {}", levelNumber);
+        number = levelNumber;
         val gridSize = calculateGridSize(levelNumber);
         log.debug("Grid size {}", gridSize);
-        roomTotal = calculateAmountOfRooms(gridSize);
-        log.debug("Room total {}", roomTotal);
         maxLength = calculateMaxLength(gridSize);
         minLength = calculateMinLength(gridSize);
         log.debug("Corridor length range: {} - {}", minLength, maxLength);
 
         grid = generateEmptyMapGrid(gridSize);
 
-        roomTypeWeightsGenerator = new WeightedRandomRoomTypeGenerator(roomTotal);
-
         val startPoint = Point.of(random.nextInt(gridSize), random.nextInt(gridSize));
         start = buildRoom(startPoint, Room.Type.START);
-        start.setVisitedByPlayer(true);
         roomsMap.put(startPoint, start);
         var currentSection = setStartSection(startPoint);
         log.debug("Successfully built start room, x:{} y:{}", startPoint.getX(), startPoint.getY());
         log.debug("Current map state\n{}", printMap(grid));
-        var walkerIterator = WalkerIterator.builder()
+        var walkerIterator = WalkerBuilderIterator.builder()
                 .currentPoint(currentSection)
                 .previousRoom(start)
                 .build();
         waitingWalkers.add(walkerIterator);
         log.debug("WalkerIterator initialized: {}", walkerIterator);
-        deadEnds = calculateDeadEndsCount(roomTotal);
+        deadEnds = calculateDeadEndsCount(gridSize);
         log.debug("Dead ends count for level: {}", deadEnds);
 
         while (!waitingWalkers.isEmpty()) {
             processNextStep(waitingWalkers.poll());
         }
+        log.debug("Dead Ends: {}", deadEndsMap.entrySet().stream().map(entry -> "{path: " + entry.getKey() + ", room:" + entry.getValue() + "}").toList());
         val endRoom = this.deadEndsMap.entrySet()
                 .stream().max(Map.Entry.comparingByKey()).get().getValue();
+        log.debug("End room selected: {}", endRoom);
         endRoom.setType(Room.Type.END);
+
         grid[endRoom.getPoint().getX()][endRoom.getPoint().getY()].setEmoji(getIcon(Optional.of(Room.Type.END)));
+        randomRoomTypeGenerator = new RandomRoomTypeGenerator(roomsMap.size() - 2);
+        val walker = WalkerDistributeIterator.builder()
+                .currentRoom(start)
+                .build();
+        distributeRoomTypes(walker);
         log.debug("Current map state\n{}", printMap(grid));
         levelMap = new LevelMap(grid[start.getPoint().getX()][start.getPoint().getY()]);
     }
 
-    private WalkerIterator processNextStep(WalkerIterator walkerIterator) {
+    private WalkerBuilderIterator processNextStep(WalkerBuilderIterator walkerBuilderIterator) {
         log.debug("Processing next step...");
-        if (roomsMap.size() < roomTotal) {
-            log.debug("Attempting to continue path...");
-            var walkerIteratorOptional = getNextSectionAndBuildPath(walkerIterator);
-            if (walkerIteratorOptional.isPresent()) {
-                walkerIterator = walkerIteratorOptional.get();
-                log.debug("WalkerIterator successfully retrieved for point {}, direction: {}, previous room point: {}",
-                        walkerIterator.getCurrentPoint(), walkerIterator.getDirection(), walkerIterator.getPreviousRoom().getPoint());
-                if (deadEnds > 1) {
-                    log.debug("Processing possible crossroads, dead ends count for level {}", deadEnds);
-                    val availableDirections = getAvailableDirections(walkerIterator.getDirection());
-                    log.debug("Choosing from available directions: {}", availableDirections);
-                    if (!isPossibleCrossroad(walkerIterator, minLength, grid.length) &&
-                            random.nextInt(2) == 0) {//todo adjust probability
-                        log.debug("No crossroads, proceed with single walker");
-                        return processNextStep(walkerIterator);
-                    } else {
-                        log.debug("Splitting roads in {} point", walkerIterator.getCurrentPoint());
-                        log.debug("Current map state\n{}", printMap(grid));
-                        walkerIterator.getCurrentPoint().setCrossroad(true);
-                        log.debug("Processing next step for new walker...");
-                        var secondWalkerIterator = WalkerIterator.builder()
-                                .currentPoint(walkerIterator.getCurrentPoint())
-                                .direction(walkerIterator.getDirection())
-                                .previousRoom(walkerIterator.getPreviousRoom())
-                                .build();
-                        waitingWalkers.add(walkerIterator);
-                        waitingWalkers.add(secondWalkerIterator);
-                        deadEnds--;
-                        log.debug("Dead ends remaining: {}, active walkers: {}", deadEnds, waitingWalkers);
-                        log.debug("Processing next step for walker...");
-                        return processNextStep(waitingWalkers.poll());
-                    }
-                } else if (deadEnds == 1) {
-                    log.debug("Single dead end left, no crossroads");
-                    return processNextStep(walkerIterator);
+        log.debug("Attempting to continue path...");
+        var walkerIteratorOptional = getNextSectionAndBuildPath(walkerBuilderIterator);
+        if (walkerIteratorOptional.isPresent()) {
+            walkerBuilderIterator = walkerIteratorOptional.get();
+            log.debug("WalkerIterator successfully retrieved for point {}, direction: {}, previous room point: {}",
+                    walkerBuilderIterator.getCurrentPoint(),
+                    walkerBuilderIterator.getDirection(),
+                    walkerBuilderIterator.getPreviousRoom().getPoint());
+            if (deadEnds > 1) {
+                log.debug("Processing possible crossroads, dead ends count for level {}", deadEnds);
+                val availableDirections = getAvailableDirections(walkerBuilderIterator.getDirection());
+                log.debug("Choosing from available directions: {}", availableDirections);
+                if (!isPossibleCrossroad(walkerBuilderIterator, minLength, grid.length) &&
+                        (random.nextInt(4) % 3 != 0)) {//todo adjust probability
+                    log.debug("No crossroads, proceed with single walker");
+                    return processNextStep(walkerBuilderIterator);
+                } else {
+                    log.debug("Splitting roads in {} point", walkerBuilderIterator.getCurrentPoint());
+                    log.debug("Current map state\n{}", printMap(grid));
+                    walkerBuilderIterator.getCurrentPoint().setCrossroad(true);
+                    log.debug("Processing next step for new walker...");
+                    var secondWalkerIterator = WalkerBuilderIterator.builder()
+                            .currentPoint(walkerBuilderIterator.getCurrentPoint())
+                            .direction(walkerBuilderIterator.getDirection())
+                            .previousRoom(walkerBuilderIterator.getPreviousRoom())
+                            .build();
+                    waitingWalkers.add(walkerBuilderIterator);
+                    waitingWalkers.add(secondWalkerIterator);
+                    deadEnds--;
+                    log.debug("Dead ends remaining: {}, active walkers: {}", deadEnds, waitingWalkers);
+                    log.debug("Processing next step for walker...");
+                    return processNextStep(waitingWalkers.poll());
                 }
-            } else {
-                return buildDeadEnd(walkerIterator);
+            } else if (deadEnds == 1) {
+                log.debug("Single dead end left, no crossroads");
+                return processNextStep(walkerBuilderIterator);
             }
         } else {
-            log.debug("No rooms left!");
-            return walkerIterator;
+            return buildDeadEnd(walkerBuilderIterator);
         }
-        return walkerIterator;
+        return walkerBuilderIterator;
     }
 
-    private WalkerIterator buildDeadEnd(WalkerIterator walkerIterator) {
-        log.debug("Walker Iterator: {}", walkerIterator);
-        val deadEndSection = walkerIterator.getCurrentPoint();
+    private WalkerBuilderIterator buildDeadEnd(WalkerBuilderIterator walkerBuilderIterator) {
+        log.debug("Walker Iterator: {}", walkerBuilderIterator);
+        val deadEndSection = walkerBuilderIterator.getCurrentPoint();
         log.debug("Processing dead end for point x:{}, y:{}", deadEndSection.getPoint().getX(), deadEndSection.getPoint().getY());
         if (!deadEndSection.getCrossroad()) {
-            val previousRoom = getRoomByCoordinates(getNextSectionInDirection(deadEndSection, getOppositeDirection(walkerIterator.getDirection())).getPoint());
+            val previousRoom = getRoomByCoordinates(getNextSectionInDirection(deadEndSection, getOppositeDirection(walkerBuilderIterator.getDirection())).getPoint());
             log.debug("Previous room: {}", previousRoom);
             log.debug("Building dead end room...");
-            val deadEndRoom = buildRoom(deadEndSection.getPoint(), generateRoomType());
-            deadEndRoom.addAdjacentRoom(getOppositeDirection(walkerIterator.getDirection()), previousRoom);
+            val deadEndRoom = buildRoom(deadEndSection.getPoint());
+            deadEndRoom.addAdjacentRoom(getOppositeDirection(walkerBuilderIterator.getDirection()), previousRoom);
             deadEndSection.setEmoji(getIcon(Optional.ofNullable(deadEndRoom.getType())));
             deadEndSection.setVisited(true);
-            deadEndSection.setStepsFromStart(walkerIterator.getCurrentPoint().getStepsFromStart() + 1);
+            deadEndSection.setStepsFromStart(walkerBuilderIterator.getCurrentPoint().getStepsFromStart() + 1);
             deadEndSection.setDeadEnd(true);
             roomsMap.put(deadEndRoom.getPoint(), deadEndRoom);
             this.deadEndsMap.put(deadEndSection.getStepsFromStart(), deadEndRoom);
             log.debug("Updated dead ends: {}", deadEndsMap.entrySet().stream().map(entry -> "{path: " + entry.getKey() + ", room:" + entry.getValue() + "}").toList());
             log.debug("Current map state\n{}", printMap(grid));
+        } else {
+            deadEndSection.setDeadEnd(false);
+            deadEndSection.setCrossroad(false);
+            deadEnds++;
         }
-        waitingWalkers.remove(walkerIterator);
-        return walkerIterator;
+        waitingWalkers.remove(walkerBuilderIterator);
+        return walkerBuilderIterator;
     }
 
-    private Optional<WalkerIterator> getNextSectionAndBuildPath(WalkerIterator walkerIterator) {
-        log.debug("Building next section from x:{}, y:{}, current walker: {}", walkerIterator.getCurrentPoint().getPoint().getX(), walkerIterator.getCurrentPoint().getPoint().getY(), walkerIterator);
+    private Optional<WalkerBuilderIterator> getNextSectionAndBuildPath(WalkerBuilderIterator walkerBuilderIterator) {
+        log.debug("Building next section from x:{}, y:{}, current walker: {}", walkerBuilderIterator.getCurrentPoint().getPoint().getX(), walkerBuilderIterator.getCurrentPoint().getPoint().getY(), walkerBuilderIterator);
         int pathLength;
-        val oldDirection = walkerIterator.getDirection();
+        val oldDirection = walkerBuilderIterator.getDirection();
         log.debug("Old direction: {}", oldDirection);
-        val startSection = walkerIterator.getCurrentPoint();
+        val startSection = walkerBuilderIterator.getCurrentPoint();
         val availableDirections = getAvailableDirections(oldDirection);
         log.debug("Available directions: {}", availableDirections);
             for (Direction direction : availableDirections) {
@@ -189,57 +190,49 @@ public class Level {
                 pathLength = random.nextInt(max - minLength + 1) + minLength;
                 if (pathLength >= minLength && pathLength <= maxLength) {
                     log.debug("Random path length to walk: {}", pathLength);
-                    walkerIterator.setDirection(direction);
-                    return Optional.of(buildPathInDirection(grid, walkerIterator, pathLength));
+                    walkerBuilderIterator.setDirection(direction);
+                    return Optional.of(buildPathInDirection(grid, walkerBuilderIterator, pathLength));
                 }
             }
 
         return Optional.empty();
     }
 
-    private WalkerIterator buildPathInDirection(GridSection[][] grid, WalkerIterator walkerIterator, int pathLength) {
+    private WalkerBuilderIterator buildPathInDirection(GridSection[][] grid, WalkerBuilderIterator walkerBuilderIterator, int pathLength) {
         GridSection nextStep;
         Room nextRoom;
         Room previousRoom;
         for (int i = 0; i < pathLength; i++) {
-            val nextPoint = switch (walkerIterator.getDirection()) {
+            val nextPoint = switch (walkerBuilderIterator.getDirection()) {
                 case N:
-                    yield Point.of(walkerIterator.getCurrentPoint().getPoint().getX(),
-                            walkerIterator.getCurrentPoint().getPoint().getY() + 1);
+                    yield Point.of(walkerBuilderIterator.getCurrentPoint().getPoint().getX(),
+                            walkerBuilderIterator.getCurrentPoint().getPoint().getY() + 1);
                 case E:
-                    yield Point.of(walkerIterator.getCurrentPoint().getPoint().getX() + 1,
-                            walkerIterator.getCurrentPoint().getPoint().getY());
+                    yield Point.of(walkerBuilderIterator.getCurrentPoint().getPoint().getX() + 1,
+                            walkerBuilderIterator.getCurrentPoint().getPoint().getY());
                 case S:
-                    yield Point.of(walkerIterator.getCurrentPoint().getPoint().getX(),
-                            walkerIterator.getCurrentPoint().getPoint().getY() - 1);
+                    yield Point.of(walkerBuilderIterator.getCurrentPoint().getPoint().getX(),
+                            walkerBuilderIterator.getCurrentPoint().getPoint().getY() - 1);
                 case W:
-                    yield Point.of(walkerIterator.getCurrentPoint().getPoint().getX() - 1,
-                            walkerIterator.getCurrentPoint().getPoint().getY());
+                    yield Point.of(walkerBuilderIterator.getCurrentPoint().getPoint().getX() - 1,
+                            walkerBuilderIterator.getCurrentPoint().getPoint().getY());
             };
             log.debug("Building next room [x:{}, y;{}]...", nextPoint.getX(), nextPoint.getY());
-            nextRoom = buildRoom(nextPoint, generateRoomType());
-            previousRoom = walkerIterator.getPreviousRoom();
+            nextRoom = buildRoom(nextPoint);
+            previousRoom = walkerBuilderIterator.getPreviousRoom();
             roomsMap.put(nextPoint, nextRoom);
-            log.debug("Rooms count: {} out of {} total rooms", roomsMap.size(), roomTotal);
-            nextStep = buildNextStep(nextPoint, walkerIterator, Optional.of(nextRoom.getType()), i);
-            previousRoom.addAdjacentRoom(walkerIterator.getDirection(), nextRoom);
-            nextRoom.addAdjacentRoom(getOppositeDirection(walkerIterator.getDirection()), previousRoom);
+            log.debug("Rooms count: {}", roomsMap.size());
+            nextStep = buildNextStep(nextPoint, walkerBuilderIterator, Optional.of(nextRoom.getType()), i);
+            previousRoom.addAdjacentRoom(walkerBuilderIterator.getDirection(), nextRoom);
+            nextRoom.addAdjacentRoom(getOppositeDirection(walkerBuilderIterator.getDirection()), previousRoom);
 
             previousRoom = nextRoom;
 
-            walkerIterator.setCurrentPoint(nextStep);
-            walkerIterator.setPreviousRoom(previousRoom);
+            walkerBuilderIterator.setCurrentPoint(nextStep);
+            walkerBuilderIterator.setPreviousRoom(previousRoom);
         }
         log.debug("Current map state\n{}", printMap(grid));
-        return walkerIterator;
-    }
-
-    private Room.Type generateRoomType() {
-        log.debug("Generating room type...");
-        log.debug("Monster room left: {}, Treasures room left: {}", roomTypeWeightsGenerator.getRoomTreasures(), roomTypeWeightsGenerator.getRoomMonsters());
-        val roomType = roomTypeWeightsGenerator.nextRoomType();
-        log.debug("Room type: {}", roomType);
-        return roomType;
+        return walkerBuilderIterator;
     }
 
     private GridSection getNextSectionInDirection(GridSection section, Direction direction) {
@@ -251,11 +244,11 @@ public class Level {
         };
     }
 
-    private GridSection buildNextStep(Point nextPoint, WalkerIterator walkerIterator, Optional<Room.Type> roomType, int i) {
+    private GridSection buildNextStep(Point nextPoint, WalkerBuilderIterator walkerBuilderIterator, Optional<Room.Type> roomType, int i) {
         GridSection nextStep = grid[nextPoint.getX()][nextPoint.getY()];
         nextStep.setVisited(true);
         nextStep.setEmoji(getIcon(roomType));
-        nextStep.setStepsFromStart(walkerIterator.getCurrentPoint().getStepsFromStart() + i);
+        nextStep.setStepsFromStart(walkerBuilderIterator.getCurrentPoint().getStepsFromStart() + i);
         grid[nextPoint.getX()][nextPoint.getY()] = nextStep;
         return nextStep;
     }
@@ -318,6 +311,98 @@ public class Level {
             log.debug("Current path length: {}", path);
         }
         return path;
+    }
+
+    private void distributeRoomTypes(WalkerDistributeIterator walkerIterator) {
+        log.debug("Distributing rooms content...");
+        while (randomRoomTypeGenerator.hasClusters()) {
+            val cluster = randomRoomTypeGenerator.getNextCluster();
+            log.debug("Processing cluster - weight: {}, size: {}", cluster.getClusterWeight(), cluster.getRooms().size());
+            walkerIterator = distributeRoomTypesCluster(walkerIterator, cluster);
+        }
+    }
+
+    private WalkerDistributeIterator distributeRoomTypesCluster(WalkerDistributeIterator walkerIterator,
+                                            RoomTypesCluster cluster) {
+        while (cluster.hasNextRoomToDistribute()) {
+            val previousRoom = walkerIterator.getPreviousRoom();
+            if (Room.Type.START.equals(walkerIterator.getCurrentRoom().getType())) {
+                log.debug("Processing start room...");
+                walkerIterator.setCurrentRoom(walkerIterator.getCurrentRoom().getAdjacentRooms().values().stream()
+                        .filter(Optional::isPresent)
+                        .map(Optional::get)
+                        .findFirst().get());
+                walkerIterator.setPreviousRoom(start);
+            } else {
+                val roomsCount = Math.toIntExact(walkerIterator.getCurrentRoom().getAdjacentRooms().values().stream()
+                        .filter(Optional::isPresent)
+                        .map(Optional::get)
+                        .filter(room -> !room.equals(previousRoom))
+                        .count());
+                switch (roomsCount) {
+                    case 0 -> {
+                        if (!walkerIterator.getCurrentRoom().getType().equals(Room.Type.END)) {
+                            setRoomContent(walkerIterator.getCurrentRoom(), cluster.getNextRoom());
+                        }
+                        if (!pathStarts.isEmpty()) {
+                            walkerIterator = pathStarts.poll();
+                        }
+                    }
+                    case 1 -> {
+                        setRoomContent(walkerIterator.getCurrentRoom(), cluster.getNextRoom());
+                        val nextRoom = walkerIterator.getCurrentRoom().getAdjacentRooms().values().stream()
+                                .filter(Optional::isPresent)
+                                .map(Optional::get)
+                                .filter(room -> !room.equals(previousRoom))
+                                .findFirst().get();
+                        walkerIterator.setPreviousRoom(walkerIterator.getCurrentRoom());
+                        walkerIterator.setCurrentRoom(nextRoom);
+                    }
+                    case 2 -> {
+                        setRoomContent(walkerIterator.getCurrentRoom(), cluster.getNextRoom());
+                        val nextRooms = walkerIterator.getCurrentRoom().getAdjacentRooms().values().stream()
+                                .filter(Optional::isPresent)
+                                .map(Optional::get)
+                                .filter(room -> !room.equals(previousRoom))
+                                .toList();
+                        pathStarts.offer(WalkerDistributeIterator.builder()
+                                .previousRoom(walkerIterator.getCurrentRoom())
+                                .currentRoom(nextRooms.get(0))
+                                .build());
+                        walkerIterator.setPreviousRoom(walkerIterator.getCurrentRoom());
+                        walkerIterator.setCurrentRoom(nextRooms.get(1));
+                    }
+                    case 3 -> {
+                        setRoomContent(walkerIterator.getCurrentRoom(), cluster.getNextRoom());
+                        val nextRooms = walkerIterator.getCurrentRoom().getAdjacentRooms().values().stream()
+                                .filter(Optional::isPresent)
+                                .map(Optional::get)
+                                .filter(room -> !room.equals(previousRoom))
+                                .toList();
+                        pathStarts.offer(WalkerDistributeIterator.builder()
+                                .previousRoom(walkerIterator.getCurrentRoom())
+                                .currentRoom(nextRooms.get(0))
+                                .build());
+                        pathStarts.offer(WalkerDistributeIterator.builder()
+                                .previousRoom(walkerIterator.getCurrentRoom())
+                                .currentRoom(nextRooms.get(1))
+                                .build());
+                        walkerIterator.setPreviousRoom(walkerIterator.getCurrentRoom());
+                        walkerIterator.setCurrentRoom(nextRooms.get(2));
+                    }
+                }
+            }
+        }
+        return walkerIterator;
+    }
+
+    private void setRoomContent(Room room, RoomContent roomContent) {
+        log.debug("Setting type {} to room [x:{}, y:{}]", roomContent.getRoomType(), room.getPoint().getX(), room.getPoint().getY());
+        room.setType(roomContent.getRoomType());
+        grid[room.getPoint().getX()][room.getPoint().getY()].setEmoji(getIcon(Optional.of(roomContent.getRoomType())));
+        room.setRoomContent(roomContent);
+        log.debug("Current map state\n{}", printMap(grid));
+
     }
 
     private GridSection setStartSection(Point startPoint) {

@@ -1,7 +1,7 @@
 package org.dungeon.prototype.util;
 
 import lombok.experimental.UtilityClass;
-import org.dungeon.prototype.model.Room;
+import org.dungeon.prototype.model.room.Room;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
@@ -41,7 +41,7 @@ public class KeyboardUtil {
         }
         if (room.getAdjacentRooms().get(direction).isPresent() && !Room.Type.MONSTER.equals(room.getType())) {
             row1.add(InlineKeyboardButton.builder()
-                    .text("Middle")
+                    .text("Forward")
                     .callbackData("btn_middle")
                     .build());
         }
@@ -53,8 +53,8 @@ public class KeyboardUtil {
         }
         List<InlineKeyboardButton> row2 = new ArrayList<>();
         row2.add(InlineKeyboardButton.builder()
-                .text("Map")
-                .callbackData("btn_map")
+                .text("Menu")
+                .callbackData("btn_menu")
                 .build());
         switch (room.getType()) {
             case TREASURE -> row2.add(InlineKeyboardButton.builder()
@@ -64,6 +64,14 @@ public class KeyboardUtil {
             case MONSTER -> row2.add(InlineKeyboardButton.builder()
                     .text("Attack!")
                     .callbackData("btn_attack")
+                    .build());
+            case SHRINE -> row2.add(InlineKeyboardButton.builder()
+                    .text("Use")
+                    .callbackData("btn_shrine_use")
+                    .build());
+            case MERCHANT -> row2.add(InlineKeyboardButton.builder()
+                    .text("Buy and sell!")
+                    .callbackData("btn_merchant")
                     .build());
         }
         if (room.getAdjacentRooms().get(getOppositeDirection(direction)).isPresent()
@@ -75,5 +83,19 @@ public class KeyboardUtil {
         }
         inlineKeyboard.setKeyboard(List.of(row1, row2));
         return inlineKeyboard;
+    }
+
+    public static InlineKeyboardMarkup getMenuInlineKeyboardMarkup() {
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        row.add(InlineKeyboardButton.builder()
+                .text("Inventory")
+                .callbackData("btn_inventory")
+                .build());
+        row.add(InlineKeyboardButton.builder()
+                .text("Back")
+                .callbackData("btn_menu_back")
+                .build());
+
+        return new InlineKeyboardMarkup(List.of(row));
     }
 }

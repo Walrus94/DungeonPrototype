@@ -2,7 +2,7 @@ package org.dungeon.prototype.util;
 
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
-import org.dungeon.prototype.model.Room;
+import org.dungeon.prototype.model.room.Room;
 import org.springframework.core.io.ClassPathResource;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 
@@ -18,6 +18,9 @@ public class FileUtil {
     private static final String MONSTER_KILLED_ROOM_ASSET = "static/images/room/monster_killed.png";
     private static final String TREASURE_ROOM_ASSET = "static/images/room/treasure.png";
     private static final String TREASURE_LOOTED_ROOM_ASSET = "static/images/room/treasure_looted.png";
+    private static final String SHRINE_ROOM_ASSET = "static/images/room/shrine.png";
+    private static final String SHRINE_DRAINED_ROOM_ASSET = "static/images/room/shrine_drained.png";
+    private static final String MERCHANT_ROOM_ASSET = "static/images/room/merchant.png";
 
     public static String getRoomAsset(Room.Type roomType) {
         return switch (roomType) {
@@ -25,6 +28,9 @@ public class FileUtil {
             case MONSTER_KILLED -> MONSTER_KILLED_ROOM_ASSET;
             case TREASURE -> TREASURE_ROOM_ASSET;
             case TREASURE_LOOTED -> TREASURE_LOOTED_ROOM_ASSET;
+            case SHRINE -> SHRINE_ROOM_ASSET;
+            case SHRINE_DRAINED -> SHRINE_DRAINED_ROOM_ASSET;
+            case MERCHANT -> MERCHANT_ROOM_ASSET;
             default -> DEFAULT_ROOM_ASSET;
         };
     }
