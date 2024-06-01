@@ -1,11 +1,13 @@
 package org.dungeon.prototype.model.ui.level;
 
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.HashSet;
 import java.util.Set;
 
 @Data
+@NoArgsConstructor
 public class LevelMap {
     private Set<GridSection> visitedRooms = new HashSet<>();
     private Integer maxX;

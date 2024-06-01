@@ -2,10 +2,10 @@ package org.dungeon.prototype.service.level;
 
 import lombok.Builder;
 import lombok.Data;
+import org.dungeon.prototype.model.Direction;
 import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.ui.level.GridSection;
 import org.dungeon.prototype.service.WalkerUniqueIdFactory;
-import org.dungeon.prototype.util.LevelUtil;
 
 import java.util.Objects;
 
@@ -15,7 +15,7 @@ public class WalkerBuilderIterator {
     @Builder.Default
     private Long id = WalkerUniqueIdFactory.getInstance().getNextId();
     private GridSection currentPoint;
-    private LevelUtil.Direction direction;
+    private Direction direction;
     private Room previousRoom;
 
     public Integer getPathFromStart() {

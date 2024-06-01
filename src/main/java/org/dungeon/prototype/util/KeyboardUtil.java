@@ -1,7 +1,10 @@
 package org.dungeon.prototype.util;
 
 import lombok.experimental.UtilityClass;
+import lombok.val;
+import org.dungeon.prototype.model.Direction;
 import org.dungeon.prototype.model.room.Room;
+import org.dungeon.prototype.model.room.RoomType;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
@@ -14,38 +17,44 @@ import static org.dungeon.prototype.util.LevelUtil.turnRight;
 
 @UtilityClass
 public class KeyboardUtil {
-    public static InlineKeyboardMarkup getStartInlineKeyboardMarkup() {
+    public static InlineKeyboardMarkup getStartInlineKeyboardMarkup(boolean hasSavedGame) {
         return InlineKeyboardMarkup.builder()
                 .keyboard(List.of(List.of(
-                        InlineKeyboardButton.builder()
+                        hasSavedGame ? InlineKeyboardButton.builder()
+                                .text("Continue game")
+                                .callbackData("continue_game")
+                                .build() : InlineKeyboardButton.builder()
                                 .text("Start Game!")
                                 .callbackData("start_game")
-                                .build())))
+                                .build()
+                )))
                 .build();
     }
-    public static InlineKeyboardMarkup getRoomInlineKeyboardMarkup(Room room, LevelUtil.Direction direction) {
+    public static InlineKeyboardMarkup getRoomInlineKeyboardMarkup(Room room, Direction direction) {
+        val roomContent = room.getRoomContent();
+        val adjacentRooms = room.getAdjacentRooms();
         InlineKeyboardMarkup inlineKeyboard = new InlineKeyboardMarkup();
 
         List<InlineKeyboardButton> row1 = new ArrayList<>();
-        if (Room.Type.END.equals(room.getType())) {
+        if (RoomType.END.equals(roomContent.getRoomType())) {
             row1.add(InlineKeyboardButton.builder()
                     .text("Next Level")
                     .callbackData("btn_next_level")
                     .build());
         }
-        if (room.getAdjacentRooms().get(turnLeft(direction)).isPresent() && !Room.Type.MONSTER.equals(room.getType())) {
+        if (adjacentRooms.containsKey(turnLeft(direction)) && adjacentRooms.get(turnLeft(direction)) && !RoomType.MONSTER.equals(roomContent.getRoomType())) {
             row1.add(InlineKeyboardButton.builder()
                     .text("Left")
                     .callbackData("btn_left")
                     .build());
         }
-        if (room.getAdjacentRooms().get(direction).isPresent() && !Room.Type.MONSTER.equals(room.getType())) {
+        if (adjacentRooms.containsKey(direction) && adjacentRooms.get(direction) && !RoomType.MONSTER.equals(roomContent.getRoomType())) {
             row1.add(InlineKeyboardButton.builder()
                     .text("Forward")
                     .callbackData("btn_middle")
                     .build());
         }
-        if (room.getAdjacentRooms().get(turnRight(direction)).isPresent() && !Room.Type.MONSTER.equals(room.getType())) {
+        if (adjacentRooms.containsKey(turnRight(direction)) && adjacentRooms.get(turnRight(direction)) && !RoomType.MONSTER.equals(roomContent.getRoomType())) {
             row1.add(InlineKeyboardButton.builder()
                     .text("Right")
                     .callbackData("btn_right")
@@ -56,7 +65,7 @@ public class KeyboardUtil {
                 .text("Menu")
                 .callbackData("btn_menu")
                 .build());
-        switch (room.getType()) {
+        switch (roomContent.getRoomType()) {
             case TREASURE -> row2.add(InlineKeyboardButton.builder()
                     .text("Collect")
                     .callbackData("btn_collect")
@@ -74,8 +83,8 @@ public class KeyboardUtil {
                     .callbackData("btn_merchant")
                     .build());
         }
-        if (room.getAdjacentRooms().get(getOppositeDirection(direction)).isPresent()
-                && !Room.Type.MONSTER.equals(room.getType())) {
+        if (adjacentRooms.containsKey(getOppositeDirection(direction)) && adjacentRooms.get(getOppositeDirection(direction))
+                && !RoomType.MONSTER.equals(roomContent.getRoomType())) {
             row2.add(InlineKeyboardButton.builder()
                     .text("Turn Back")
                     .callbackData("btn_turn_back")

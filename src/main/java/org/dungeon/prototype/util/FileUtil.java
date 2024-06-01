@@ -2,7 +2,7 @@ package org.dungeon.prototype.util;
 
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
-import org.dungeon.prototype.model.room.Room;
+import org.dungeon.prototype.model.room.RoomType;
 import org.springframework.core.io.ClassPathResource;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 
@@ -22,7 +22,7 @@ public class FileUtil {
     private static final String SHRINE_DRAINED_ROOM_ASSET = "static/images/room/shrine_drained.png";
     private static final String MERCHANT_ROOM_ASSET = "static/images/room/merchant.png";
 
-    public static String getRoomAsset(Room.Type roomType) {
+    public static String getRoomAsset(RoomType roomType) {
         return switch (roomType) {
             case MONSTER -> MONSTER_ROOM_ASSET;
             case MONSTER_KILLED -> MONSTER_KILLED_ROOM_ASSET;
@@ -35,8 +35,8 @@ public class FileUtil {
         };
     }
 
-    public static InputFile getInputFile(String path) {
-        ClassPathResource imgFile = new ClassPathResource(path);
+    public static InputFile getInputFile(RoomType roomType) {
+        ClassPathResource imgFile = new ClassPathResource(getRoomAsset(roomType));
         try (InputStream inputStream = imgFile.getInputStream()) {
             return new InputFile(inputStream, imgFile.getFilename());
         } catch (IOException e) {

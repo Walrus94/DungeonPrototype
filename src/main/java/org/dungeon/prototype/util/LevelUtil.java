@@ -3,8 +3,9 @@ package org.dungeon.prototype.util;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.dungeon.prototype.model.Direction;
 import org.dungeon.prototype.model.Point;
-import org.dungeon.prototype.model.room.Room;
+import org.dungeon.prototype.model.room.RoomType;
 import org.dungeon.prototype.model.ui.level.GridSection;
 import org.dungeon.prototype.model.ui.level.LevelMap;
 import org.dungeon.prototype.service.level.WalkerBuilderIterator;
@@ -18,46 +19,30 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
-import static org.dungeon.prototype.util.LevelUtil.Direction.E;
-import static org.dungeon.prototype.util.LevelUtil.Direction.N;
-import static org.dungeon.prototype.util.LevelUtil.Direction.S;
-import static org.dungeon.prototype.util.LevelUtil.Direction.W;
+import static org.dungeon.prototype.model.Direction.E;
+import static org.dungeon.prototype.model.Direction.N;
+import static org.dungeon.prototype.model.Direction.S;
+import static org.dungeon.prototype.model.Direction.W;
 
 @Slf4j
 @UtilityClass
 public class LevelUtil {
-
-
-    public enum Direction {
-        N, E, S, W
-    }
     private static final Integer LEVEL_ONE_GRID_SIZE = 10;
     private static final Integer GRID_SIZE_INCREMENT = 1;
     private static final Integer INCREMENT_STEP = 10;
-    //TODO adjust according to level depth
-    private static final Integer MONSTER_RATIO = 40;
-    private static final Integer TREASURE_RATIO = 30;
+    //TODO: adjust according to level depth
+    private static final Integer MONSTER_RATIO = 30;
+    private static final Integer TREASURE_RATIO = 20;
     private static final Integer MERCHANT_RATIO = 10;
     private static final Integer SHRINE_RATIO = 1;
     private static final Double MAX_LENGTH_RATIO = 0.4;
     private static final Double MIN_LENGTH_RATIO = 0.2;
     private static final Integer MIN_LENGTH = 2;
     private static final Double DEAD_ENDS_RATIO = 0.1;
-    public static Room buildRoom(Point nextPoint, Room.Type type) {
-        return Room.builder()
-                .type(type)
-                .point(nextPoint)
-                .build();
-    }
-    public static Room buildRoom(Point nextPoint) {
-        return Room.builder()
-                .point(nextPoint)
-                .build();
-    }
 
     public static List<Direction> getAvailableDirections(Direction oldDirection) {
         if (oldDirection == null) {
-            return randomizeDirections(Arrays.asList(Direction.values()));
+            return randomizeDirections(Arrays.asList(Direction.values()));//TODO: randomize according number of visited rooms in this direction
         }
         return randomizeDirections(
                 Arrays.stream(Direction.values())
@@ -97,6 +82,15 @@ public class LevelUtil {
         };
     }
 
+    public static Point getNextPointInDirection(Point point, Direction direction) {
+        return switch (direction) {
+            case N -> new Point(point.getX(), point.getY() + 1);
+            case S -> new Point(point.getX(), point.getY() - 1);
+            case W -> new Point(point.getX() - 1, point.getY());
+            case E -> new Point(point.getX() + 1, point.getY());
+        };
+    }
+
     public static int calculateDeadEndsCount(int gridSize) {
         return (int) (gridSize * gridSize * DEAD_ENDS_RATIO);
     }
@@ -125,13 +119,13 @@ public class LevelUtil {
                 (walkerBuilderIterator.getCurrentPoint().getPoint().getY() > minLength);
     }
 
-    public static NavigableMap<Integer, Room.Type> getRoomTypeWeights() {
-        NavigableMap<Integer, Room.Type> roomTypesWeights = new TreeMap<>();
-        roomTypesWeights.put(MONSTER_RATIO, Room.Type.MONSTER);
-        roomTypesWeights.put(TREASURE_RATIO, Room.Type.TREASURE);
-        roomTypesWeights.put(SHRINE_RATIO, Room.Type.SHRINE);
-        roomTypesWeights.put(MERCHANT_RATIO, Room.Type.MERCHANT);
-        roomTypesWeights.put(100 - MONSTER_RATIO - TREASURE_RATIO - SHRINE_RATIO - MERCHANT_RATIO, Room.Type.NORMAL);
+    public static NavigableMap<Integer, RoomType> getRoomTypeWeights() {
+        NavigableMap<Integer, RoomType> roomTypesWeights = new TreeMap<>();
+        roomTypesWeights.put(MONSTER_RATIO, RoomType.MONSTER);
+        roomTypesWeights.put(TREASURE_RATIO, RoomType.TREASURE);
+        roomTypesWeights.put(SHRINE_RATIO, RoomType.SHRINE);
+        roomTypesWeights.put(MERCHANT_RATIO, RoomType.MERCHANT);
+        roomTypesWeights.put(100 - MONSTER_RATIO - TREASURE_RATIO - SHRINE_RATIO - MERCHANT_RATIO, RoomType.NORMAL);
         return roomTypesWeights;
     }
 
@@ -172,7 +166,7 @@ public class LevelUtil {
         return LEVEL_ONE_GRID_SIZE + increments * GRID_SIZE_INCREMENT;
     }
 
-    public static String getIcon(Optional<Room.Type> roomType) {
+    public static String getIcon(Optional<RoomType> roomType) {
         return roomType.map(type -> switch (type) {
             case NORMAL -> "\uD83D\uDFE7";
             case START -> "\uD83D\uDEAA";
@@ -210,7 +204,7 @@ public class LevelUtil {
             for (int x = 0; x < map.length; x++) {
                 if (map[x][y].getDeadEnd() || map[x][y].getCrossroad()) {
                     if (map[x][y].getDeadEnd() && !map[x][y].getCrossroad()) {
-                        result.append(getIcon(Optional.of(Room.Type.END)).equals(map[x][y].getEmoji()) ?
+                        result.append(getIcon(Optional.of(RoomType.END)).equals(map[x][y].getEmoji()) ?
                                 map[x][y].getEmoji() :
                                 getDeadEndIcon());
                     }

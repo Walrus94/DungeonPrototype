@@ -1,8 +1,8 @@
 package org.dungeon.prototype.util;
 
 import lombok.experimental.UtilityClass;
-import org.dungeon.prototype.model.Player;
-import org.dungeon.prototype.model.room.Monster;
+import org.dungeon.prototype.model.player.Player;
+import org.dungeon.prototype.model.room.content.Monster;
 
 @UtilityClass
 public class MessageUtil {

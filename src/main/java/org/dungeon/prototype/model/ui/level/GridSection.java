@@ -19,7 +19,7 @@ public class GridSection {
     private String emoji;
 
     public GridSection(Integer x, Integer y) {
-        this.point = Point.of(x, y);
+        this.point = new Point(x, y);
         this.stepsFromStart = 0;
         this.visited = false;
         this.crossroad = false;

@@ -1,6 +1,8 @@
-package org.dungeon.prototype.model.room;
+package org.dungeon.prototype.model.room.content;
 
 import lombok.Data;
+import org.dungeon.prototype.model.room.RoomContent;
+import org.dungeon.prototype.model.room.RoomType;
 
 @Data
 public class Monster implements RoomContent {
@@ -24,7 +26,7 @@ public class Monster implements RoomContent {
     }
 
     @Override
-    public Room.Type getRoomType() {
-        return Room.Type.MONSTER;
+    public RoomType getRoomType() {
+        return RoomType.MONSTER;
     }
 }

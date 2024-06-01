@@ -1,7 +1,9 @@
-package org.dungeon.prototype.model.room;
+package org.dungeon.prototype.model.room.content;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import org.dungeon.prototype.model.room.RoomContent;
+import org.dungeon.prototype.model.room.RoomType;
 
 @Data
 @AllArgsConstructor
@@ -14,7 +16,7 @@ public class Treasure implements RoomContent {
     }
 
     @Override
-    public Room.Type getRoomType() {
-        return Room.Type.TREASURE;
+    public RoomType getRoomType() {
+        return RoomType.TREASURE;
     }
 }

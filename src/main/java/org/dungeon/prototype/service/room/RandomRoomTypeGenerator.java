@@ -3,7 +3,7 @@ package org.dungeon.prototype.service.room;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.dungeon.prototype.model.room.Room;
+import org.dungeon.prototype.model.room.RoomType;
 
 import java.util.Comparator;
 import java.util.HashSet;
@@ -19,10 +19,9 @@ import static org.dungeon.prototype.util.LevelUtil.getRoomTypeWeights;
 
 @Slf4j
 public class RandomRoomTypeGenerator {
-    private final NavigableMap<Integer, Room.Type> map;
+    private final NavigableMap<Integer, RoomType> map;
     private final Random random;
-    private final int total;
-    private Queue<RoomTypesCluster> clusters =
+    private final Queue<RoomTypesCluster> clusters =
             new PriorityQueue<>(Comparator.comparing(RoomTypesCluster::getClusterWeight));
     @Getter
     private Integer roomMonsters;
@@ -40,8 +39,8 @@ public class RandomRoomTypeGenerator {
         roomTreasures = calculateAmountOfTreasures(roomTotal);
         hasShrineRoom = false;
         hasMerchantRoom = false;
-        clusterWeightRange = 200; //todo investigate calculation depending on level
-        total = map.keySet().stream().mapToInt(k -> k).sum();
+        clusterWeightRange = 200; //TODO: investigate calculation depending on level
+        int total = map.keySet().stream().mapToInt(k -> k).sum();
         log.debug("Parameters - roomMonsters: {}, roomTreasures: {}, clusterWeightRange: {}, total: {}", roomMonsters, roomTreasures, clusterWeightRange, total);
         generateClusters(roomTotal);
     }
@@ -55,7 +54,7 @@ public class RandomRoomTypeGenerator {
     }
 
     public void generateClusters(int totalRooms) {
-        val minClusterSize = 5;
+        val minClusterSize = 5;//TODO: adjust according to level depth
         val maxClusterSize = totalRooms / 5 > minClusterSize ? totalRooms / 5 : minClusterSize + 5;
         log.debug("Cluster size range: {} - {}", minClusterSize, maxClusterSize);
         while (totalRooms > maxClusterSize) {
@@ -72,7 +71,7 @@ public class RandomRoomTypeGenerator {
         var cluster = new RoomTypesCluster(totalRooms);
         var clusterWeight = cluster.getClusterWeight();
         val exclude = getExcludedRoomTypes();
-        Room.Type roomType;
+        RoomType roomType;
         while (cluster.hasRoomLeft()) {
             if (clusterWeight > -clusterWeightRange && clusterWeight < clusterWeightRange) {
                 log.debug("Generating random room...");
@@ -81,12 +80,12 @@ public class RandomRoomTypeGenerator {
                 if (clusterWeight < 0) {
                     log.debug("Positive weight room generation...");
                     var excludeNegative = new HashSet<>(exclude);
-                    excludeNegative.add(Room.Type.MONSTER);
+                    excludeNegative.add(RoomType.MONSTER);
                     roomType = nextRoomType(excludeNegative);
                 } else {
                     log.debug("Negative weight room generation...");
                     var excludePositive = new HashSet<>(exclude);
-                    excludePositive.addAll(Set.of(Room.Type.SHRINE, Room.Type.TREASURE, Room.Type.MERCHANT));
+                    excludePositive.addAll(Set.of(RoomType.SHRINE, RoomType.TREASURE, RoomType.MERCHANT));
                     roomType = nextRoomType(excludePositive);
                 }
             }
@@ -98,30 +97,30 @@ public class RandomRoomTypeGenerator {
 
 
 
-    private Set<Room.Type> getExcludedRoomTypes() {
-        Set<Room.Type> exclude = new HashSet<>();
+    private Set<RoomType> getExcludedRoomTypes() {
+        Set<RoomType> exclude = new HashSet<>();
         if (roomMonsters == 0) {
-            exclude.add(Room.Type.MONSTER);
+            exclude.add(RoomType.MONSTER);
             log.debug("No monster room left");
         }
         if (roomTreasures == 0) {
-            exclude.add(Room.Type.TREASURE);
+            exclude.add(RoomType.TREASURE);
             log.debug("No treasures room left");
         }
         if (hasShrineRoom) {
-            exclude.add(Room.Type.SHRINE);
+            exclude.add(RoomType.SHRINE);
             log.debug("Shrine already on the level");
         }
         if (hasMerchantRoom) {
-            exclude.add(Room.Type.MERCHANT);
+            exclude.add(RoomType.MERCHANT);
             log.debug("Merchant is already on the level");
         }
         return exclude;
     }
 
-    public Room.Type nextRoomType(Set<Room.Type> exclude) {
+    public RoomType nextRoomType(Set<RoomType> exclude) {
         log.debug("Generating next room type...");
-        Room.Type roomType = null;
+        RoomType roomType = null;
         if (!exclude.isEmpty()) {
             log.debug("Excluded room types: {}", exclude);
             while (roomType == null || exclude.contains(roomType)) {

@@ -1,13 +1,13 @@
 package org.dungeon.prototype.service.room;
 
 import lombok.Data;
-import org.dungeon.prototype.model.room.NormalRoom;
-import org.dungeon.prototype.model.room.Merchant;
-import org.dungeon.prototype.model.room.Monster;
-import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.RoomContent;
-import org.dungeon.prototype.model.room.Shrine;
-import org.dungeon.prototype.model.room.Treasure;
+import org.dungeon.prototype.model.room.RoomType;
+import org.dungeon.prototype.model.room.content.Merchant;
+import org.dungeon.prototype.model.room.content.Monster;
+import org.dungeon.prototype.model.room.content.NormalRoom;
+import org.dungeon.prototype.model.room.content.Shrine;
+import org.dungeon.prototype.model.room.content.Treasure;
 
 import java.util.LinkedList;
 import java.util.Optional;
@@ -53,10 +53,10 @@ public class RoomTypesCluster {
         return rooms.poll();
     }
 
-    public Integer addRoom(Room.Type roomType) {
+    public Integer addRoom(RoomType roomType) {
         switch (roomType) {
-            case MONSTER -> addRoom(new Monster(random.nextInt(6) - 1));
-            case TREASURE -> addRoom(new Treasure((random.nextInt(6) - 1) * 100));
+            case MONSTER -> addRoom(new Monster(random.nextInt(4) + 1)); //TODO: adjust according to level depth
+            case TREASURE -> addRoom(new Treasure((random.nextInt(4) + 1) * 100));
             case MERCHANT -> addRoom(new Merchant());
             case SHRINE -> addRoom(new Shrine());
             case NORMAL -> addRoom(new NormalRoom());

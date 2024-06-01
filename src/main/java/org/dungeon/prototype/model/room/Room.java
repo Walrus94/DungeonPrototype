@@ -1,48 +1,61 @@
 package org.dungeon.prototype.model.room;
 
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.dungeon.prototype.model.Direction;
 import org.dungeon.prototype.model.Point;
-import org.dungeon.prototype.util.LevelUtil;
+import org.dungeon.prototype.model.room.content.NormalRoom;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.EnumMap;
 
 
 @Slf4j
-@Getter
-@Setter
-@Builder(toBuilder = true)
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Document(collection = "rooms")
 public class Room {
-    public enum Type {
-        NORMAL, START, END, MONSTER, TREASURE, MONSTER_KILLED, TREASURE_LOOTED, SHRINE, SHRINE_DRAINED, MERCHANT
-    }
-    @Builder.Default
-    private Map<LevelUtil.Direction, Optional<Room>> adjacentRooms = getDefaultAdjacentRooms();
 
-    private static Map<LevelUtil.Direction, Optional<Room>> getDefaultAdjacentRooms() {
-        HashMap<LevelUtil.Direction, Optional<Room>> defaultMap = new HashMap<>();
-        defaultMap.put(LevelUtil.Direction.N, Optional.empty());
-        defaultMap.put(LevelUtil.Direction.W, Optional.empty());
-        defaultMap.put(LevelUtil.Direction.E, Optional.empty());
-        defaultMap.put(LevelUtil.Direction.S, Optional.empty());
-        return defaultMap;
+    public Room(Point point, Long chatId, RoomContent roomContent) {
+        this.point = point;
+        this.chatId = chatId;
+        this.roomContent = roomContent;
     }
 
-    @Builder.Default
-    private Type type = Type.NORMAL;
+    public Room(Point point, Long chatId) {
+        this.point = point;
+        this.chatId = chatId;
+        this.roomContent = new NormalRoom();
+    }
+    @Id
+    private String id;
+    private Long chatId;
+    private EnumMap<Direction, Boolean> adjacentRooms = getDefaultEnumMap();
+
+    private EnumMap<Direction, Boolean> getDefaultEnumMap() {
+        EnumMap<Direction, Boolean> map = new EnumMap<>(Direction.class);
+        map.put(Direction.N, false);
+        map.put(Direction.E, false);
+        map.put(Direction.S, false);
+        map.put(Direction.W, false);
+        return map;
+    }
+
     private RoomContent roomContent;
     private Point point;
-    public void addAdjacentRoom(LevelUtil.Direction direction, Room nextRoom) {
-        adjacentRooms.put(direction, Optional.of(nextRoom));
-        log.debug("Added adjacent room {} to {} in {} direction", nextRoom.getPoint(), point, direction);
+
+    public void addAdjacentRoom(Direction direction) {
+        adjacentRooms.put(direction, true);
+
+        log.debug("Added adjacent room to {} in {} direction", point, direction);
     }
 
     @Override
     public String toString() {
-        return "Room [type=" + type + ", point=" + point + "]";
+        return "Room [type=" + roomContent.getRoomType() + ", point=" + point + "]";
     }
 }
