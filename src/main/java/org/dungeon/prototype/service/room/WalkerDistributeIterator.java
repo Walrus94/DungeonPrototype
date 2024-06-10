@@ -3,6 +3,7 @@ package org.dungeon.prototype.service.room;
 import lombok.Builder;
 import lombok.Data;
 import org.dungeon.prototype.model.room.Room;
+import org.dungeon.prototype.model.room.RoomsSegment;
 import org.dungeon.prototype.service.WalkerUniqueIdFactory;
 
 import java.util.Objects;
@@ -14,6 +15,8 @@ public class WalkerDistributeIterator {
     private Long id = WalkerUniqueIdFactory.getInstance().getNextId();
     private Room currentRoom;
     private Room previousRoom;
+
+    private RoomsSegment segment;
 
     @Override
     public boolean equals(Object obj) {

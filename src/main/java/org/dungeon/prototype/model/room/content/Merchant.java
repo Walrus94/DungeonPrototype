@@ -13,7 +13,7 @@ public class Merchant implements RoomContent {
 
     @Override
     public Integer getRoomContentWeight() {
-        return items.stream().mapToInt(Item::getWeight).sum();
+        return 400;//items.stream().mapToInt(Item::getWeight).sum();
     }
     @Override
     public RoomType getRoomType() {

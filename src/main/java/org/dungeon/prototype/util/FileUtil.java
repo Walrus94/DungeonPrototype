@@ -18,7 +18,8 @@ public class FileUtil {
     private static final String MONSTER_KILLED_ROOM_ASSET = "static/images/room/monster_killed.png";
     private static final String TREASURE_ROOM_ASSET = "static/images/room/treasure.png";
     private static final String TREASURE_LOOTED_ROOM_ASSET = "static/images/room/treasure_looted.png";
-    private static final String SHRINE_ROOM_ASSET = "static/images/room/shrine.png";
+    private static final String SHRINE_HEALTH_ROOM_ASSET = "static/images/room/shrine_health.png";
+    private static final String SHRINE_MANA_ROOM_ASSET = "static/images/room/shrine_mana.png";
     private static final String SHRINE_DRAINED_ROOM_ASSET = "static/images/room/shrine_drained.png";
     private static final String MERCHANT_ROOM_ASSET = "static/images/room/merchant.png";
 
@@ -28,7 +29,8 @@ public class FileUtil {
             case MONSTER_KILLED -> MONSTER_KILLED_ROOM_ASSET;
             case TREASURE -> TREASURE_ROOM_ASSET;
             case TREASURE_LOOTED -> TREASURE_LOOTED_ROOM_ASSET;
-            case SHRINE -> SHRINE_ROOM_ASSET;
+            case HEALTH_SHRINE -> SHRINE_HEALTH_ROOM_ASSET;
+            case MANA_SHRINE -> SHRINE_MANA_ROOM_ASSET;
             case SHRINE_DRAINED -> SHRINE_DRAINED_ROOM_ASSET;
             case MERCHANT -> MERCHANT_ROOM_ASSET;
             default -> DEFAULT_ROOM_ASSET;

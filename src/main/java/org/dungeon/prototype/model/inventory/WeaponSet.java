@@ -15,7 +15,7 @@ public class WeaponSet {
     private List<Weapon> weapons;
 
     public boolean addWeapon(Weapon weapon) {
-        switch (weapon.getType()) {
+        switch (weapon.getHandling()) {
             case SINGLE_HANDED, TWO_HANDED -> {
                 if (weapons.size() > 0) {
                     return false;
@@ -24,7 +24,7 @@ public class WeaponSet {
                 return true;
             }
             case ADDITIONAL -> {
-                if (weapons.size() == 1 && Weapon.Type.SINGLE_HANDED.equals(weapons.getFirst().getType())) {
+                if (weapons.size() == 1 && Weapon.Handling.SINGLE_HANDED.equals(weapons.getFirst().getHandling())) {
                     weapons.add(weapon);
                     return true;
                 } else {

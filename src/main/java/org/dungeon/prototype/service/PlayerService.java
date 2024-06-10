@@ -51,6 +51,8 @@ public class PlayerService {
         player.setDefense(player.getMaxDefense());
         player.setAttack(calculateAttack(player.getWeapon(), player.getAttributes()));
         player.setXp(0L);
+        player.setPlayerLevel(PlayerLevelService.getLevel(player.getXp()));
+        player.setNextLevelXp(PlayerLevelService.calculateXPForLevel(player.getPlayerLevel() + 1));
         player.setMaxHp(90 + player.getAttributes().get(Attribute.STAMINA));
         player.setHp(player.getMaxHp());
         player.setMaxMana(6 + player.getAttributes().get(Attribute.MAGIC));

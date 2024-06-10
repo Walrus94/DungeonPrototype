@@ -12,6 +12,5 @@ public interface Effect {
     //private Attribute attribute;
     //private Action action
     //private Boolean isPermanent;
-    //private Integer turnsLeft;
     //private Integer amount
 }

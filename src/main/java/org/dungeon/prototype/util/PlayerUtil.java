@@ -43,7 +43,7 @@ public class PlayerUtil {
 
     public static WeaponSet getDefaultWeaponSet() {
         WeaponSet weaponSet = new WeaponSet();
-        weaponSet.addWeapon(new Weapon(Weapon.Type.SINGLE_HANDED, "Basic sword", 10, 15, 0));
+        weaponSet.addWeapon(new Weapon(Weapon.Handling.SINGLE_HANDED, "Basic sword", 10, 15, 0));
         return weaponSet;
     }
 

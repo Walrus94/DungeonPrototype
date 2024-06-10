@@ -30,18 +30,34 @@ public class Weapon implements Item {
         return false;
     }
 
-    public enum Type {
+    public enum Handling {
         SINGLE_HANDED, TWO_HANDED, ADDITIONAL
     }
 
-    private Type type;
+    public enum HandlerMaterial {
+        WOOD, STEEL, LEATHER, RUBBER
+    }
+
+    public enum Material {
+        WOOD, STEEL, PLATINUM, DIAMOND, ELEMENTAL
+    }
+
+    public enum Size {
+        SMALL, MEDIUM, LARGE
+    }
+
+    public enum Action {
+        PIERCE, SLASH, STUB, FIRE, DEFENSE, HEAL
+    }
+
+    private Handling handling;
     private String name;
     private Integer attack;
     private Integer sellingPrice;
     private Integer priceDelta;
 
-    public Type getType() {
-        return type;
+    public Handling getHandling() {
+        return handling;
     }
 
     public Integer getAttack() {

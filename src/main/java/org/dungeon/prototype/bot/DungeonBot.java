@@ -160,7 +160,6 @@ public class DungeonBot extends AbilityBot {
             }
             case "btn_menu_back" -> {
                 answerCallbackQuery(callBackQueryId);
-                //TODO: fix END_ROOM have no Next Level button
                 yield sendOrUpdateRoomMessage(chatId);
             }
             case "btn_next_level" -> {
@@ -200,14 +199,19 @@ public class DungeonBot extends AbilityBot {
             log.error("Unable to find room by Id:, {}", player.getCurrentRoomId());
             return false;
         }
-        //TODO: fix shrine using
-        if (!RoomType.SHRINE.equals(currentRoom.getRoomContent().getRoomType())) {
+        //TODO: fix shrines working
+        if (!RoomType.HEALTH_SHRINE.equals(currentRoom.getRoomContent().getRoomType()) &&
+                !RoomType.MANA_SHRINE.equals(currentRoom.getRoomContent().getRoomType())) {
             log.error("No shrine to use!");
             return false;
         }
         level.updateRoomType(point, RoomType.SHRINE_DRAINED);
-        player.refillHp();
-        player.refillMana();
+        if (currentRoom.getRoomContent().getRoomType().equals(RoomType.HEALTH_SHRINE)) {
+            player.refillHp();
+        }
+        if (currentRoom.getRoomContent().getRoomType().equals(RoomType.MANA_SHRINE)) {
+            player.refillMana();
+        }
         player = playerService.updatePlayer(player);
         roomService.saveOrUpdateRoom(currentRoom);
         levelService.updateLevel(level);
@@ -620,9 +624,10 @@ public class DungeonBot extends AbilityBot {
         sendPromptMessage(chatId, "Welcome to dungeon!\nPlease, enter nickname to register", nickName);
     }
 
+    //TODO: add validation by user
     private void sendPromptMessage(Long chatId, String text, String suggested) {
         ForceReplyKeyboard keyboard = ForceReplyKeyboard.builder()
-                .forceReply(true)
+                .forceReply(false)
                 .inputFieldPlaceholder(suggested)
                 .build();
         SendMessage message = SendMessage.builder()

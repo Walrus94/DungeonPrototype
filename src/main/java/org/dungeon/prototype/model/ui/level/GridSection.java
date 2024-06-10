@@ -12,8 +12,8 @@ import static org.dungeon.prototype.util.LevelUtil.getIcon;
 @NoArgsConstructor
 public class GridSection {
     private Boolean visited;
-    private Boolean deadEnd = false;
-    private Boolean crossroad = false;
+    private Boolean deadEnd;
+    private Boolean crossroad;
     private Integer stepsFromStart;
     private Point point;
     private String emoji;
@@ -23,6 +23,7 @@ public class GridSection {
         this.stepsFromStart = 0;
         this.visited = false;
         this.crossroad = false;
+        this.deadEnd = false;
         this.emoji = getIcon(Optional.empty());
     }
 }

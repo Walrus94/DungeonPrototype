@@ -74,7 +74,7 @@ public class KeyboardUtil {
                     .text("Attack!")
                     .callbackData("btn_attack")
                     .build());
-            case SHRINE -> row2.add(InlineKeyboardButton.builder()
+            case HEALTH_SHRINE, MANA_SHRINE -> row2.add(InlineKeyboardButton.builder()
                     .text("Use")
                     .callbackData("btn_shrine_use")
                     .build());

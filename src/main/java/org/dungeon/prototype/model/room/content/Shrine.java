@@ -1,20 +1,18 @@
 package org.dungeon.prototype.model.room.content;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.dungeon.prototype.model.room.RoomContent;
-import org.dungeon.prototype.model.room.RoomType;
 
-@Data
-@AllArgsConstructor
-public class Shrine implements RoomContent {
-    @Override
-    public Integer getRoomContentWeight() {
-        return 100;
-    }
 
-    @Override
-    public RoomType getRoomType() {
-        return RoomType.SHRINE;
-    }
+@JsonTypeInfo(
+        use = JsonTypeInfo.Id.NAME,
+        property = "type"
+)
+@JsonSubTypes({
+        @JsonSubTypes.Type(value = HealthShrine.class, name = "HealthShrine"),
+        @JsonSubTypes.Type(value = ManaShrine.class, name = "ManaShrine")
+})
+public abstract class Shrine implements RoomContent {
+
 }

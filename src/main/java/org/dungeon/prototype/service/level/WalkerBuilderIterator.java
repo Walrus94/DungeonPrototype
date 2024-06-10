@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 import org.dungeon.prototype.model.Direction;
 import org.dungeon.prototype.model.room.Room;
+import org.dungeon.prototype.model.room.RoomsSegment;
 import org.dungeon.prototype.model.ui.level.GridSection;
 import org.dungeon.prototype.service.WalkerUniqueIdFactory;
 
@@ -17,6 +18,7 @@ public class WalkerBuilderIterator {
     private GridSection currentPoint;
     private Direction direction;
     private Room previousRoom;
+    private RoomsSegment roomsSegment;
 
     public Integer getPathFromStart() {
         return currentPoint.getStepsFromStart();
@@ -47,5 +49,15 @@ public class WalkerBuilderIterator {
                 ", currentPoint=" + currentPoint +
                 ", direction=" + direction +
                 ", previousRoom=" + previousRoom;
+    }
+
+    public boolean hasRoomsSegment() {
+        return !Objects.isNull(this.roomsSegment);
+    }
+
+    public boolean hasOpenRoomsSegment() {
+        return !Objects.isNull(this.roomsSegment) &&
+                !Objects.isNull(this.roomsSegment.getStart()) &&
+                Objects.isNull(roomsSegment.getEnd());
     }
 }

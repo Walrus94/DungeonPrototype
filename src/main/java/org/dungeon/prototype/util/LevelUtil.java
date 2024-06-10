@@ -3,26 +3,30 @@ package org.dungeon.prototype.util;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.apache.commons.math3.util.Pair;
 import org.dungeon.prototype.model.Direction;
+import org.dungeon.prototype.model.Level;
 import org.dungeon.prototype.model.Point;
 import org.dungeon.prototype.model.room.RoomType;
+import org.dungeon.prototype.model.room.RoomsSegment;
 import org.dungeon.prototype.model.ui.level.GridSection;
 import org.dungeon.prototype.model.ui.level.LevelMap;
 import org.dungeon.prototype.service.level.WalkerBuilderIterator;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.NavigableMap;
+import java.util.Objects;
 import java.util.Optional;
-import java.util.TreeMap;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+import static org.apache.commons.math3.util.FastMath.toIntExact;
 import static org.dungeon.prototype.model.Direction.E;
 import static org.dungeon.prototype.model.Direction.N;
 import static org.dungeon.prototype.model.Direction.S;
 import static org.dungeon.prototype.model.Direction.W;
+import static org.dungeon.prototype.util.RandomUtil.flipAdjustedCoin;
 
 @Slf4j
 @UtilityClass
@@ -30,32 +34,76 @@ public class LevelUtil {
     private static final Integer LEVEL_ONE_GRID_SIZE = 10;
     private static final Integer GRID_SIZE_INCREMENT = 1;
     private static final Integer INCREMENT_STEP = 10;
-    //TODO: adjust according to level depth
-    private static final Integer MONSTER_RATIO = 30;
-    private static final Integer TREASURE_RATIO = 20;
-    private static final Integer MERCHANT_RATIO = 10;
-    private static final Integer SHRINE_RATIO = 1;
     private static final Double MAX_LENGTH_RATIO = 0.4;
     private static final Double MIN_LENGTH_RATIO = 0.2;
     private static final Integer MIN_LENGTH = 2;
-    private static final Double DEAD_ENDS_RATIO = 0.1;
 
-    public static List<Direction> getAvailableDirections(Direction oldDirection) {
-        if (oldDirection == null) {
-            return randomizeDirections(Arrays.asList(Direction.values()));//TODO: randomize according number of visited rooms in this direction
-        }
-        return randomizeDirections(
-                Arrays.stream(Direction.values())
-                        .filter(dir -> !dir.equals(oldDirection) && ! dir.equals(getOppositeDirection(oldDirection)))
-                        .collect(Collectors.toList()));
+
+    public static Optional<Direction> getRandomValidDirection(WalkerBuilderIterator walkerBuilderIterator, Level level) {
+        val grid = level.getGrid();
+        val visitedRooms = level.getRoomsMap().keySet();
+        val gridSize = grid.length;
+        val oldDirection = walkerBuilderIterator.getDirection();
+        val currentPoint = walkerBuilderIterator.getCurrentPoint();
+        val gridSections = getGridSections(grid, visitedRooms);
+        val validDirections = Arrays.stream(Direction.values())
+                .filter(dir -> !dir.equals(oldDirection) && ! dir.equals(getOppositeDirection(oldDirection)))
+                .filter(direction -> calculateMaxLengthInDirection(grid, currentPoint, direction) >= level.getMinLength())
+                .collect(Collectors.toList());
+        return getRandomDirection(validDirections, currentPoint.getPoint(), gridSections, gridSize);
     }
 
-    public static List<Direction> randomizeDirections(List<Direction> directions) {
-        Collections.shuffle(directions);
-        return directions;
+    public static Optional<Direction> getRandomDirection(List<Direction> directions, Point currentPoint, Set<GridSection> visitedRooms, int gridSize) {
+        double s, n, w, e;
+        log.debug("Randomizing direction...");
+        var nCount = toIntExact(visitedRooms.stream()
+                .map(GridSection::getPoint)
+                .filter(point -> point.getY() > currentPoint.getY())
+                .count());
+        var sCount = toIntExact(visitedRooms.stream()
+                .map(GridSection::getPoint)
+                .filter(point -> point.getY() < currentPoint.getY())
+                .count());
+        var wCount = toIntExact(visitedRooms.stream()
+                .map(GridSection::getPoint)
+                .filter(point -> point.getX() > currentPoint.getX())
+                .count());
+        var eCount = toIntExact(visitedRooms.stream()
+                .map(GridSection::getPoint)
+                .filter(point -> point.getX() < currentPoint.getX())
+                .count());
+        if (directions.contains(S)) {
+            s = nCount == 0 && sCount == 0 ?
+                    currentPoint.getY().doubleValue() / gridSize :
+                    (double) nCount / visitedRooms.size();
+        } else {
+            s = 0.0;
+        }
+        n = directions.contains(N) ? 1.0 - s : 0.0;
+
+        if (directions.contains(W)) {
+            w = eCount == 0 && wCount == 0 ?
+                    currentPoint.getX().doubleValue() / gridSize :
+                    (double) eCount / visitedRooms.size();
+        } else {
+            w = 0.0;
+        }
+        e = directions.contains(E) ? 1.0 - w : 0.0;
+        if (s + n + w + e > 0.0) {
+            return Optional.of(RandomUtil.getRandomDirection(List.of(
+                    Pair.create(S, s),
+                    Pair.create(N, n),
+                    Pair.create(W, w),
+                    Pair.create(E, e))));
+        } else {
+            return Optional.empty();
+        }
     }
 
     public static Direction getOppositeDirection(Direction direction) {
+        if (Objects.isNull(direction)) {
+            return null;
+        }
         return switch (direction) {
             case N -> S;
             case E -> W;
@@ -91,15 +139,8 @@ public class LevelUtil {
         };
     }
 
-    public static int calculateDeadEndsCount(int gridSize) {
-        return (int) (gridSize * gridSize * DEAD_ENDS_RATIO);
-    }
-
-    public static int calculateAmountOfTreasures(int roomTotal) {
-        return roomTotal * TREASURE_RATIO / 100;
-    }
-    public static int calculateAmountOfMonsters(int roomTotal) {
-        return roomTotal * MONSTER_RATIO / 100;
+    private static Set<GridSection> getGridSections(GridSection[][] grid, Set<Point> points) {
+        return points.stream().map(point -> grid[point.getX()][point.getY()]).collect(Collectors.toSet());
     }
 
     public static Integer calculateMaxLength(Integer gridSize) {
@@ -111,22 +152,69 @@ public class LevelUtil {
                 (int) (gridSize * MIN_LENGTH_RATIO);
     }
 
-    public static boolean isPossibleCrossroad(WalkerBuilderIterator walkerBuilderIterator, int minLength, int gridLength) {
-        return (walkerBuilderIterator.getPathFromStart() > 0) &&
-                (walkerBuilderIterator.getCurrentPoint().getPoint().getX() < gridLength - minLength) &&
-                (walkerBuilderIterator.getCurrentPoint().getPoint().getX() > minLength) &&
-                (walkerBuilderIterator.getCurrentPoint().getPoint().getY() < gridLength - minLength) &&
-                (walkerBuilderIterator.getCurrentPoint().getPoint().getY() > minLength);
+    public static boolean isCrossroad(WalkerBuilderIterator walkerBuilderIterator, Level level, int waitingWalkerBuilders) {
+        val currentPoint = walkerBuilderIterator.getCurrentPoint();
+        val oldDirection = walkerBuilderIterator.getDirection();
+        val pathFromStart = walkerBuilderIterator.getPathFromStart();
+        val grid = level.getGrid();
+        val levelSize = level.getRoomsMap().size();
+        val minLength = level.getMinLength();
+        val isCrossroad = flipAdjustedCoin(((double) (pathFromStart - waitingWalkerBuilders)) / (double) levelSize);
+        return isCrossroad && Arrays.stream(Direction.values())
+                .filter(direction -> !direction.equals(oldDirection) && !direction.equals(getOppositeDirection(oldDirection)))
+                .filter(direction -> calculateMaxLengthInDirection(grid, currentPoint, direction) > minLength)
+                .count() > 1;
     }
 
-    public static NavigableMap<Integer, RoomType> getRoomTypeWeights() {
-        NavigableMap<Integer, RoomType> roomTypesWeights = new TreeMap<>();
-        roomTypesWeights.put(MONSTER_RATIO, RoomType.MONSTER);
-        roomTypesWeights.put(TREASURE_RATIO, RoomType.TREASURE);
-        roomTypesWeights.put(SHRINE_RATIO, RoomType.SHRINE);
-        roomTypesWeights.put(MERCHANT_RATIO, RoomType.MERCHANT);
-        roomTypesWeights.put(100 - MONSTER_RATIO - TREASURE_RATIO - SHRINE_RATIO - MERCHANT_RATIO, RoomType.NORMAL);
-        return roomTypesWeights;
+
+
+    public static Integer calculateMaxLengthInDirection(GridSection[][] grid, GridSection startSection, Direction direction) {
+        log.debug("Calculating max length in {} direction...", direction);
+        GridSection currentSection = null;
+        var path = 0;
+        while (currentSection == null || !currentSection.getVisited()) {
+            if (currentSection == null) {
+                currentSection = startSection;
+            }
+            val nextPoint = getNextPointInDirection(currentSection.getPoint(), direction);
+            if (isPointOnGrid(nextPoint, grid.length)) {
+                val nextSection = grid[nextPoint.getX()][nextPoint.getY()];
+                if (nextSection.getVisited()) {
+                    log.debug("Visited room reached, returning max length of {}", path);
+                    return path;
+                }
+                val nextNextPoint = getNextPointInDirection(nextPoint, direction);
+                if (isPointOnGrid(nextNextPoint, grid.length)) {
+                    val nextNextSection = grid[nextNextPoint.getX()][nextNextPoint.getY()];
+                    if (nextNextSection.getVisited()) {
+                        log.debug("Visited room is one step away, returning max length of {}", path);
+                        return path;
+                    }
+                    currentSection = nextSection;
+                    log.debug("Adding {} step...", currentSection.getPoint());
+                    path++;
+                    log.debug("Current path length: {}", path);
+                } else {
+                    log.debug("Edge of map is one step away, returning max length of {}", path);
+                    return path;
+                }
+            } else {
+                log.debug("Edge of map reached, returning max length of {}", path);
+                return path;
+            }
+        }
+        return path;
+    }
+
+    private static boolean isPointOnGrid(Point nextPoint, int gridSize) {
+        return nextPoint.getY() < gridSize && nextPoint.getY() > -1 &&
+                nextPoint.getX() < gridSize && nextPoint.getX() > -1;
+    }
+
+    public static RoomsSegment getMainSegment(Level level) {
+        val startSection = level.getGrid()[level.getStart().getPoint().getX()][level.getStart().getPoint().getY()];
+        val endSection = level.getGrid()[level.getEnd().getPoint().getX()][level.getEnd().getPoint().getY()];
+        return new RoomsSegment(startSection, endSection);
     }
 
 
@@ -174,7 +262,8 @@ public class LevelUtil {
             case MONSTER_KILLED -> "\uD83D\uDC80";
             case TREASURE -> "\uD83D\uDCB0";
             case TREASURE_LOOTED -> "\uD83D\uDDD1";
-            case SHRINE -> "\uD83D\uDD2E";
+            case MANA_SHRINE -> "\uD83D\uDD2E";
+            case HEALTH_SHRINE -> "\uD83C\uDFE5";
             case SHRINE_DRAINED -> "\uD83E\uDEA6";
             case END -> "\uD83C\uDFC1";
             case MERCHANT -> "\uD83E\uDDD9";

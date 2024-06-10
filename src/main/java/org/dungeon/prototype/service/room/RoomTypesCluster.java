@@ -2,24 +2,18 @@ package org.dungeon.prototype.service.room;
 
 import lombok.Data;
 import org.dungeon.prototype.model.room.RoomContent;
-import org.dungeon.prototype.model.room.RoomType;
-import org.dungeon.prototype.model.room.content.Merchant;
-import org.dungeon.prototype.model.room.content.Monster;
-import org.dungeon.prototype.model.room.content.NormalRoom;
-import org.dungeon.prototype.model.room.content.Shrine;
-import org.dungeon.prototype.model.room.content.Treasure;
 
 import java.util.LinkedList;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Queue;
-import java.util.Random;
 import java.util.stream.Collectors;
 
+import static org.apache.commons.math3.util.FastMath.abs;
 import static org.dungeon.prototype.util.LevelUtil.getIcon;
 
 @Data
 public class RoomTypesCluster {
-    Random random = new Random();
     private Queue<RoomContent> rooms = new LinkedList<>();
     private Integer totalRooms;
 
@@ -28,18 +22,34 @@ public class RoomTypesCluster {
     }
 
     public Integer getClusterWeight() {
-        if (rooms.isEmpty()) {
-            return 0;
-        }
-        return rooms.stream()
+        return Objects.isNull(rooms) || rooms.isEmpty() ? 0 : rooms.stream()
                 .mapToInt(RoomContent::getRoomContentWeight)
                 .sum();
     }
-
-    private void addRoom(RoomContent roomContent) {
-        rooms.add(roomContent);
-        totalRooms--;
+    public Integer getLastAddedWeight() {
+        return Objects.isNull(rooms) || rooms.isEmpty() ? 0 : rooms.peek().getRoomContentWeight();
     }
+
+    public Integer getMiddleWeight() {
+        return Objects.isNull(rooms) ? null : rooms.isEmpty() ? 0 : rooms.stream()
+                .mapToInt(RoomContent::getRoomContentWeight)
+                .sum() / rooms.size();
+    }
+
+    public Integer getMiddleAbsWeight() {
+        return Objects.isNull(rooms) || rooms.isEmpty() ? 0 : rooms.stream()
+                .mapToInt(roomContent -> abs(roomContent.getRoomContentWeight()))
+                .sum() / rooms.size();
+    }
+
+    public Integer addRoom(RoomContent roomContent) {
+        if (rooms.add(roomContent)) {
+            totalRooms--;
+            return roomContent.getRoomContentWeight();
+        }
+        return null;
+    }
+
 
     public boolean hasRoomLeft() {
         return totalRooms > 0;
@@ -51,17 +61,6 @@ public class RoomTypesCluster {
 
     public RoomContent getNextRoom() {
         return rooms.poll();
-    }
-
-    public Integer addRoom(RoomType roomType) {
-        switch (roomType) {
-            case MONSTER -> addRoom(new Monster(random.nextInt(4) + 1)); //TODO: adjust according to level depth
-            case TREASURE -> addRoom(new Treasure((random.nextInt(4) + 1) * 100));
-            case MERCHANT -> addRoom(new Merchant());
-            case SHRINE -> addRoom(new Shrine());
-            case NORMAL -> addRoom(new NormalRoom());
-        }
-        return getClusterWeight();
     }
 
     @Override

@@ -6,6 +6,7 @@ import org.dungeon.prototype.model.Direction;
 import org.dungeon.prototype.model.Point;
 import org.dungeon.prototype.model.inventory.ArmorSet;
 import org.dungeon.prototype.model.inventory.WeaponSet;
+import org.dungeon.prototype.service.PlayerLevelService;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -25,6 +26,8 @@ public class Player {
     private Direction direction;
     private Integer gold;
     private Long xp;
+    private Integer playerLevel;
+    private Long nextLevelXp;
     private Integer hp;
     private Integer maxHp;
     private Integer mana;
@@ -41,6 +44,7 @@ public class Player {
     @Transient
     public void addXp(Integer xpReward) {
         xp += xpReward;
+        playerLevel = PlayerLevelService.getLevel(xp);
     }
 
     @Transient
