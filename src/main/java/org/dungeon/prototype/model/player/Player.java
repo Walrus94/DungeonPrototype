@@ -2,23 +2,20 @@ package org.dungeon.prototype.model.player;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.dungeon.prototype.model.Direction;
 import org.dungeon.prototype.model.Point;
-import org.dungeon.prototype.model.inventory.ArmorSet;
-import org.dungeon.prototype.model.inventory.WeaponSet;
+import org.dungeon.prototype.model.inventory.Inventory;
 import org.dungeon.prototype.service.PlayerLevelService;
-import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
-import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.EnumMap;
 
 @Data
+@Slf4j
 @NoArgsConstructor
-@Document(collection = "players")
 public class Player {
-
-    @Id
+    private String id;
     private Long chatId;
     private String nickname;
     private Point currentRoom;
@@ -32,13 +29,10 @@ public class Player {
     private Integer maxHp;
     private Integer mana;
     private Integer maxMana;
-    private Integer attack;
     private Integer defense;
     private Integer maxDefense;
-    private ArmorSet armor;
-    private WeaponSet weapon;
-
-    EnumMap<Attribute, Integer> attributes;
+    private Inventory inventory;
+    EnumMap<PlayerAttribute, Integer> attributes;
 
     //TODO: move to service and use queries through repository
     @Transient
@@ -46,24 +40,18 @@ public class Player {
         xp += xpReward;
         playerLevel = PlayerLevelService.getLevel(xp);
     }
-
-    @Transient
-    public void decreaseHp(int amount) {
-        hp -= amount;
-    }
-    @Transient
     public void decreaseDefence(int amount) {
         defense -= amount;
     }
-    @Transient
+    public void decreaseHp(int amount) {
+        hp -= amount;
+    }
     public void addGold(int amount) {
         gold += amount;
     }
-    @Transient
     public void refillHp() {
         hp = maxHp;
     }
-    @Transient
     public void refillMana() {
         mana = maxMana;
     }

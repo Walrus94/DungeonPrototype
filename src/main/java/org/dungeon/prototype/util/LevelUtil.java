@@ -31,14 +31,16 @@ import static org.dungeon.prototype.util.RandomUtil.flipAdjustedCoin;
 @Slf4j
 @UtilityClass
 public class LevelUtil {
-    private static final Integer LEVEL_ONE_GRID_SIZE = 10;
-    private static final Integer GRID_SIZE_INCREMENT = 1;
-    private static final Integer INCREMENT_STEP = 10;
-    private static final Double MAX_LENGTH_RATIO = 0.4;
-    private static final Double MIN_LENGTH_RATIO = 0.2;
-    private static final Integer MIN_LENGTH = 2;
-
-
+    public static RoomType getMonsterKilledRoomType(RoomType roomType) {
+        return switch (roomType) {
+            case WEREWOLF -> RoomType.WEREWOLF_KILLED;
+            case VAMPIRE -> RoomType.VAMPIRE_KILLED;
+            case SWAMP_BEAST -> RoomType.SWAMP_BEAST_KILLED;
+            case DRAGON -> RoomType.DRAGON_KILLED;
+            case ZOMBIE -> RoomType.ZOMBIE_KILLED;
+            default -> throw new IllegalStateException("Unexpected value: " + roomType);
+        };
+    }
     public static Optional<Direction> getRandomValidDirection(WalkerBuilderIterator walkerBuilderIterator, Level level) {
         val grid = level.getGrid();
         val visitedRooms = level.getRoomsMap().keySet();
@@ -143,15 +145,6 @@ public class LevelUtil {
         return points.stream().map(point -> grid[point.getX()][point.getY()]).collect(Collectors.toSet());
     }
 
-    public static Integer calculateMaxLength(Integer gridSize) {
-        return (int) (gridSize * MAX_LENGTH_RATIO);
-    }
-
-    public static Integer calculateMinLength(Integer gridSize) {
-        return (int) (gridSize * MIN_LENGTH_RATIO) < MIN_LENGTH ? MIN_LENGTH :
-                (int) (gridSize * MIN_LENGTH_RATIO);
-    }
-
     public static boolean isCrossroad(WalkerBuilderIterator walkerBuilderIterator, Level level, int waitingWalkerBuilders) {
         val currentPoint = walkerBuilderIterator.getCurrentPoint();
         val oldDirection = walkerBuilderIterator.getDirection();
@@ -249,17 +242,12 @@ public class LevelUtil {
         return grid;
     }
 
-    public static Integer calculateGridSize(Integer levelNumber) {
-        val increments = (levelNumber - 1) / INCREMENT_STEP;
-        return LEVEL_ONE_GRID_SIZE + increments * GRID_SIZE_INCREMENT;
-    }
-
     public static String getIcon(Optional<RoomType> roomType) {
         return roomType.map(type -> switch (type) {
             case NORMAL -> "\uD83D\uDFE7";
             case START -> "\uD83D\uDEAA";
-            case MONSTER -> "\uD83D\uDC7E";
-            case MONSTER_KILLED -> "\uD83D\uDC80";
+            case WEREWOLF, VAMPIRE, SWAMP_BEAST, DRAGON, ZOMBIE -> "\uD83D\uDC7E";
+            case WEREWOLF_KILLED, VAMPIRE_KILLED, SWAMP_BEAST_KILLED, DRAGON_KILLED, ZOMBIE_KILLED -> "\uD83D\uDC80";
             case TREASURE -> "\uD83D\uDCB0";
             case TREASURE_LOOTED -> "\uD83D\uDDD1";
             case MANA_SHRINE -> "\uD83D\uDD2E";

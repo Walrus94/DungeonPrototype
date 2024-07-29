@@ -1,13 +1,13 @@
 package org.dungeon.prototype.repository.converters;
 
-import org.dungeon.prototype.model.player.Attribute;
+import org.dungeon.prototype.model.player.PlayerAttribute;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.convert.WritingConverter;
 
 @WritingConverter
-public class AttributeWritingConverter implements Converter<Attribute, String> {
+public class AttributeWritingConverter implements Converter<PlayerAttribute, String> {
     @Override
-    public String convert(Attribute source) {
+    public String convert(PlayerAttribute source) {
         return source.getValue();
     }
 }

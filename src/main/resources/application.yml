@@ -1,0 +1,497 @@
+spring:
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/
+      database: dungeon_proto_db
+
+huggingface:
+  api:
+    url: http://localhost:5000/generate
+
+keyboard:
+  emoji:
+    treasure: "\uD83D\uDCB0"
+  template-replacement: "?"
+  buttons:
+    start-game:
+      callback: btn_start_game
+      name: Start Game
+    continue-game:
+      callback: btn_continue_game
+      name: Continue Game
+    next-level:
+      callback: btn_next_level
+      name: Next Level
+    left:
+      callback: btn_left
+      name: Left
+    right:
+      callback: btn_right
+      name: Right
+    forward:
+      callback: btn_forward
+      name: Forward
+    back:
+      callback: btn_turn_back
+      name: Turn Back
+    attack:
+      callback: btn_attack
+      name: Attack!
+    secondary-attack:
+      callback: btn_attack_sec
+      name: Secondary attack!
+    menu:
+      callback: btn_menu
+      name: Menu
+    map:
+      callback: btn_menu
+      name: Map
+    menu-back:
+      callback: btn_menu_back
+      name: Back
+    shrine:
+      callback: btn_shrine_use
+      name: Use
+    merchant:
+      callback: btn_merchant
+      name: Buy and sell!
+    treasure-open:
+      callback: btn_treasure_open
+      name: Open
+    treasure-gold-collected:
+      callback: btn_treasure_gold_collected
+      name: ${keyboard.template-replacement} ${keyboard.emoji.treasure}
+    item-collected:
+      callback: btn_treasure_item_collected_${keyboard.template-replacement}
+      name: ${keyboard.template-replacement}
+    collect-all:
+      callback: btn_treasure_collect_all
+      name: Collect all
+    inventory:
+      callback: btn_inventory
+      name: Inventory
+    head:
+      callback: btn_inventory_head_${keyboard.template-replacement}
+      name: ${keyboard.template-replacement} (un-equip)
+    vest:
+      callback: btn_inventory_vest_${keyboard.template-replacement}
+      name: ${keyboard.template-replacement} (un-equip)
+    gloves:
+      callback: btn_inventory_gloves_${keyboard.template-replacement}
+      name: ${keyboard.template-replacement} (un-equip)
+    boots:
+      callback: btn_inventory_boots_${keyboard.template-replacement}
+      name: ${keyboard.template-replacement} (un-equip)
+    right-hand:
+      callback: btn_inventory_primary_weapon_${keyboard.template-replacement}
+      name: ${keyboard.template-replacement} (un-equip)
+    left-hand:
+      callback: btn_inventory_secondary_weapon_${keyboard.template-replacement}
+      name: ${keyboard.template-replacement} (un-equip)
+    item-inventory:
+      callback: btn_inventory_item_${keyboard.template-replacement}
+      name: ${keyboard.template-replacement} (equip)
+    item-merchant:
+      callback: btn_merchant_item_${keyboard.template-replacement}
+
+generation:
+  level:
+    level-one-grid-size: 10
+    grid-size-increment: 1
+    increment-step: 10
+    max-length-ratio: 0.4
+    min-length-ratio: 0.2
+    min-length: 2
+  monsters:
+    zombie:
+      primary-attack-ratio: 2
+      primary-attack-bonus: 3
+      secondary-attack-ratio: 2
+      secondary-attack-bonus: 3
+      health-ratio: 5
+      health-bonus: 3
+      weight-primary-attack-multiplier: 5
+      weight-secondary-attack-multiplier: 0
+    werewolf:
+      primary-attack-ratio: 4
+      primary-attack-bonus: 2
+      secondary-attack-ratio: 3
+      secondary-attack-bonus: 2
+      health-ratio: 7
+      health-bonus: 4
+      weight-primary-attack-multiplier: 3
+      weight-secondary-attack-multiplier: 2
+    swamp-beast:
+      primary-attack-ratio: 2
+      primary-attack-bonus: 3
+      secondary-attack-ratio: 1
+      secondary-attack-bonus: 2
+      health-ratio: 6
+      health-bonus: 2
+      weight-primary-attack-multiplier: 7
+      weight-secondary-attack-multiplier: 5
+    vampire:
+      primary-attack-ratio: 4
+      primary-attack-bonus: 2
+      secondary-attack-ratio: 2
+      secondary-attack-bonus: 3
+      health-ratio: 5
+      health-bonus: 3
+      weight-primary-attack-multiplier: 10
+      weight-secondary-attack-multiplier: 8
+    dragon:
+      primary-attack-ratio: 7
+      primary-attack-bonus: 4
+      secondary-attack-ratio: 6
+      secondary-attack-bonus: 3
+      health-ratio: 7
+      health-bonus: 4
+      weight-primary-attack-multiplier: 5
+      weight-secondary-attack-multiplier: 3
+  items:
+    selling-price-ratio: 0.9
+    buying-price-ratio: 1.2
+    weapon:
+      weapon-attributes-pool-size: 1000
+      weapon-per-game: 100
+      default-attributes:
+        sword:
+          attack: 6
+          critical-hit-chance: 0.3
+          chance-to-miss: 0.5
+          chance-to-knock-out: 0.0
+        axe:
+          attack: 8
+          critical-hit-chance: 0.3
+          chance-to-miss: 0.7
+          chance-to-knock-out: 0.1
+        mace:
+          attack: 8
+          critical-hit-chance: 0.3
+          chance-to-miss: 0.6
+          chance-to-knock-out: 0.2
+        club:
+          attack: 8
+          critical-hit-chance: 0.2
+          chance-to-miss: 0.5
+          chance-to-knock-out: 0.4
+        dagger:
+          attack: 4
+          critical-hit-chance: 0.4
+          chance-to-miss: 0.4
+          chance-to-knock-out: 0.0
+        spear:
+          attack: 7
+          critical-hit-chance: 0.3
+          chance-to-miss: 0.6
+          chance-to-knock-out: 0.2
+        staff:
+          attack: 5
+          critical-hit-chance: 0.3
+          chance-to-miss: 0.2
+          chance-to-knock-out: 0.0
+      handling-adjustment-attributes:
+        single-handed:
+          attack-ratio: 0.95
+          chance-to-miss-ratio: 0.9
+          critical-chance-ratio: 1.05
+          knock-out-chance-ratio: 1.0
+        additional:
+          attack-ratio: 0.95
+          chance-to-miss-ratio: 0.9
+          critical-chance-ratio: 1.05
+          knock-out-chance-ratio: 1.0
+        two-handed:
+          attack-ratio: 1.15
+          chance-to-miss-ratio: 1.1
+          critical-chance-ratio: 0.95
+          knock-out-chance-ratio: 1.0
+      weapon-material-adjustment-attributes:
+        steel:
+          attack-ratio: 1.1
+          chance-to-miss-ratio: 1.0
+          critical-chance-ratio: 1.0
+          knock-out-chance-ratio: 1.0
+        wood:
+          attack-ratio: 1.0
+          chance-to-miss-ratio: 1.0
+          critical-chance-ratio: 1.0
+          knock-out-chance-ratio: 0.9
+        stone:
+          attack-ratio: 1.2
+          chance-to-miss-ratio: 1.0
+          critical-chance-ratio: 1.0
+          knock-out-chance-ratio: 1.2
+        iron:
+          attack-ratio: 1.1
+          chance-to-miss-ratio: 1.0
+          critical-chance-ratio: 1.1
+          knock-out-chance-ratio: 1.0
+        platinum:
+          attack-ratio: 1.0
+          chance-to-miss-ratio: 1.0
+          critical-chance-ratio: 1.3
+          knock-out-chance-ratio: 1.0
+        diamond:
+          attack-ratio: 1.3
+          chance-to-miss-ratio: 1.0
+          critical-chance-ratio: 1.3
+          knock-out-chance-ratio: 1.0
+        mithril:
+          attack-ratio: 1.5
+          chance-to-miss-ratio: 1.0
+          critical-chance-ratio: 1.5
+          knock-out-chance-ratio: 1.0
+        obsidian:
+          attack-ratio: 1.4
+          chance-to-miss-ratio: 1.0
+          critical-chance-ratio: 1.4
+          knock-out-chance-ratio: 1.0
+        enchanted-wood:
+          attack-ratio: 1.1
+          chance-to-miss-ratio: 1.0
+          critical-chance-ratio: 1.0
+          knock-out-chance-ratio: 1.0
+        dragon-bone:
+          attack-ratio: 1.3
+          chance-to-miss-ratio: 1.0
+          critical-chance-ratio: 1.2
+          knock-out-chance-ratio: 1.0
+      weapon-handler-material-adjustment-attributes:
+        wood:
+          attack-ratio: 1.0
+          chance-to-miss-ratio: 1.0
+          critical-chance-ratio: 1.0
+          knock-out-chance-ratio: 1.0
+        steel:
+          attack-ratio: 1.0
+          chance-to-miss-ratio: 1.0
+          critical-chance-ratio: 1.05
+          knock-out-chance-ratio: 1.0
+        leather:
+          attack-ratio: 1.0
+          chance-to-miss-ratio: 0.9
+          critical-chance-ratio: 1.0
+          knock-out-chance-ratio: 1.0
+        treated-leather:
+          attack-ratio: 1.0
+          chance-to-miss-ratio: 0.6
+          critical-chance-ratio: 1.15
+          knock-out-chance-ratio: 1.0
+        dragon-bone:
+          attack-ratio: 1.3
+          chance-to-miss-ratio: 1.0
+          critical-chance-ratio: 1.2
+          knock-out-chance-ratio: 1.0
+      complete-material-adjustment-attributes:
+        dragon-bone:
+          attack-ratio: 1.5
+          chance-to-miss-ratio: 0.3
+          critical-chance-ratio: 1.7
+          knock-out-chance-ratio: 1.0
+          first-hit-addition: 5
+        wood:
+          attack-ratio: 1.0
+          chance-to-miss-ratio: 1.0
+          critical-chance-ratio: 1.0
+          knock-out-chance-ratio: 1.1
+          first-hit-addition: 0
+        steel:
+          attack-ratio: 1.1
+          chance-to-miss-ratio: 1.0
+          critical-chance-ratio: 1.0
+          knock-out-chance-ratio: 1.0
+          first-hit-addition: 0
+      size-adjustment-attributes:
+        small:
+          attack-ratio: 0.9
+          chance-to-miss-ratio: 0.8
+        medium:
+          attack-ratio: 1.0
+          chance-to-miss-ratio: 0.9
+        large:
+          attack-ratio: 1.2
+          chance-to-miss-ratio: 1.15
+      attack-type-adjustment-attributes:
+        stab:
+          attack-ratio: 1.0
+          critical-chance-ratio: 1.3
+          knock-out-chance-ratio: 0.0
+        slash:
+          attack-ratio: 1.2
+          critical-chance-ratio: 1.0
+          knock-out-chance-ratio: 0.0
+        blunt:
+          attack-ratio: 1.0
+          critical-chance-ratio: 1.0
+          knock-out-chance-ratio: 1.4
+        strike:
+          attack-ratio: 1.0
+          knock-out-chance-ratio: 1.0
+          critical-chance-ratio: 1.0
+
+      quality-adjustment-ratio:
+        common: 0.8
+        rare: 1.1
+        epic: 1.3
+        legendary: 1.4
+        mythic: 1.6
+
+    wearables:
+      wearables-per-game: 100
+      wearable-min-effects-play: 1
+      wearable-max-effects-play: 2
+
+      default-armor: 5
+      chance-to-dodge-ratio:
+        cloth: 0.0
+        leather: 0.3
+        iron: 0.2
+        steel: 0.1
+        chain-mail: 0.0
+        enchanted-leather: 0.3
+        treated-leather: 0.4
+        mithril: 0.0
+        elven-silk: 0.0
+        wool: 0.0
+      armor-bonus:
+        cloth: -2
+        leather: -1
+        treated-leather: 0
+        enchanted-leather: -1
+        iron: 2
+        steel: 3
+        chain-mail: 4
+        elven-silk: 0
+        mithril: 4
+        wool: 0
+      quality-adjustment-ratio:
+        common: 0.8
+        rare: 1.1
+        epic: 1.3
+        legendary: 1.4
+        mythic: 1.6
+
+battle:
+  player-defense-ratio-matrix:
+    slash:
+      material-defense-ratio-map:
+        iron: 0.7
+        steel: 0.8
+        mithril: 1.1
+    growl:
+      material-defense-ratio-map:
+        iron: 1.0
+        steel: 0.9
+        mithril: 0.7
+    vampire-bite:
+      material-defense-ratio-map:
+        cloth: 0.6
+        leather: 0.7
+        iron: 0.85
+        steel: 0.9
+        chain-mail: 0.95
+        enchanted-leather: 1.2
+        treated-leather: 0.8
+        mithril: 1.3
+    bite:
+      material-defense-ratio-map:
+        cloth: 0.6
+        leather: 0.7
+        iron: 1.1
+        steel: 1.15
+        chain-mail: 1.2
+        enchanted-leather: 0.7
+        treated-leather: 0.8
+        mithril: 1.2
+    fire-spit:
+      material-defense-ratio-map:
+        cloth: 0.3
+        leather: 0.35
+        iron: 0.7
+        steel: 0.8
+        chain-mail: 0.85
+        enchanted-leather: 0.75
+        treated-leather: 0.65
+        mithril: 1.1
+    poison-spit:
+      material-defense-ratio-map:
+        cloth: 0.4
+        leather: 0.65
+        iron: 0.5
+        steel: 0.55
+        chain-mail: 0.6
+        enchanted-leather: 0.8
+        treated-leather: 0.7
+        mithril: 1.15
+#  TODO: adjust values
+  monster-defense-ratio-matrix:
+    slash:
+      monster-defense-ratio-map:
+        dragon: 1.0
+        swamp-beast: 1.0
+        vampire: 1.0
+        werewolf: 1.0
+        zombie: 1.0
+    strike:
+      monster-defense-ratio-map:
+        dragon: 1.0
+        swamp-beast: 1.0
+        vampire: 1.0
+        werewolf: 1.0
+        zombie: 1.0
+    blunt:
+      monster-defense-ratio-map:
+        dragon: 1.0
+        swamp-beast: 1.0
+        vampire: 1.0
+        werewolf: 1.0
+        zombie: 1.0
+    stab:
+      monster-defense-ratio-map:
+        dragon: 1.0
+        swamp-beast: 1.0
+        vampire: 1.0
+        werewolf: 1.0
+        zombie: 1.0
+
+player:
+  attributes: #TODO: consider different classes
+    power: 5
+    stamina: 4
+    perception: 3
+    magic: 1
+    luck: 2
+
+logging:
+  level:
+    org:
+      dungeon:
+        prototype:
+          bot:
+            DungeonBot: DEBUG
+          model:
+            room:
+              Room: DEBUG
+            Level: DEBUG
+          service:
+            PlayerLevelService: DEBUG
+            BattleService: DEBUG
+            room:
+              generation:
+                RandomRoomTypeGenerator: DEBUG
+                RoomContentRandomFactory: DEBUG
+            level:
+              LevelService: DEBUG
+            item:
+              ItemGenerator: DEBUG
+              ItemService: DEBUG
+              ItemNamingService: DEBUG
+          util:
+            RoomGenerationUtils: DEBUG
+            LevelUtil: DEBUG
+            RandomUtil: DEBUG
+
+bot:
+  username: dungeon_prototype_bot
+  token:

@@ -1,13 +1,13 @@
 package org.dungeon.prototype.config;
 
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
 import org.dungeon.prototype.repository.converters.AttributeReadingConverter;
 import org.dungeon.prototype.repository.converters.AttributeWritingConverter;
 import org.dungeon.prototype.repository.converters.DirectionReadingConverter;
 import org.dungeon.prototype.repository.converters.DirectionWritingConverter;
 import org.dungeon.prototype.repository.converters.PointReadingConverter;
 import org.dungeon.prototype.repository.converters.PointWritingConverter;
+import org.dungeon.prototype.repository.converters.WearableTypeReadingConverter;
+import org.dungeon.prototype.repository.converters.WearableTypeWritingConverter;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,15 +32,10 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
     @Bean
     @NotNull
     @Override
-    public MongoClient mongoClient() {
-        return MongoClients.create("mongodb://localhost:27017");
-    }
-
-    @Bean
-    @NotNull
-    @Override
     public MongoCustomConversions customConversions() {
         List<Converter<?, ?>> converters = new ArrayList<>();
+        converters.add(new WearableTypeReadingConverter());
+        converters.add(new WearableTypeWritingConverter());
         converters.add(new AttributeReadingConverter());
         converters.add(new AttributeWritingConverter());
         converters.add(new DirectionReadingConverter());

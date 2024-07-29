@@ -6,18 +6,17 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.dungeon.prototype.model.Direction;
 import org.dungeon.prototype.model.Point;
-import org.dungeon.prototype.model.room.content.NormalRoom;
+import org.dungeon.prototype.model.room.content.RoomContent;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.EnumMap;
+import java.util.Objects;
 
 
 @Slf4j
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(collection = "rooms")
 public class Room {
 
     public Room(Point point, Long chatId, RoomContent roomContent) {
@@ -26,11 +25,6 @@ public class Room {
         this.roomContent = roomContent;
     }
 
-    public Room(Point point, Long chatId) {
-        this.point = point;
-        this.chatId = chatId;
-        this.roomContent = new NormalRoom();
-    }
     @Id
     private String id;
     private Long chatId;
@@ -56,6 +50,7 @@ public class Room {
 
     @Override
     public String toString() {
-        return "Room [type=" + roomContent.getRoomType() + ", point=" + point + "]";
+        return Objects.isNull(roomContent) ? "Point=" + point :
+                "Room [type=" + roomContent.getRoomType() + ", point=" + point + "]";
     }
 }

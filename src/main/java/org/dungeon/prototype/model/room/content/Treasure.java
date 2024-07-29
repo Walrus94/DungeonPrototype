@@ -1,18 +1,23 @@
 package org.dungeon.prototype.model.room.content;
 
-import lombok.AllArgsConstructor;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
-import org.dungeon.prototype.model.room.RoomContent;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.room.RoomType;
 
 @Data
-@AllArgsConstructor
-public class Treasure implements RoomContent {
-    private Integer reward;
-
+@NoArgsConstructor
+@EqualsAndHashCode(callSuper = false)
+public class Treasure extends BonusRoom {
+    @NotNull
+    @Positive
+    private Integer gold;
     @Override
     public Integer getRoomContentWeight() {
-        return reward;
+        return gold + items.stream().mapToInt(Item::getWeight).sum();
     }
 
     @Override

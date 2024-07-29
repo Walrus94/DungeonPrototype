@@ -4,19 +4,24 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.model.Level;
 import org.dungeon.prototype.model.Point;
+import org.dungeon.prototype.model.document.level.LevelDocument;
+import org.dungeon.prototype.model.player.Player;
 import org.dungeon.prototype.model.room.Room;
-import org.dungeon.prototype.model.room.RoomContent;
+import org.dungeon.prototype.model.room.content.NormalRoom;
+import org.dungeon.prototype.model.room.content.RoomContent;
 import org.dungeon.prototype.model.room.RoomType;
 import org.dungeon.prototype.model.room.RoomsSegment;
 import org.dungeon.prototype.model.room.content.EndRoom;
 import org.dungeon.prototype.model.room.content.StartRoom;
 import org.dungeon.prototype.model.ui.level.GridSection;
 import org.dungeon.prototype.model.ui.level.LevelMap;
+import org.dungeon.prototype.properties.GenerationProperties;
 import org.dungeon.prototype.repository.LevelRepository;
-import org.dungeon.prototype.service.room.RandomRoomTypeGenerator;
+import org.dungeon.prototype.repository.converters.mapstruct.LevelMapper;
 import org.dungeon.prototype.service.room.RoomService;
-import org.dungeon.prototype.service.room.RoomTypesCluster;
-import org.dungeon.prototype.service.room.WalkerDistributeIterator;
+import org.dungeon.prototype.service.room.generation.RandomRoomTypeGenerator;
+import org.dungeon.prototype.service.room.generation.RoomTypesCluster;
+import org.dungeon.prototype.service.room.generation.WalkerDistributeIterator;
 import org.dungeon.prototype.util.RandomUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -30,12 +35,11 @@ import java.util.Optional;
 import java.util.PriorityQueue;
 import java.util.Queue;
 
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 import static org.apache.commons.math3.util.FastMath.min;
 import static org.apache.commons.math3.util.FastMath.toIntExact;
-import static org.dungeon.prototype.util.LevelUtil.calculateGridSize;
-import static org.dungeon.prototype.util.LevelUtil.calculateMaxLength;
 import static org.dungeon.prototype.util.LevelUtil.calculateMaxLengthInDirection;
-import static org.dungeon.prototype.util.LevelUtil.calculateMinLength;
 import static org.dungeon.prototype.util.LevelUtil.generateEmptyMapGrid;
 import static org.dungeon.prototype.util.LevelUtil.getIcon;
 import static org.dungeon.prototype.util.LevelUtil.getNextPointInDirection;
@@ -53,29 +57,43 @@ public class LevelService {
     private LevelRepository levelRepository;
     @Autowired
     private RoomService roomService;
+    @Autowired
+    private RandomRoomTypeGenerator randomRoomTypeGenerator;
+    @Autowired
+    private GenerationProperties generationProperties;
 
-    public Level saveNewLevel(Long chatId,  Integer levelNumber) {
-        var level = generateLevel(chatId, levelNumber);
+    public Level startNewLevel(Long chatId, Player player, Integer levelNumber) {
+        var level = generateLevel(chatId, player, levelNumber);
+        val direction = level.getStart().getAdjacentRooms().entrySet().stream()
+                .filter(entry -> Objects.nonNull(entry.getValue()) && entry.getValue())
+                .map(Map.Entry::getKey)
+                .findFirst().orElse(null);
+        player.setDirection(direction);
+        player.setCurrentRoom(level.getStart().getPoint());
+        player.setCurrentRoomId(level.getStart().getId());
         if (levelRepository.existsByChatId(chatId)) {
             levelRepository.removeByChatId(chatId);
         }
-        return levelRepository.save(level);
+        return saveOrUpdateLevel(level);
     }
 
-    public Level updateLevel(Level level) {
-        return levelRepository.save(level);
+    public Level saveOrUpdateLevel(Level level) {
+        val levelDocument = LevelMapper.INSTANCE.mapToDocument(level);
+        val savedLevelDocument = levelRepository.save(levelDocument);
+        return LevelMapper.INSTANCE.mapToLevel(savedLevelDocument);
     }
 
     public Level getLevel(Long chatId) {
-        return levelRepository.findByChatId(chatId).orElseGet(() -> {
+        val levelDocument =  levelRepository.findByChatId(chatId).orElseGet(() -> {
             log.error("Unable to find level by chatId: {}", chatId);
             return null;
         });
+        return LevelMapper.INSTANCE.mapToLevel(levelDocument);
     }
 
     public Integer getLevelNumber(Long chatId) {
         //TODO: adjust query
-        Level level = levelRepository.findByChatId(chatId).orElseGet(() -> {
+        LevelDocument level = levelRepository.findByChatId(chatId).orElseGet(() -> {
             log.error("Unable to fetch level number by chatId");
             return null;
         });
@@ -90,7 +108,7 @@ public class LevelService {
         return levelRepository.existsByChatId(chatId);
     }
 
-    public Level generateLevel(Long chatId, Integer levelNumber) {
+    public Level generateLevel(Long chatId, Player player, Integer levelNumber) {
         log.debug("Generating level {}", levelNumber);
         val gridSize = calculateGridSize(levelNumber);
         var level = new Level();
@@ -108,6 +126,7 @@ public class LevelService {
         val startPoint = new Point(getRandomInt(minLength, gridSize - minLength - 1),
                 getRandomInt(minLength, gridSize - minLength - 1));
         var start = buildStartRoom(startPoint, chatId);
+        start = roomService.saveOrUpdateRoom(start);
         level.setStart(start);
         Map<Point, Room> roomsMap = new HashMap<>();
         roomsMap.put(startPoint, start);
@@ -136,7 +155,6 @@ public class LevelService {
             val endSection = level.getDeadEnds()
                     .stream().max(Comparator.comparing(GridSection::getStepsFromStart)).get();
             endSection.setDeadEnd(false);
-            level.getDeadEndToSegmentMap().remove(endSection.getPoint());
             level.removeDeadEnd(endSection);
             endSection.setEmoji(getIcon(Optional.of(RoomType.END)));
             val endRoom = level.getRoomByCoordinates(endSection.getPoint());
@@ -151,7 +169,7 @@ public class LevelService {
                 level.getDeadEndToSegmentMap().size());
         log.debug("Dead ends: {}", level.getDeadEnds().stream().map(GridSection::getPoint).toList());
         log.debug("Segments: {}", new ArrayList<>(level.getDeadEndToSegmentMap().values()));
-        distributeRoomTypes(level);
+        distributeRoomTypes(level, player);
         log.debug("Current map state\n{}", printMap(level.getGrid()));
         val levelMap = new LevelMap(level.getGrid()[start.getPoint().getX()][start.getPoint().getY()]);
         level.setLevelMap(levelMap);
@@ -204,7 +222,8 @@ public class LevelService {
                 var deadEndRoom = buildRoom(deadEndSection.getPoint(), level.getChatId());
                 deadEndRoom.addAdjacentRoom(getOppositeDirection(walkerBuilderIterator.getDirection()));
                 deadEndRoom = roomService.saveOrUpdateRoom(deadEndRoom);
-                deadEndSection.setEmoji(getIcon(Optional.ofNullable(deadEndRoom.getRoomContent().getRoomType())));
+                deadEndSection.setEmoji(getIcon(Optional.ofNullable(isNull(deadEndRoom.getRoomContent()) ?
+                        null : deadEndRoom.getRoomContent().getRoomType())));
                 deadEndSection.setVisited(true);
                 level.getRoomsMap().put(deadEndRoom.getPoint(), deadEndRoom);
                 deadEndSection.setDeadEnd(true);
@@ -272,12 +291,15 @@ public class LevelService {
             previousRoom = walkerBuilderIterator.getPreviousRoom();
             level.getRoomsMap().put(nextPoint, nextRoom);
             log.debug("Rooms count: {}", level.getRoomsMap().size());
-            nextStep = buildNextStep(level.getGrid(), nextPoint, walkerBuilderIterator, Optional.of(nextRoom.getRoomContent().getRoomType()));
+            nextStep = buildNextStep(level.getGrid(), nextPoint, walkerBuilderIterator,
+                    Objects.isNull(nextRoom.getRoomContent()) ?
+                    Optional.empty() :
+                    Optional.of(nextRoom.getRoomContent().getRoomType()));
             log.debug("Current path: {}", walkerBuilderIterator.getPathFromStart());
             previousRoom.addAdjacentRoom(walkerBuilderIterator.getDirection());
-            previousRoom = roomService.saveOrUpdateRoom(previousRoom);
-            nextRoom.addAdjacentRoom(getOppositeDirection(walkerBuilderIterator.getDirection()));
             roomService.saveOrUpdateRoom(previousRoom);
+            nextRoom.addAdjacentRoom(getOppositeDirection(walkerBuilderIterator.getDirection()));
+            roomService.saveOrUpdateRoom(nextRoom);
             previousRoom = nextRoom;
 
             walkerBuilderIterator.setCurrentPoint(nextStep);
@@ -296,35 +318,35 @@ public class LevelService {
         return nextStep;
     }
 
-    private void distributeRoomTypes(Level level) {
+    private void distributeRoomTypes(Level level, Player player) {
         log.debug("Distributing rooms content...");
         WalkerDistributeIterator walkerIterator;
-        val roomGenerator = new RandomRoomTypeGenerator(level);
-        roomGenerator.updateDeadEndsForDistribution(level);
-        log.debug("Rooms generator for levelId:{}: {}", level.getChatId(), roomGenerator);
-        while (roomGenerator.hasClusters() && roomGenerator.hasDeadEnds()) {
+        var clusters = randomRoomTypeGenerator.generateClusters(level, player);
+        randomRoomTypeGenerator.updateDeadEndsForDistribution(level, clusters);
+        log.debug("Clusters generated for levelId:{}: {}", level.getChatId(), clusters);
+        while (clusters.hasClusters() && clusters.hasDeadEnds()) {
             log.debug("Getting next segment...");
-            var currentSection = roomGenerator.getNextDeadEnd();
-            var currentSegment = roomGenerator.getSegmentByDeadEnd(currentSection.getPoint());
+            var currentSection = clusters.getNextDeadEnd();
+            var currentSegment = clusters.getSegmentByDeadEnd(currentSection.getPoint());
             walkerIterator = WalkerDistributeIterator.builder()
                     .currentRoom(level.getRoomByCoordinates(currentSection.getPoint()))
                     .segment(currentSegment)
                     .build();
             log.debug("Room distribute walker initialized: {}", walkerIterator);
-            val cluster = roomGenerator.getClusterBySegment(currentSegment);
+            val cluster = clusters.getClusterBySegment(currentSegment);
             log.debug("Processing cluster - weight: {}, size: {}", cluster.getClusterWeight(), cluster.getRooms().size());
             distributeRoomTypesCluster(level, walkerIterator, cluster);
         }
-        if (roomGenerator.hasClusters()) {
+        if (clusters.hasClusters()) {
             log.debug("Processing last cluster...");
             var currentRoom = level.getEnd();
-            var currentSegment = roomGenerator.getMainSegment();
+            var currentSegment = clusters.getMainSegment();
             walkerIterator = WalkerDistributeIterator.builder()
                     .currentRoom(currentRoom)
                     .segment(currentSegment)
                     .build();
             log.debug("Room distribute walker initialized: {}", walkerIterator);
-            val cluster = roomGenerator.getClusterBySegment(currentSegment);
+            val cluster = clusters.getClusterBySegment(currentSegment);
             log.debug("Processing cluster - weight: {}, size: {}", cluster.getClusterWeight(), cluster.getRooms().size());
             distributeRoomTypesCluster(level, walkerIterator, cluster);
         }
@@ -334,7 +356,8 @@ public class LevelService {
                                                                 RoomTypesCluster cluster) {
         while (cluster.hasNextRoomToDistribute()) {
             val previousRoom = walkerIterator.getPreviousRoom();
-            if (RoomType.END.equals(walkerIterator.getCurrentRoom().getRoomContent().getRoomType())) {
+            if (nonNull(walkerIterator.getCurrentRoom().getRoomContent()) &&
+                    RoomType.END.equals(walkerIterator.getCurrentRoom().getRoomContent().getRoomType())) {
                 log.debug("Processing end room...");
                 var currentRoom = walkerIterator.getCurrentRoom();
                 walkerIterator.setCurrentRoom(currentRoom.getAdjacentRooms().entrySet().stream()
@@ -351,7 +374,7 @@ public class LevelService {
                         .count());
                 switch (roomsCount) {
                     case 1 -> {
-                        if (!RoomType.START.equals(walkerIterator.getCurrentRoom().getRoomContent().getRoomType())) {
+                        if (isNull(walkerIterator.getCurrentRoom().getRoomContent()) || !RoomType.START.equals(walkerIterator.getCurrentRoom().getRoomContent().getRoomType())) {
                             log.debug("Processing dead end room...");
                             setRoomContent(level.getGrid(), walkerIterator.getCurrentRoom(), cluster.getNextRoom());
                             val nextRoom = walkerIterator.getCurrentRoom().getAdjacentRooms().entrySet().stream()
@@ -391,7 +414,7 @@ public class LevelService {
                                     .map(direction -> getNextPointInDirection(currentRoom.getPoint(), direction))
                                     .filter(point -> !point.equals(previousRoom.getPoint()))
                                     .map(point -> level.getGrid()[point.getX()][point.getY()])
-                                    .sorted(Comparator.comparing(GridSection::getStepsFromStart).reversed())
+                                    .sorted(Comparator.comparing(GridSection::getStepsFromStart))
                                     .map(GridSection::getPoint)
                                     .map(level::getRoomByCoordinates)
                                     .findFirst().get();
@@ -406,15 +429,18 @@ public class LevelService {
 
     private void setRoomContent(GridSection[][] grid, Room room, RoomContent roomContent) {
         log.debug("Setting type {} to room [x:{}, y:{}]", roomContent.getRoomType(), room.getPoint().getX(), room.getPoint().getY());
-        room.setRoomContent(roomContent);
         grid[room.getPoint().getX()][room.getPoint().getY()].setEmoji(getIcon(Optional.of(roomContent.getRoomType())));
         room.setRoomContent(roomContent);
+        roomService.saveOrUpdateRoom(room);
         log.debug("Current map state\n{}", printMap(grid));
-
     }
 
     public Room buildRoom(Point point, Long chatId) {
-        return new Room(point, chatId);
+        val room = new Room();
+        room.setChatId(chatId);
+        room.setPoint(point);
+        room.setRoomContent(new NormalRoom());
+        return room;
     }
 
     private Room buildStartRoom(Point point, Long chatId) {
@@ -425,6 +451,21 @@ public class LevelService {
         return new Room(point, chatId, new EndRoom());
     }
 
+    private Integer calculateMaxLength(Integer gridSize) {
+        return (int) (gridSize * generationProperties.getLevel().getMaxLengthRatio());
+    }
+
+    public Integer calculateMinLength(Integer gridSize) {
+        val properties = generationProperties.getLevel();
+        return (int) (gridSize * properties.getMinLengthRatio()) < properties.getMinLength() ? properties.getMinLength() :
+                (int) (gridSize * properties.getMinLengthRatio());
+    }
+
+    public Integer calculateGridSize(Integer levelNumber) {
+        val properties = generationProperties.getLevel();
+        val increments = (levelNumber - 1) / properties.getIncrementStep();
+        return properties.getLevelOneGridSize() + increments * properties.getGridSizeIncrement();
+    }
     private GridSection setStartSection(GridSection[][] grid, Point startPoint) {
         val startSection = grid[startPoint.getX()][startPoint.getY()];
         startSection.setStepsFromStart(0);

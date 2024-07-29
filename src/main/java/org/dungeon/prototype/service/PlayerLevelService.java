@@ -8,8 +8,8 @@ import static org.apache.commons.math3.util.FastMath.pow;
 @UtilityClass
 public class PlayerLevelService {
     private static final int BASE_XP = 1000; // Base XP required for level 1
-    private static final double COEFFICIENT = 50; // Coefficient for polynomial growth
-    private static final double POWER = 2; // Power of the polynomial
+    private static final double COEFFICIENT = 50.0; // Coefficient for polynomial growth
+    private static final double POWER = 2.0; // Power of the polynomial
 
     public static Integer getLevel(Long xp) {
         if (xp < BASE_XP) {

@@ -1,66 +1,41 @@
 package org.dungeon.prototype.model.inventory.items;
 
-import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.dungeon.prototype.model.document.item.ItemType;
 import org.dungeon.prototype.model.inventory.Item;
+import org.dungeon.prototype.model.inventory.attributes.MagicType;
+import org.dungeon.prototype.model.inventory.attributes.effect.Effect;
+import org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttributes;
 
-@AllArgsConstructor
+import java.util.List;
+
+@Data
+@NoArgsConstructor
 public class Weapon implements Item {
-    @Override
-    public String getName() {
-        return name;
-    }
-
-    @Override
-    public Integer getWeight() {
-        return getAttack(); //TODO: investigate calculating weight for weapons
-    }
-
-    @Override
-    public Integer getBuyingPrice() {
-        return 5;
-    }
-
-    @Override
-    public Integer getSellingPrice() {
-        return 0;
-    }
-
-    @Override
-    public boolean hasRoomForGem() {
-        return false;
-    }
-
-    public enum Handling {
-        SINGLE_HANDED, TWO_HANDED, ADDITIONAL
-    }
-
-    public enum HandlerMaterial {
-        WOOD, STEEL, LEATHER, RUBBER
-    }
-
-    public enum Material {
-        WOOD, STEEL, PLATINUM, DIAMOND, ELEMENTAL
-    }
-
-    public enum Size {
-        SMALL, MEDIUM, LARGE
-    }
-
-    public enum Action {
-        PIERCE, SLASH, STUB, FIRE, DEFENSE, HEAL
-    }
-
-    private Handling handling;
+    private String id;
+    private Long chatId;
+    private WeaponAttributes attributes;
     private String name;
+    private Integer weight;
+
     private Integer attack;
+    private Integer additionalFirstHit;
+    private Double criticalHitChance;
+    private Double chanceToMiss;
+    private Double chanceToKnockOut;
+    private boolean isCompleteDragonBone;
+
+    private boolean hasMagic;
+    private MagicType magicType;
+
+    private List<Effect> effects;
+
     private Integer sellingPrice;
-    private Integer priceDelta;
+    private Integer buyingPrice;
 
-    public Handling getHandling() {
-        return handling;
-    }
-
-    public Integer getAttack() {
-        return attack;
+    @Override
+    public ItemType getItemType() {
+        return ItemType.WEAPON;
     }
 }

@@ -1,0 +1,31 @@
+package org.dungeon.prototype.properties;
+
+public enum CallbackType {
+    CONTINUE_GAME,
+    START_GAME,
+    NEXT_LEVEL,
+    LEFT,
+    RIGHT,
+    FORWARD,
+    BACK,
+    MENU,
+    TREASURE_OPEN,
+    ATTACK,
+    SECONDARY_ATTACK,
+    SHRINE,
+    MERCHANT,
+    INVENTORY,
+    MENU_BACK,
+    TREASURE_GOLD_COLLECTED,
+    ITEM_COLLECTED,
+    COLLECT_ALL,
+    HEAD,
+    VEST,
+    GLOVES,
+    BOOTS,
+    RIGHT_HAND,
+    LEFT_HAND,
+    ITEM_INVENTORY,
+    ITEM_MERCHANT,
+    MAP
+}

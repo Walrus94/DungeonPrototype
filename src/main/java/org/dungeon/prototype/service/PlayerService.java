@@ -1,39 +1,58 @@
 package org.dungeon.prototype.service;
 
 import lombok.extern.slf4j.Slf4j;
-import org.dungeon.prototype.model.player.Attribute;
+import lombok.val;
+import org.dungeon.prototype.model.inventory.ArmorSet;
+import org.dungeon.prototype.model.inventory.Inventory;
+import org.dungeon.prototype.model.inventory.WeaponSet;
+import org.dungeon.prototype.model.inventory.attributes.wearable.WearableType;
+import org.dungeon.prototype.model.inventory.items.Wearable;
 import org.dungeon.prototype.model.player.Player;
+import org.dungeon.prototype.properties.PlayerProperties;
 import org.dungeon.prototype.repository.PlayerRepository;
+import org.dungeon.prototype.repository.converters.mapstruct.PlayerMapper;
 import org.dungeon.prototype.repository.projections.NicknameProjection;
+import org.dungeon.prototype.service.inventory.InventoryService;
+import org.dungeon.prototype.service.item.ItemService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.Objects;
 import java.util.Optional;
-
-import static org.dungeon.prototype.util.PlayerUtil.*;
 
 @Slf4j
 @Component
 public class PlayerService {
     @Autowired
     PlayerRepository playerRepository;
+    @Autowired
+    PlayerProperties playerProperties;
+    @Autowired
+    ItemService itemService;
+    @Autowired
+    InventoryService inventoryService;
 
     public Player getPlayer(Long chatId) {
-        return playerRepository.findByChatId(chatId).orElseGet(() -> {
+        val playerDocument = playerRepository.findByChatId(chatId).orElseGet(() -> {
             log.error("Unable to load player for chatId: {}", chatId);
             return null;
         });
+        return PlayerMapper.INSTANCE.mapToPlayer(playerDocument);
     }
 
     public Player updatePlayer(Player player) {
-        return playerRepository.save(player);
+        val playerDocument = PlayerMapper.INSTANCE.mapToDocument(player);
+        val savedPlayer = playerRepository.save(playerDocument);
+        return PlayerMapper.INSTANCE.mapToPlayer(savedPlayer);
     }
     public Boolean hasPlayer(Long chatId) {
         return playerRepository.existsByChatId(chatId);
     }
     public Player addNewPlayer(Long chatId, String nickname) {
-        Player player = generatePlayer(chatId, nickname);
-        return playerRepository.save(player);
+        val player = generatePlayer(chatId, nickname);
+        val playerDocument = PlayerMapper.INSTANCE.mapToDocument(player);
+        val savedPlayer = playerRepository.save(playerDocument);
+        return PlayerMapper.INSTANCE.mapToPlayer(savedPlayer);
     }
     public Optional<String> getNicknameByChatId(Long chatId) {
         return playerRepository.getNicknameByChatId(chatId).map(NicknameProjection::getNickname);
@@ -44,19 +63,38 @@ public class PlayerService {
         player.setChatId(chatId);
         player.setNickname(nickname);
         player.setGold(100);
-        player.setAttributes(initializeAttributes());
-        player.setArmor(getDefaultArmorSet());
-        player.setWeapon(getDefaultWeaponSet());
-        player.setMaxDefense(calculateMaxDefense(player.getArmor()));
-        player.setDefense(player.getMaxDefense());
-        player.setAttack(calculateAttack(player.getWeapon(), player.getAttributes()));
-        player.setXp(0L);
-        player.setPlayerLevel(PlayerLevelService.getLevel(player.getXp()));
-        player.setNextLevelXp(PlayerLevelService.calculateXPForLevel(player.getPlayerLevel() + 1));
-        player.setMaxHp(90 + player.getAttributes().get(Attribute.STAMINA));
-        player.setHp(player.getMaxHp());
-        player.setMaxMana(6 + player.getAttributes().get(Attribute.MAGIC));
-        player.setMana(player.getMaxMana());
+        player.setAttributes(playerProperties.getAttributes());
         return player;
+    }
+
+    private ArmorSet getDefaultArmorSet(Long chatId) {
+        val vest = itemService.getMostLightweightWearable(chatId, WearableType.VEST);
+        val armorSet = new ArmorSet();
+        armorSet.setVest(vest);
+        return armorSet;
+    }
+
+    private WeaponSet getDefaultWeaponSet(Long chatId) {
+        WeaponSet weaponSet = new WeaponSet();
+        val weapon = itemService.getMostLightWeightMainWeapon(chatId);
+        weaponSet.addWeapon(weapon);
+        return weaponSet;
+    }
+
+    public void addDefaultInventory(Player player, Long chatId) {
+        Inventory inventory = new Inventory();
+        inventory.setArmorSet(getDefaultArmorSet(chatId));
+        inventory.setWeaponSet(getDefaultWeaponSet(chatId));
+        inventory = inventoryService.saveOrUpdateInventory(inventory);
+        player.setInventory(inventory);
+        player.setMaxDefense(calculateMaxDefense(player.getInventory().getArmorSet()));
+        player.setDefense(player.getMaxDefense());
+        log.debug("Player default inventory initialized: {}", player);
+        val playerDocument = PlayerMapper.INSTANCE.mapToDocument(player);
+        playerRepository.save(playerDocument);
+    }
+
+    private Integer calculateMaxDefense(ArmorSet armor) {
+        return armor.getArmorItems().stream().filter(Objects::nonNull).mapToInt(Wearable::getArmor).sum();
     }
 }
