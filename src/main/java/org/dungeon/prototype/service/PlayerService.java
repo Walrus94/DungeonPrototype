@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -87,6 +88,11 @@ public class PlayerService {
         inventory.setWeaponSet(getDefaultWeaponSet(chatId));
         inventory = inventoryService.saveOrUpdateInventory(inventory);
         player.setInventory(inventory);
+        player.addEffects(inventory
+                .getItems()
+                .stream()
+                .flatMap(item -> item.getEffects().stream())
+                .collect(Collectors.toList()));
         player.setMaxDefense(calculateMaxDefense(player.getInventory().getArmorSet()));
         player.setDefense(player.getMaxDefense());
         log.debug("Player default inventory initialized: {}", player);

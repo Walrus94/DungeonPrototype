@@ -2,9 +2,11 @@ package org.dungeon.prototype.repository.converters.mapstruct;
 
 import org.dungeon.prototype.model.document.item.ItemDocument;
 import org.dungeon.prototype.model.document.item.ItemSpecs;
+import org.dungeon.prototype.model.document.item.specs.UsableSpecs;
 import org.dungeon.prototype.model.document.item.specs.WeaponSpecs;
 import org.dungeon.prototype.model.document.item.specs.WearableSpecs;
 import org.dungeon.prototype.model.inventory.Item;
+import org.dungeon.prototype.model.inventory.items.Usable;
 import org.dungeon.prototype.model.inventory.items.Weapon;
 import org.dungeon.prototype.model.inventory.items.Wearable;
 import org.mapstruct.Mapper;
@@ -18,7 +20,7 @@ public interface ItemMapper {
     ItemMapper INSTANCE = Mappers.getMapper(ItemMapper.class);
 
     @Mappings({
-            @Mapping(target = "specs", source = "item", qualifiedByName = "mapToSpecs"),
+            @Mapping(target = "specs", source = "item", qualifiedByName = "mapToSpecs")
     })
     ItemDocument mapToDocument(Item item);
 
@@ -40,6 +42,12 @@ public interface ItemMapper {
     })
     Weapon mapToWeapon(ItemDocument document);
 
+    @Mappings({
+            @Mapping(target = "attributes", expression = "java((org.dungeon.prototype.model.inventory.attributes.usable.UsableAttributes) document.getAttributes())"),
+            @Mapping(target = "amount",  expression = "java(((org.dungeon.prototype.model.document.item.specs.UsableSpecs) document.getSpecs()).getAmount())")
+    })
+    Usable mapToUsable(ItemDocument document);
+
     @Named("mapToSpecs")
     default ItemSpecs mapToSpecs(Item item){
         if (item instanceof Weapon weapon) {
@@ -56,6 +64,10 @@ public interface ItemMapper {
             wearableSpecs.setArmor(wearable.getArmor());
             wearableSpecs.setChanceToDodge(wearable.getChanceToDodge());
             return wearableSpecs;
+        } else if (item instanceof Usable usable) {
+            UsableSpecs usableSpecs = new UsableSpecs();
+            usableSpecs.setAmount(usable.getAmount());
+            return usableSpecs;
         }
         return null;
     }

@@ -5,9 +5,7 @@ import org.dungeon.prototype.model.inventory.attributes.EnumAttribute;
 
 public enum Handling implements EnumAttribute {
     SINGLE_HANDED("Single-handed"),
-    TWO_HANDED("Two-handed"),
-    ADDITIONAL("Additional");
-
+    TWO_HANDED("Two-handed");
     private final String value;
 
     Handling(String value) {

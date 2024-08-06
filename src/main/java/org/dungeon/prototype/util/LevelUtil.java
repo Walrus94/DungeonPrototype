@@ -252,6 +252,7 @@ public class LevelUtil {
             case TREASURE_LOOTED -> "\uD83D\uDDD1";
             case MANA_SHRINE -> "\uD83D\uDD2E";
             case HEALTH_SHRINE -> "\uD83C\uDFE5";
+            case ANVIL -> "\uD83D\uDD28";
             case SHRINE_DRAINED -> "\uD83E\uDEA6";
             case END -> "\uD83C\uDFC1";
             case MERCHANT -> "\uD83E\uDDD9";

@@ -47,6 +47,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import static java.util.Objects.nonNull;
+import static org.dungeon.prototype.model.effect.attributes.MonsterEffectAttribute.MOVING;
 import static org.dungeon.prototype.util.FileUtil.getRoomAsset;
 import static org.dungeon.prototype.util.LevelUtil.getMonsterKilledRoomType;
 import static org.dungeon.prototype.util.LevelUtil.getNextPointInDirection;
@@ -196,6 +197,14 @@ public class DungeonBot extends AbilityBot {
                 answerCallbackQuery(callBackQueryId);
                 yield collectAllTreasure(chatId);
             }
+            case RESTORE_ARMOR -> {
+                answerCallbackQuery(callBackQueryId);
+                yield restoreArmor(chatId);
+            }
+            case SHARPEN_WEAPON -> {
+                answerCallbackQuery(callBackQueryId);
+                yield sharpenWeapon(chatId);
+            }
             default -> {
                 if (callData.startsWith("btn_treasure_item_collected_")) {
                     val itemId = callData.replaceFirst("^" + "btn_treasure_item_collected_", "");
@@ -206,6 +215,18 @@ public class DungeonBot extends AbilityBot {
                 yield false;
             }
         };
+    }
+
+    private boolean sharpenWeapon(Long chatId) {
+        //TODO: implement
+        return true;
+    }
+
+    private boolean restoreArmor(Long chatId) {
+        val player = playerService.getPlayer(chatId);
+        player.restoreArmor();
+        playerService.updatePlayer(player);
+        return sendOrUpdateRoomMessage(chatId);
     }
 
     private void answerCallbackQuery(String callbackQueryId) {
@@ -249,10 +270,7 @@ public class DungeonBot extends AbilityBot {
         if (treasure.getGold() == 0 && treasure.getItems().isEmpty()) {
             level.updateRoomType(point, RoomType.TREASURE_LOOTED);
             log.debug("Treasure looted!");
-            playerService.updatePlayer(player);
-            levelService.saveOrUpdateLevel(level);
-            roomService.saveOrUpdateRoom(currentRoom);
-            val messageId = sendOrUpdateRoomMessage(currentRoom, player, chatId);
+            val messageId = updateRoomAndSendMessage(level, currentRoom, player, chatId);
             if (messageId == -1) {
                 return false;
             }
@@ -297,15 +315,13 @@ public class DungeonBot extends AbilityBot {
 
         level.updateRoomType(point, RoomType.TREASURE_LOOTED);
         log.debug("Treasure looted!");
-        playerService.updatePlayer(player);
-        levelService.saveOrUpdateLevel(level);
-        roomService.saveOrUpdateRoom(currentRoom);
-        val messageId = sendOrUpdateRoomMessage(currentRoom, player, chatId);
+        val messageId = updateRoomAndSendMessage(level, currentRoom, player, chatId);
         if (messageId == -1) {
             return false;
         }
-        deleteMessage(chatId, lastMessageByChat.get(chatId));
-        lastMessageByChat.put(chatId, messageId);
+        //TODO: verify it works
+//        deleteMessage(chatId, lastMessageByChat.get(chatId));
+//        lastMessageByChat.put(chatId, messageId);
         return true;
     }
 
@@ -341,10 +357,7 @@ public class DungeonBot extends AbilityBot {
         if (treasure.getGold() == 0 && treasure.getItems().isEmpty()) {
             level.updateRoomType(point, RoomType.TREASURE_LOOTED);
             log.info("Treasure looted!");
-            playerService.updatePlayer(player);
-            levelService.saveOrUpdateLevel(level);
-            roomService.saveOrUpdateRoom(currentRoom);
-            val messageId = sendOrUpdateRoomMessage(currentRoom, player, chatId);
+            val messageId = updateRoomAndSendMessage(level, currentRoom, player, chatId);
             if (messageId == -1) {
                 return false;
             }
@@ -373,10 +386,7 @@ public class DungeonBot extends AbilityBot {
         if (treasure.getGold() == 0 && treasure.getItems().isEmpty()) {
             level.updateRoomType(point, RoomType.TREASURE_LOOTED);
             log.debug("Treasure looted!");
-            playerService.updatePlayer(player);
-            levelService.saveOrUpdateLevel(level);
-            roomService.saveOrUpdateRoom(currentRoom);
-            val messageId = sendOrUpdateRoomMessage(currentRoom, player, chatId);
+            val messageId = updateRoomAndSendMessage(level, currentRoom, player, chatId);
             if (messageId == -1) {
                 return false;
             }
@@ -440,10 +450,7 @@ public class DungeonBot extends AbilityBot {
         if (currentRoom.getRoomContent().getRoomType().equals(RoomType.MANA_SHRINE)) {
             player.refillMana();
         }
-        player = playerService.updatePlayer(player);
-        roomService.saveOrUpdateRoom(currentRoom);
-        levelService.saveOrUpdateLevel(level);
-        val messageId = sendOrUpdateRoomMessage(currentRoom, player, chatId);
+        val messageId = updateRoomAndSendMessage(level, currentRoom, player, chatId);
         if (messageId == -1) {
             return false;
         }
@@ -472,31 +479,27 @@ public class DungeonBot extends AbilityBot {
             level.updateRoomType(point, getMonsterKilledRoomType(currentRoom.getRoomContent().getRoomType()));
             player.addXp(monster.getXpReward());
             monstersByChat.remove(chatId);
-            roomService.saveOrUpdateRoom(currentRoom);
-            levelService.saveOrUpdateLevel(level);
-            playerService.updatePlayer(player);
-            val messageId = sendOrUpdateRoomMessage(currentRoom, player, chatId);
+            val messageId = updateRoomAndSendMessage(level, currentRoom, player, chatId);
             if (messageId == -1) {
                 return false;
             }
             lastMessageByChat.put(chatId, messageId);
             return true;
         } else {
-            if (Objects.isNull(monster.getCurrentAttack()) || !monster.getCurrentAttack().hasNext()) {
-                monster.setCurrentAttack(monster.getDefaultAttackPattern().listIterator());
+            if (monster.getEffects().stream().noneMatch(monsterEffect -> MOVING.equals(monsterEffect.getAttribute()))) {
+                if (Objects.isNull(monster.getCurrentAttack()) || !monster.getCurrentAttack().hasNext()) {
+                    monster.setCurrentAttack(monster.getDefaultAttackPattern().listIterator());
+                }
+                val currentAttack = monster.getCurrentAttack().next();
+                player = battleService.monsterAttacks(player, currentAttack);
             }
-            val currentAttack = monster.getCurrentAttack().next();
-            player = battleService.monsterAttacks(player, currentAttack);
         }
         if (player.getHp() < 0) {
             sendDeathMessage(chatId);
             itemService.dropCollection(chatId);
             return true;
         }
-        roomService.saveOrUpdateRoom(currentRoom);
-        levelService.saveOrUpdateLevel(level);
-        playerService.updatePlayer(player);
-        val messageId = sendOrUpdateRoomMessage(currentRoom, player, chatId);
+        val messageId = updateRoomAndSendMessage(level, currentRoom, player, chatId);
         if (messageId == -1) {
             return false;
         }
@@ -531,8 +534,7 @@ public class DungeonBot extends AbilityBot {
         }
         playerService.updatePlayer(player);
         level.getLevelMap().addRoom(level.getGrid()[nextRoom.getPoint().getX()][nextRoom.getPoint().getY()]);
-        levelService.saveOrUpdateLevel(level);
-        val messageId = sendOrUpdateRoomMessage(nextRoom, player, chatId);
+        val messageId = updateRoomAndSendMessage(level, nextRoom, player, chatId);
         if (messageId == -1) {
             return false;
         }
@@ -565,10 +567,8 @@ public class DungeonBot extends AbilityBot {
                         .forEach(weapon -> battleService.firstHitAttacked(monster, weapon.getAdditionalFirstHit(), weapon.getAttributes().getWeaponAttackType()));
                 monstersByChat.put(chatId, monster);
             }
-            playerService.updatePlayer(player);
             level.getLevelMap().addRoom(level.getGrid()[nextRoom.getPoint().getX()][nextRoom.getPoint().getY()]);
-            levelService.saveOrUpdateLevel(level);
-            val messageId = sendOrUpdateRoomMessage(nextRoom, player, chatId);
+            val messageId = updateRoomAndSendMessage(level, nextRoom, player, chatId);
             if (messageId == -1) {
                 return false;
             }
@@ -605,10 +605,8 @@ public class DungeonBot extends AbilityBot {
                         .forEach(weapon -> battleService.firstHitAttacked(monster, weapon.getAdditionalFirstHit(), weapon.getAttributes().getWeaponAttackType()));
                 monstersByChat.put(chatId, monster);
             }
-            playerService.updatePlayer(player);
             level.getLevelMap().addRoom(level.getGrid()[nextRoom.getPoint().getX()][nextRoom.getPoint().getY()]);
-            levelService.saveOrUpdateLevel(level);
-            val messageId = sendOrUpdateRoomMessage(nextRoom, player, chatId);
+            val messageId = updateRoomAndSendMessage(level, nextRoom, player, chatId);
             if (messageId == -1) {
                 return false;
             }
@@ -645,11 +643,9 @@ public class DungeonBot extends AbilityBot {
                         .forEach(weapon -> battleService.firstHitAttacked(monster, weapon.getAdditionalFirstHit(), weapon.getAttributes().getWeaponAttackType()));
                 monstersByChat.put(chatId, monster);
             }
-            playerService.updatePlayer(player);
             level.getLevelMap().addRoom(level.getGrid()[nextRoom.getPoint().getX()][nextRoom.getPoint().getY()]);
-            levelService.saveOrUpdateLevel(level);
             log.debug("Moving back to {}, updated direction: {}", nextRoom.getPoint(), player.getDirection());
-            val messageId = sendOrUpdateRoomMessage(nextRoom, player, chatId);
+            val messageId = updateRoomAndSendMessage(level, nextRoom, player, chatId);
             if (messageId == -1) {
                 return false;
             }
@@ -674,12 +670,11 @@ public class DungeonBot extends AbilityBot {
         playerService.addDefaultInventory(player, chatId);
         val level = startLevel(chatId, player, 1);
         log.debug("Player loaded: {}", player);
-        val messageId = sendOrUpdateRoomMessage(level.getStart(), player, chatId);
+        val messageId = updateRoomAndSendMessage(level, level.getStart(), player, chatId);
         if (messageId == -1) {
             return false;
         }
         lastMessageByChat.put(chatId, messageId);
-        playerService.updatePlayer(player);
         log.debug("Player started level 1, current point: {}", level.getStart().getPoint());
         return true;
     }
@@ -692,7 +687,7 @@ public class DungeonBot extends AbilityBot {
             log.error("Couldn't find current room by id: {}", player.getCurrentRoomId());
             return false;
         }
-        val messageId = sendOrUpdateRoomMessage(currentRoom, player, chatId);
+        val messageId = updateRoomAndSendMessage(level, currentRoom, player, chatId);
         if (messageId == -1) {
             return false;
         }
@@ -716,11 +711,11 @@ public class DungeonBot extends AbilityBot {
                 .filter(entry -> nonNull(entry.getValue()) && entry.getValue())
                 .map(Map.Entry::getKey)
                 .findFirst().orElse(null));
-        val messageId = sendOrUpdateRoomMessage(level.getStart(), player, chatId);
+        player.restoreArmor();
+        val messageId = updateRoomAndSendMessage(level, level.getStart(), player, chatId);
         if (messageId == -1) {
             return false;
         }
-        playerService.updatePlayer(player);
         lastMessageByChat.put(chatId, messageId);
         log.debug("Player started level {}, current point, {}", number, level.getStart().getPoint());
         return true;
@@ -743,10 +738,12 @@ public class DungeonBot extends AbilityBot {
         sendMessage(message);
     }
 
+    //TODO: refactor to get rid of this method
     private boolean sendOrUpdateRoomMessage(Long chatId) {
-        var player = playerService.getPlayer(chatId);
+        val level = levelService.getLevel(chatId);
+        val player = playerService.getPlayer(chatId);
         val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
-        val messageId = sendOrUpdateRoomMessage(currentRoom, player, chatId);
+        val messageId = updateRoomAndSendMessage(level, currentRoom, player, chatId);
         if (messageId == -1) {
             return false;
         }
@@ -754,7 +751,10 @@ public class DungeonBot extends AbilityBot {
         return true;
     }
 
-    private Integer sendOrUpdateRoomMessage(Room room, Player player, long chatId) {
+    private Integer updateRoomAndSendMessage(Level level, Room room, Player player, long chatId) {
+        playerService.updatePlayer(player);
+        levelService.saveOrUpdateLevel(level);
+        roomService.saveOrUpdateRoom(room);
         ClassPathResource imgFile = new ClassPathResource(getRoomAsset(room.getRoomContent().getRoomType()));
         String caption;
         if (monstersByChat.containsKey(chatId)) {

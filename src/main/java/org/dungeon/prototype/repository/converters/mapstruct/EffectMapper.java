@@ -1,34 +1,83 @@
 package org.dungeon.prototype.repository.converters.mapstruct;
 
 import org.dungeon.prototype.model.document.item.EffectDocument;
-import org.dungeon.prototype.model.inventory.Item;
-import org.dungeon.prototype.model.inventory.attributes.effect.Effect;
+import org.dungeon.prototype.model.effect.DirectPlayerEffect;
+import org.dungeon.prototype.model.effect.Effect;
+import org.dungeon.prototype.model.effect.ItemEffect;
+import org.dungeon.prototype.model.effect.MonsterEffect;
+import org.dungeon.prototype.model.effect.PlayerEffect;
+import org.dungeon.prototype.model.effect.attributes.EffectAttribute;
+import org.dungeon.prototype.model.effect.attributes.MonsterEffectAttribute;
+import org.dungeon.prototype.model.effect.attributes.PlayerEffectAttribute;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.Mappings;
 import org.mapstruct.Named;
 import org.mapstruct.factory.Mappers;
+
+import static org.dungeon.prototype.model.effect.EffectApplicant.ITEM;
+import static org.dungeon.prototype.model.effect.EffectApplicant.PLAYER;
 
 @Mapper
 public interface EffectMapper {
     EffectMapper INSTANCE = Mappers.getMapper(EffectMapper.class);
 
-    @Mapping(source = "applicableTo", target = "applicableTo", qualifiedByName = "classToString")
+    @Mappings({
+            @Mapping(target = "attribute", source = "effect", qualifiedByName = "mapAttributeToDocument"),
+            @Mapping(target = "turnsLasts", source = "effect", qualifiedByName = "mapTurnsLastsToDocument")
+    })
     EffectDocument mapToDocument(Effect effect);
 
-    @Mapping(source = "applicableTo", target = "applicableTo", qualifiedByName = "stringToClass")
-    Effect mapToEffect(EffectDocument document);
-
-    @Named("classToString")
-    default String classToString(Class<? extends Item> clazz) {
-        return clazz != null ? clazz.getName() : null;
-    }
-
-    @Named("stringToClass")
-    default Class<? extends Item> stringToClass(String className) {
-        try {
-            return className != null ? (Class<? extends Item>)  Class.forName(className) : null;
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Class not found: " + className, e);
+    default PlayerEffect mapToPlayerEffect(EffectDocument document) {
+        if (document.getApplicableTo().equals(ITEM)) {
+            return mapToItemEffect(document);
+        } else if (document.getApplicableTo().equals(PLAYER)) {
+            return mapToDirectPlayerEffect(document);
+        } else {
+            return null;
         }
     }
+
+    DirectPlayerEffect mapToDirectPlayerEffect(EffectDocument document);
+
+    ItemEffect mapToItemEffect(EffectDocument document);
+
+    MonsterEffect mapToMonsterEffect(EffectDocument document);
+
+    @Named("mapAttributeToDocument")
+    default EffectAttribute mapAttributeToDocument(Effect effect) {
+
+        if (effect instanceof MonsterEffect) {
+            return mapToMonsterAttribute(effect.getAttribute());
+        } else if (effect instanceof PlayerEffect) {
+            return mapToPlayerAttribute(effect.getAttribute());
+        }
+        return null;
+    }
+
+    @Named("mapTurnsLastsToDocument")
+    default Integer mapTurnsLastsToDocument(Effect effect) {
+        if (effect instanceof DirectPlayerEffect) {
+            return ((DirectPlayerEffect) effect).getTurnsLasts();
+        } else {
+            return null;
+        }
+    }
+
+    default MonsterEffectAttribute mapToMonsterAttribute(EffectAttribute effectAttribute) {
+        if (effectAttribute instanceof MonsterEffectAttribute) {
+            return (MonsterEffectAttribute) effectAttribute;
+        } else {
+            return null;
+        }
+    }
+
+    default PlayerEffectAttribute mapToPlayerAttribute(EffectAttribute effectAttribute) {
+        if (effectAttribute instanceof DirectPlayerEffect) {
+            return (PlayerEffectAttribute) effectAttribute;
+        } else {
+            return null;
+        }
+    }
+
 }

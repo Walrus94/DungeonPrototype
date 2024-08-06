@@ -23,7 +23,7 @@ import static org.dungeon.prototype.util.RoomGenerationUtils.convertToRoomType;
 public class MonsterRoomGenerationService {
     @Autowired
     private GenerationProperties generationProperties;
-    public Pair<Integer, Integer> getMonsterClassWeightRangeByLevel(MonsterClass monsterClass, Integer level) {
+    private Pair<Integer, Integer> getMonsterClassWeightRangeByLevel(MonsterClass monsterClass, Integer level) {
         val properties = generationProperties.getMonsters().get(monsterClass);
         val start = level * (properties.getWeightPrimaryAttackMultiplier() * properties.getPrimaryAttackRatio() +
                 properties.getWeightSecondaryAttackMultiplier() * properties.getSecondaryAttackRatio() + properties.getHealthRatio());

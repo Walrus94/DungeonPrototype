@@ -10,4 +10,5 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 public class ItemsGenerationProperties {
     private WeaponGenerationProperties weapon;
     private WearableGenerationProperties wearables;
+    private ItemEffectsGenerationProperties effects;
 }

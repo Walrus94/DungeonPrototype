@@ -6,7 +6,7 @@ import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.convert.ReadingConverter;
 
 @ReadingConverter
-public class AttributeReadingConverter implements Converter<String, PlayerAttribute> {
+public class PlayerAttributeReadingConverter implements Converter<String, PlayerAttribute> {
     @Override
     public PlayerAttribute convert(@NotNull String source) {
         return PlayerAttribute.fromValue(source);

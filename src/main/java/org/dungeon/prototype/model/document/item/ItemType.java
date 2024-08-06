@@ -5,7 +5,8 @@ import org.dungeon.prototype.model.inventory.attributes.EnumAttribute;
 
 public enum ItemType implements EnumAttribute {
     WEAPON("Weapon"),
-    WEARABLE("Wearable");
+    WEARABLE("Wearable"),
+    USABLE("Usable");
 
     private final String value;
 

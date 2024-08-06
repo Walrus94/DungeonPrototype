@@ -2,12 +2,15 @@ package org.dungeon.prototype.model.document.monster;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.dungeon.prototype.model.document.item.EffectDocument;
 import org.dungeon.prototype.model.monster.MonsterAttack;
 import org.dungeon.prototype.model.monster.MonsterClass;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -24,5 +27,7 @@ public class MonsterDocument {
     private Integer xpReward;
 
     private Iterator<MonsterAttack> currentAttack;
+
+    private List<EffectDocument> effects = new ArrayList<>();
 
 }

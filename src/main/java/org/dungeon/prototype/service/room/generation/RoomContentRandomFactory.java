@@ -5,7 +5,6 @@ import lombok.val;
 import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.monster.Monster;
 import org.dungeon.prototype.model.monster.MonsterAttack;
-import org.dungeon.prototype.model.monster.MonsterAttackType;
 import org.dungeon.prototype.model.room.content.RoomContent;
 import org.dungeon.prototype.model.room.RoomType;
 import org.dungeon.prototype.model.room.content.HealthShrine;
@@ -119,51 +118,13 @@ public class RoomContentRandomFactory {
         monster.setLevel(level);
         monster.setMaxHp(getRandomInt(properties.getHealthRatio() * level, (properties.getHealthRatio() * level) + properties.getHealthBonus()));
         monster.setHp(monster.getMaxHp());
-        switch (roomType) {
-            case ZOMBIE -> {
-                monster.setPrimaryAttack(MonsterAttack.of(MonsterAttackType.SLASH,
-                        getRandomInt(properties.getPrimaryAttackRatio() * level, (properties.getPrimaryAttackRatio() * level) + properties.getPrimaryAttackBonus())));
-                monster.setSecondaryAttack(MonsterAttack.of(MonsterAttackType.SLASH,
-                        getRandomInt(properties.getSecondaryAttackRatio() * level, properties.getSecondaryAttackRatio() * level + properties.getSecondaryAttackBonus())));
-                monster.setXpReward(monster.getPrimaryAttack().getAttack() * properties.getWeightPrimaryAttackMultiplier() + monster.getMaxHp());
-            }
-            case WEREWOLF -> {
-                monster.setPrimaryAttack(MonsterAttack.of(MonsterAttackType.GROWL,
-                        getRandomInt(properties.getPrimaryAttackRatio() * level, (properties.getPrimaryAttackRatio() * level) + properties.getPrimaryAttackBonus())));
-                monster.setSecondaryAttack(MonsterAttack.of(MonsterAttackType.SLASH,
-                        getRandomInt(properties.getSecondaryAttackRatio() * level, properties.getSecondaryAttackRatio() * level + properties.getSecondaryAttackBonus())));
-                monster.setXpReward(monster.getPrimaryAttack().getAttack() * properties.getWeightPrimaryAttackMultiplier() +
-                        monster.getSecondaryAttack().getAttack() * properties.getWeightSecondaryAttackMultiplier() +
-                        monster.getMaxHp());
-            }
-            case SWAMP_BEAST -> {
-                monster.setPrimaryAttack(MonsterAttack.of(MonsterAttackType.POISON_SPIT,
-                        getRandomInt(properties.getPrimaryAttackRatio() * level, (properties.getPrimaryAttackRatio() * level) + properties.getPrimaryAttackBonus())));
-                monster.setSecondaryAttack(MonsterAttack.of(MonsterAttackType.BITE,
-                        getRandomInt(properties.getSecondaryAttackRatio() * level, properties.getSecondaryAttackRatio() * level + properties.getSecondaryAttackBonus())));
-                monster.setXpReward(monster.getPrimaryAttack().getAttack() * properties.getWeightPrimaryAttackMultiplier() +
-                        monster.getSecondaryAttack().getAttack() * properties.getWeightSecondaryAttackMultiplier() +
-                        monster.getMaxHp());
-            }
-            case VAMPIRE -> {
-                monster.setPrimaryAttack(MonsterAttack.of(MonsterAttackType.VAMPIRE_BITE,
-                        getRandomInt(properties.getPrimaryAttackRatio() * level, (properties.getPrimaryAttackRatio() * level) + properties.getPrimaryAttackBonus())));
-                monster.setSecondaryAttack(MonsterAttack.of(MonsterAttackType.SLASH,
-                        getRandomInt(properties.getSecondaryAttackRatio() * level, properties.getSecondaryAttackRatio() * level + properties.getSecondaryAttackBonus())));
-                monster.setXpReward(monster.getPrimaryAttack().getAttack() * properties.getWeightPrimaryAttackMultiplier() +
-                        monster.getSecondaryAttack().getAttack() * properties.getWeightSecondaryAttackMultiplier() +
-                        monster.getMaxHp());
-            }
-            case DRAGON -> {
-                monster.setPrimaryAttack(MonsterAttack.of(MonsterAttackType.FIRE_SPIT,
-                        getRandomInt(properties.getPrimaryAttackRatio() * level, (properties.getPrimaryAttackRatio() * level) + properties.getPrimaryAttackBonus())));
-                monster.setSecondaryAttack(MonsterAttack.of(MonsterAttackType.GROWL,
-                        getRandomInt(properties.getSecondaryAttackRatio() * level, properties.getSecondaryAttackRatio() * level + properties.getSecondaryAttackBonus())));
-                monster.setXpReward(monster.getPrimaryAttack().getAttack() * properties.getWeightPrimaryAttackMultiplier() +
-                        monster.getSecondaryAttack().getAttack() * properties.getWeightSecondaryAttackMultiplier() +
-                        monster.getMaxHp());
-            }
-        }
+        monster.setPrimaryAttack(MonsterAttack.of(properties.getPrimaryAttackType(),
+                getRandomInt(properties.getPrimaryAttackRatio() * level, (properties.getPrimaryAttackRatio() * level) + properties.getPrimaryAttackBonus())));
+        monster.setSecondaryAttack(MonsterAttack.of(properties.getSecondaryAttackType(),
+                getRandomInt(properties.getSecondaryAttackRatio() * level, properties.getSecondaryAttackRatio() * level + properties.getSecondaryAttackBonus())));
+        monster.setXpReward(monster.getPrimaryAttack().getAttack() * properties.getWeightPrimaryAttackMultiplier() +
+                monster.getSecondaryAttack().getAttack() * properties.getWeightSecondaryAttackMultiplier() +
+                monster.getMaxHp());
         val monsterDocument = MonsterMapper.INSTANCE.mapToDocument(monster);
         return MonsterMapper.INSTANCE.mapToMonster(monsterRepository.save(monsterDocument));
     }

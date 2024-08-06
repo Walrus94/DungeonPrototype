@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 public class ItemNamingService {
     @Value("${huggingface.api.url}")
     private static String url;
+    private static final String DEFAULT_ITEM_NAME = "Mysterious unnamed item";
     @Autowired
     RestTemplate restTemplate;
 
@@ -81,11 +82,13 @@ public class ItemNamingService {
                 val index = matcher.start();
                 rawResponse = rawResponse.substring(0, index);
             }
-            log.debug("Processed result: {}", rawResponse.trim());
-            return rawResponse.trim();
+            val result = rawResponse.trim();
+            log.debug("Processed result: {}", result);
+            return result.isEmpty() ? DEFAULT_ITEM_NAME : result;
         } else {
-            log.debug("Processed result: {}", substrings.getFirst().trim());
-            return substrings.getFirst().trim();
+            val result = substrings.getFirst().trim().isEmpty() ? DEFAULT_ITEM_NAME : substrings.getFirst().trim();
+            log.debug("Processed result: {}", result);
+            return result;
         }
     }
 

@@ -4,12 +4,15 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.dungeon.prototype.model.Direction;
 import org.dungeon.prototype.model.Point;
+import org.dungeon.prototype.model.document.item.EffectDocument;
 import org.dungeon.prototype.model.player.PlayerAttribute;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -34,5 +37,7 @@ public class PlayerDocument {
     private Integer maxDefense;
     @DBRef
     private InventoryDocument inventory;
+    @DBRef
+    private List<EffectDocument> playerEffects = new ArrayList<>();
     EnumMap<PlayerAttribute, Integer> attributes;
 }

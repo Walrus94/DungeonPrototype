@@ -18,6 +18,7 @@ public enum RoomType {
     ZOMBIE_KILLED,
     HEALTH_SHRINE,
     MANA_SHRINE,
+    ANVIL,
     SHRINE_DRAINED,
     MERCHANT
 }

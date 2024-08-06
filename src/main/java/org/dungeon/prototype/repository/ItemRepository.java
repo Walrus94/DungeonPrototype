@@ -17,7 +17,7 @@ public interface ItemRepository extends MongoRepository<ItemDocument, String> {
     @Query(value = "{'chatId': ?0, 'itemType': 'WEARABLE', 'attributes.wearableType': ?1}", sort = "{'weight':  1}")
     List<ItemDocument> findWearablesByChatIdTypeAndMinWeight(Long chatId, WearableType wearableType, Pageable pageable);
 
-    @Query(value = "{'chatId': ?0, 'itemType' : 'WEAPON', 'attributes.weaponType' : {'$ne': 'ADDITIONAL'} }", sort = "{'weight':  1}")
+    @Query(value = "{'chatId': ?0, 'itemType' : 'WEAPON' }", sort = "{'weight':  1}")
     List<ItemDocument> findMainWeaponByChatIdAndMinWeight(Long chatId, Pageable pageable);
 
     List<ItemDocument> findByChatIdAndWeightAndIdNotIn(Long chatId, Integer weight, Set<String> ids, Pageable pageable);

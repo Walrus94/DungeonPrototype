@@ -1,6 +1,7 @@
 package org.dungeon.prototype.properties;
 
 import lombok.Data;
+import org.dungeon.prototype.model.monster.MonsterAttackType;
 import org.dungeon.prototype.model.monster.MonsterClass;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
@@ -17,6 +18,8 @@ public class GenerationProperties {
 
     @Data
     public static class MonsterClassGenerationAttributes {
+        private MonsterAttackType primaryAttackType;
+        private MonsterAttackType secondaryAttackType;
         private Integer primaryAttackRatio;
         private Integer primaryAttackBonus;
         private Integer secondaryAttackRatio;

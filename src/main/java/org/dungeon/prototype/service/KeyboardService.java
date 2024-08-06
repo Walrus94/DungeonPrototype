@@ -5,6 +5,7 @@ import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.player.Player;
 import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.RoomType;
+import org.dungeon.prototype.model.room.content.Anvil;
 import org.dungeon.prototype.model.room.content.Treasure;
 import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.properties.KeyboardButtonProperties;
@@ -20,33 +21,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import static org.dungeon.prototype.properties.CallbackType.ATTACK;
-import static org.dungeon.prototype.properties.CallbackType.BACK;
-import static org.dungeon.prototype.properties.CallbackType.BOOTS;
-import static org.dungeon.prototype.properties.CallbackType.COLLECT_ALL;
-import static org.dungeon.prototype.properties.CallbackType.CONTINUE_GAME;
-import static org.dungeon.prototype.properties.CallbackType.FORWARD;
-import static org.dungeon.prototype.properties.CallbackType.GLOVES;
-import static org.dungeon.prototype.properties.CallbackType.HEAD;
-import static org.dungeon.prototype.properties.CallbackType.INVENTORY;
-import static org.dungeon.prototype.properties.CallbackType.ITEM_COLLECTED;
-import static org.dungeon.prototype.properties.CallbackType.ITEM_INVENTORY;
-import static org.dungeon.prototype.properties.CallbackType.ITEM_MERCHANT;
-import static org.dungeon.prototype.properties.CallbackType.LEFT;
-import static org.dungeon.prototype.properties.CallbackType.LEFT_HAND;
-import static org.dungeon.prototype.properties.CallbackType.MAP;
-import static org.dungeon.prototype.properties.CallbackType.MENU;
-import static org.dungeon.prototype.properties.CallbackType.MENU_BACK;
-import static org.dungeon.prototype.properties.CallbackType.MERCHANT;
-import static org.dungeon.prototype.properties.CallbackType.NEXT_LEVEL;
-import static org.dungeon.prototype.properties.CallbackType.RIGHT;
-import static org.dungeon.prototype.properties.CallbackType.RIGHT_HAND;
-import static org.dungeon.prototype.properties.CallbackType.SECONDARY_ATTACK;
-import static org.dungeon.prototype.properties.CallbackType.SHRINE;
-import static org.dungeon.prototype.properties.CallbackType.START_GAME;
-import static org.dungeon.prototype.properties.CallbackType.TREASURE_GOLD_COLLECTED;
-import static org.dungeon.prototype.properties.CallbackType.TREASURE_OPEN;
-import static org.dungeon.prototype.properties.CallbackType.VEST;
+import static org.dungeon.prototype.properties.CallbackType.*;
 import static org.dungeon.prototype.util.LevelUtil.getOppositeDirection;
 import static org.dungeon.prototype.util.LevelUtil.turnLeft;
 import static org.dungeon.prototype.util.LevelUtil.turnRight;
@@ -100,6 +75,13 @@ public class KeyboardService {
             }
             case HEALTH_SHRINE, MANA_SHRINE -> row2.add(getButton(SHRINE));
             case MERCHANT -> row2.add(getButton(MERCHANT));
+            case ANVIL -> {
+                val anvil = (Anvil) room.getRoomContent();
+                if (!anvil.isArmorRestored()) {
+                    row2.add(getButton(RESTORE_ARMOR));
+                }
+                row2.add(getButton(SHARPEN_WEAPON));
+            }
         }
         if (adjacentRooms.containsKey(getOppositeDirection(direction)) && adjacentRooms.get(getOppositeDirection(direction))
                 && !getMonsterRoomTypes().contains(roomContent.getRoomType())) {

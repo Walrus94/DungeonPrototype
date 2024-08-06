@@ -30,6 +30,7 @@ public interface InventoryMapper {
         return documents.stream().map(document -> switch (document.getItemType()) {
             case WEAPON -> ItemMapper.INSTANCE.mapToWeapon(document);
             case WEARABLE -> ItemMapper.INSTANCE.mapToWearable(document);
+            case USABLE -> ItemMapper.INSTANCE.mapToUsable(document);
         }).collect(Collectors.toList());
     }
 }

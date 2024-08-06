@@ -5,11 +5,17 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.dungeon.prototype.model.Direction;
 import org.dungeon.prototype.model.Point;
+import org.dungeon.prototype.model.effect.PlayerEffect;
 import org.dungeon.prototype.model.inventory.Inventory;
 import org.dungeon.prototype.service.PlayerLevelService;
 import org.springframework.data.annotation.Transient;
 
 import java.util.EnumMap;
+import java.util.List;
+
+import static org.apache.commons.lang3.math.NumberUtils.max;
+import static org.apache.commons.lang3.math.NumberUtils.min;
+import static org.dungeon.prototype.model.effect.Action.ADD;
 
 @Data
 @Slf4j
@@ -32,6 +38,7 @@ public class Player {
     private Integer defense;
     private Integer maxDefense;
     private Inventory inventory;
+    private List<PlayerEffect> playerEffects;
     EnumMap<PlayerAttribute, Integer> attributes;
 
     //TODO: move to service and use queries through repository
@@ -54,5 +61,25 @@ public class Player {
     }
     public void refillMana() {
         mana = maxMana;
+    }
+    public void restoreArmor() {
+        defense = maxDefense;
+    }
+
+    public void addEffects(List<PlayerEffect> effects) {
+        effects.forEach(playerEffect -> {
+            switch (playerEffect.getAttribute()) {
+                case HEALTH -> hp = playerEffect.getAction().equals(ADD) ?
+                        min(maxHp, max(0, hp + playerEffect.getAmount())) :
+                        min(maxHp, max(0, ((Double)(hp * playerEffect.getMultiplier())).intValue()));
+                case MANA -> mana = playerEffect.getAction().equals(ADD) ?
+                        min(maxMana, max(0, mana + playerEffect.getAmount())) :
+                        min(maxMana, max(0, ((Double)(mana * playerEffect.getMultiplier())).intValue()));
+                case ARMOR -> defense = playerEffect.getAction().equals(ADD) ?
+                        min(maxDefense, max(0, defense + playerEffect.getAmount())) :
+                        min(maxDefense, max(0, ((Double)(defense * playerEffect.getMultiplier())).intValue()));
+            }
+            effects.add(playerEffect);
+        });
     }
 }

@@ -5,7 +5,7 @@ import lombok.val;
 import org.apache.commons.math3.util.Pair;
 import org.dungeon.prototype.model.inventory.attributes.MagicType;
 import org.dungeon.prototype.model.inventory.attributes.Quality;
-import org.dungeon.prototype.model.inventory.attributes.effect.Effect;
+import org.dungeon.prototype.model.effect.Effect;
 import org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttackType;
 import org.dungeon.prototype.model.inventory.attributes.weapon.WeaponHandlerMaterial;
 import org.dungeon.prototype.model.inventory.attributes.weapon.Handling;
@@ -19,6 +19,7 @@ import org.dungeon.prototype.model.inventory.attributes.wearable.WearableType;
 import org.dungeon.prototype.model.inventory.items.Weapon;
 import org.dungeon.prototype.model.inventory.items.Wearable;
 import org.dungeon.prototype.properties.GenerationProperties;
+import org.dungeon.prototype.service.effect.ItemEffectsGenerator;
 import org.dungeon.prototype.util.RandomUtil;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,11 +37,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static java.util.Objects.isNull;
 import static org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttackType.BLUNT;
 import static org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttackType.SLASH;
 import static org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttackType.STAB;
 import static org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttackType.STRIKE;
-import static org.dungeon.prototype.model.inventory.attributes.weapon.Handling.ADDITIONAL;
 import static org.dungeon.prototype.model.inventory.attributes.weapon.Handling.SINGLE_HANDED;
 import static org.dungeon.prototype.model.inventory.attributes.weapon.Handling.TWO_HANDED;
 import static org.dungeon.prototype.model.inventory.attributes.weapon.Size.LARGE;
@@ -63,7 +64,7 @@ import static org.dungeon.prototype.model.inventory.attributes.wearable.Wearable
 import static org.dungeon.prototype.model.inventory.attributes.wearable.WearableMaterial.MITHRIL;
 import static org.dungeon.prototype.model.inventory.attributes.wearable.WearableMaterial.STEEL;
 import static org.dungeon.prototype.model.inventory.attributes.wearable.WearableMaterial.WOOL;
-import static org.dungeon.prototype.util.ItemGeneratorUtil.*;
+import static org.dungeon.prototype.util.GenerationUtil.*;
 import static org.dungeon.prototype.util.RandomUtil.getRandomEnumValue;
 import static org.dungeon.prototype.util.RandomUtil.getRandomInt;
 
@@ -87,7 +88,7 @@ public class ItemGenerator {
     @Value("${generation.items.buying-price-ratio}")
     private double buyingPriceRatio;
     @Autowired
-    private EffectsGenerator effectsGenerator;
+    private ItemEffectsGenerator itemEffectsGenerator;
     @Autowired
     private GenerationProperties generationProperties;
 
@@ -101,7 +102,7 @@ public class ItemGenerator {
             Handling handling;
             switch (type) {
                 case SWORD, AXE -> handling = getRandomEnumValue(List.of(SINGLE_HANDED, TWO_HANDED));
-                case DAGGER -> handling = getRandomEnumValue(List.of(SINGLE_HANDED, ADDITIONAL));
+                case DAGGER -> handling = SINGLE_HANDED;
                 default -> handling = getRandomEnumValue(List.of(Handling.values())); //TODO: consider more constraints
             }
             log.debug("Weapon handling: {}", handling);
@@ -130,15 +131,13 @@ public class ItemGenerator {
             }
             log.debug("Weapon quality: {}", quality);
             Size size;
-            switch (handling) {
-                case ADDITIONAL -> size = SMALL;
-                case TWO_HANDED -> size = LARGE;
-                default -> {
-                    if (DAGGER.equals(type)) {
-                        size = getRandomEnumValue(List.of(SMALL, MEDIUM));
-                    } else {
-                        size = getRandomEnumValue(List.of(Size.values()));
-                    }
+            if (TWO_HANDED.equals(handling)) {
+                size = LARGE;
+            } else {
+                if (DAGGER.equals(type)) {
+                    size = getRandomEnumValue(List.of(SMALL, MEDIUM));
+                } else {
+                    size = getRandomEnumValue(List.of(Size.values()));
                 }
             }
             log.debug("Weapon size: {}", size);
@@ -247,6 +246,7 @@ public class ItemGenerator {
         val weapon = new Weapon();
         weapon.setAttributes(weaponAttributes);
         weapon.setChatId(chatId);
+        weapon.setEffects(itemEffectsGenerator.generateEffects());
         return calculateParameters(weapon);
     }
 
@@ -269,8 +269,8 @@ public class ItemGenerator {
         weapon.setAttack((int) (weapon.getAttack() * handlingAdjustmentAttributes.getAttackRatio()));
         weapon.setChanceToMiss(weapon.getChanceToMiss() * handlingAdjustmentAttributes.getChanceToMissRatio());
         weapon.setCriticalHitChance(weapon.getCriticalHitChance() * handlingAdjustmentAttributes.getCriticalChanceRatio());
-        if (ADDITIONAL.equals(weapon.getAttributes().getHandling())) {
-            weapon.setAdditionalFirstHit(3); //TODO: adjust
+        if (!weapon.getAttributes().getSize().equals(LARGE)) {
+            weapon.setAdditionalFirstHit(getRandomInt(1, 3)); //TODO: adjust
         }
 
         val weaponMaterialAdjustmentAttributes = properties.getWeaponMaterialAdjustmentAttributes().get(weapon.getAttributes().getWeaponMaterial());
@@ -278,7 +278,7 @@ public class ItemGenerator {
         weapon.setChanceToMiss(weapon.getChanceToMiss() * weaponMaterialAdjustmentAttributes.getChanceToMissRatio());
         weapon.setCriticalHitChance(weapon.getCriticalHitChance() * weaponMaterialAdjustmentAttributes.getCriticalChanceRatio());
         weapon.setChanceToKnockOut(weapon.getChanceToKnockOut() * weaponMaterialAdjustmentAttributes.getKnockOutChanceRatio());
-        if (ENCHANTED_WOOD.equals(weapon.getAttributes().getWeaponMaterial()) && !weapon.isHasMagic()) {
+        if (ENCHANTED_WOOD.equals(weapon.getAttributes().getWeaponMaterial()) && (isNull(weapon.getHasMagic()) || !weapon.getHasMagic())) {
             weapon.setHasMagic(true);
             weapon.setMagicType(MagicType.values()[getRandomInt(0, MagicType.values().length - 1)]);
         }
@@ -313,7 +313,7 @@ public class ItemGenerator {
         weapon.setCriticalHitChance(weapon.getCriticalHitChance() * attackTypeAdjustment.getCriticalChanceRatio());
         weapon.setChanceToKnockOut(weapon.getChanceToKnockOut() * attackTypeAdjustment.getKnockOutChanceRatio());
         if (STRIKE.equals(weapon.getAttributes().getWeaponAttackType())) {
-            if (!weapon.isHasMagic()) {
+            if (isNull(weapon.getHasMagic()) || !weapon.getHasMagic()) {
                 weapon.setHasMagic(true);
                 weapon.setMagicType(MagicType.values()[getRandomInt(0, MagicType.values().length - 1)]);
             }
@@ -350,7 +350,7 @@ public class ItemGenerator {
         val wearable = new Wearable();
         wearable.setAttributes(wearableAttributes);
         wearable.setChatId(chatId);
-        wearable.setEffects(effectsGenerator.generateEffects(wearable.getClass()));
+        wearable.setEffects(itemEffectsGenerator.generateEffects());
         return calculateParameters(wearable);
     }
 

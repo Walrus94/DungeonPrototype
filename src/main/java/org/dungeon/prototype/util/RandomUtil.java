@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.apache.commons.math3.util.FastMath.PI;
@@ -50,10 +51,6 @@ public class RandomUtil {
 
     public static Integer getRandomInt(int from, int to) {
         return random.nextInt(from, to);
-    }
-
-    public static Double getRandomUniform(double from, double to) {
-        return random.nextUniform(from, to);
     }
 
     public static Double getNormalDistributionRandomDouble(double mean, double sd) {
@@ -155,24 +152,20 @@ public class RandomUtil {
                 .map(value -> (Weapon) value);
     }
 
-    public static Integer getRandomEffectAddition() {
-        return getEnumeratedDistribution(List.of(
-                Pair.create(1, 0.1),
-                Pair.create(2, 0.3),
-                Pair.create(3, 0.5),
-                Pair.create(5, 0.3),
-                Pair.create(7, 0.1)
-        )).sample();
+    public static Integer getRandomEffectAddition(Map<Integer, Double> randomEffectAdditionMap) {
+        return getEnumeratedDistribution(randomEffectAdditionMap
+                .entrySet()
+                .stream()
+                .map(entry -> Pair.create(entry.getKey(), entry.getValue()))
+                .collect(Collectors.toList())).sample();
     }
 
-    public static Double getRandomEffectMultiplier() {
-        return getEnumeratedDistribution(List.of(
-                Pair.create(1.1, 0.1),
-                Pair.create(1.2, 0.2),
-                Pair.create(1.3, 0.5),
-                Pair.create(1.5, 0.2),
-                Pair.create(1.7, 0.1)
-        )).sample();
+    public static Double getRandomEffectMultiplier(Map<Double, Double> randomEffectMultiplierMap) {
+        return getEnumeratedDistribution(randomEffectMultiplierMap
+                .entrySet()
+                .stream()
+                .map(entry -> Pair.create(entry.getKey(), entry.getValue()))
+                .collect(Collectors.toList())).sample();
     }
 
     private static <T>EnumeratedDistribution<T> getEnumeratedDistribution(List<Pair<T, Double>> probabilities) {

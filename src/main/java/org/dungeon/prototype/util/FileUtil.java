@@ -25,6 +25,7 @@ public class FileUtil {
     private static final String SHRINE_MANA_ROOM_ASSET = "static/images/room/shrine_mana.png";
     private static final String SHRINE_DRAINED_ROOM_ASSET = "static/images/room/shrine_drained.png";
     private static final String MERCHANT_ROOM_ASSET = "static/images/room/merchant.png";
+    private static final String ANVIL_ROOM_ASSET = "static/images/room/anvil.png";
 
     public static String getRoomAsset(RoomType roomType) {
         return switch (roomType) {
@@ -44,6 +45,7 @@ public class FileUtil {
             case MANA_SHRINE -> SHRINE_MANA_ROOM_ASSET;
             case SHRINE_DRAINED -> SHRINE_DRAINED_ROOM_ASSET;
             case MERCHANT -> MERCHANT_ROOM_ASSET;
+            case ANVIL -> ANVIL_ROOM_ASSET;
             default -> DEFAULT_ROOM_ASSET;
         };
     }

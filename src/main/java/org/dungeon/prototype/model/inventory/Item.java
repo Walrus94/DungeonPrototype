@@ -1,19 +1,24 @@
 package org.dungeon.prototype.model.inventory;
 
+import lombok.Data;
 import org.dungeon.prototype.model.document.item.ItemAttributes;
 import org.dungeon.prototype.model.document.item.ItemType;
+import org.dungeon.prototype.model.effect.ItemEffect;
 import org.dungeon.prototype.model.inventory.attributes.MagicType;
 
-public interface Item {
-    String getId();
-    ItemType getItemType();
-    String getName();
-    Long getChatId();
-    ItemAttributes getAttributes();
-    Integer getWeight();
-    boolean isHasMagic();
-    MagicType getMagicType();
-//    List<Effect> getEffects();
-    Integer getBuyingPrice();
-    Integer getSellingPrice();
+import java.util.List;
+
+@Data
+public abstract class Item {
+    protected String id;
+    protected String name;
+    protected Long chatId;
+    protected Integer weight;
+    protected Integer buyingPrice;
+    protected Integer sellingPrice;
+    protected List<ItemEffect> effects;
+    protected Boolean hasMagic;
+    protected MagicType magicType;
+    public abstract ItemAttributes getAttributes();
+    public abstract ItemType getItemType();
 }

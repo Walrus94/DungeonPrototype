@@ -6,7 +6,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
 
-@Mapper
+@Mapper(uses = EffectMapper.class)
 public interface MonsterMapper {
     MonsterMapper INSTANCE = Mappers.getMapper(MonsterMapper.class);
 

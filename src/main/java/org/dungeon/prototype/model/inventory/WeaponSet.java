@@ -10,6 +10,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.dungeon.prototype.model.inventory.attributes.weapon.Handling.SINGLE_HANDED;
+import static org.dungeon.prototype.model.inventory.attributes.weapon.Handling.TWO_HANDED;
+import static org.dungeon.prototype.model.inventory.attributes.weapon.Size.LARGE;
 
 @Data
 @NoArgsConstructor
@@ -17,22 +19,22 @@ public class WeaponSet {
     private String id;
     private Weapon primaryWeapon;
     private Weapon secondaryWeapon;
-
     public boolean addWeapon(Weapon weapon) {
         switch (weapon.getAttributes().getHandling()) {
-            case SINGLE_HANDED, TWO_HANDED -> {
-                if (Objects.nonNull(primaryWeapon)) {
+            case TWO_HANDED -> {
+                if (Objects.nonNull(primaryWeapon) || Objects.nonNull(secondaryWeapon)) {
                     return false;
                 }
                 primaryWeapon = weapon;
                 return true;
             }
-            case ADDITIONAL -> {
-                if (Objects.nonNull(primaryWeapon) && SINGLE_HANDED.equals(primaryWeapon.getAttributes().getHandling())) {
-                    secondaryWeapon = weapon;
-                    return true;
-                } else {
+            case SINGLE_HANDED -> {
+                if (Objects.nonNull(primaryWeapon) && TWO_HANDED.equals(primaryWeapon.getAttributes().getHandling())) {
                     return false;
+                } else if (Objects.isNull(primaryWeapon)) {
+                    primaryWeapon = weapon;
+                } else if (primaryWeapon.getAttributes().getHandling().equals(SINGLE_HANDED) && !primaryWeapon.getAttributes().getSize().equals(LARGE)) {
+                    secondaryWeapon = weapon;
                 }
             }
         }

@@ -40,6 +40,11 @@ public class RoomContentDocument {
     private Integer gold;
     @DBRef
     private List<ItemDocument> items;
+
+    private Double chanceToBreakWeapon;
+    private Integer attackBonus;
+    private boolean armorRestored;
+
     private Integer roomContentWeight;
     private RoomType roomType;
 }

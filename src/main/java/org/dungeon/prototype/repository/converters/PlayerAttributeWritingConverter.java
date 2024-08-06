@@ -5,7 +5,7 @@ import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.convert.WritingConverter;
 
 @WritingConverter
-public class AttributeWritingConverter implements Converter<PlayerAttribute, String> {
+public class PlayerAttributeWritingConverter implements Converter<PlayerAttribute, String> {
     @Override
     public String convert(PlayerAttribute source) {
         return source.getValue();

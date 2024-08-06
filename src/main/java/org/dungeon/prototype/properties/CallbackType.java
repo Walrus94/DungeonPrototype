@@ -27,5 +27,7 @@ public enum CallbackType {
     LEFT_HAND,
     ITEM_INVENTORY,
     ITEM_MERCHANT,
-    MAP
+    MAP,
+    RESTORE_ARMOR,
+    SHARPEN_WEAPON
 }

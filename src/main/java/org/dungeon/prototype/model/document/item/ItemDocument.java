@@ -5,7 +5,11 @@ import lombok.NoArgsConstructor;
 import org.dungeon.prototype.model.inventory.attributes.MagicType;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @Document(collection = "items")
@@ -23,8 +27,8 @@ public class ItemDocument {
     private Integer weight;
     private boolean hasMagic;
     private MagicType magicType;
-//    @DBRef
-//    private List<EffectDocument> effects;
+    @DBRef
+    private List<EffectDocument> effects = new ArrayList<>();
 
     private Integer sellingPrice;
     private Integer buyingPrice;
