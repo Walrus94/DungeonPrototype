@@ -19,6 +19,7 @@ import org.dungeon.prototype.model.inventory.attributes.wearable.WearableType;
 import org.dungeon.prototype.model.inventory.items.Weapon;
 import org.dungeon.prototype.model.inventory.items.Wearable;
 import org.dungeon.prototype.properties.GenerationProperties;
+import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.effect.ItemEffectsGenerator;
 import org.dungeon.prototype.util.RandomUtil;
 import org.jetbrains.annotations.NotNull;
@@ -89,6 +90,8 @@ public class ItemGenerator {
     private double buyingPriceRatio;
     @Autowired
     private ItemEffectsGenerator itemEffectsGenerator;
+    @Autowired
+    private EffectService effectService;
     @Autowired
     private GenerationProperties generationProperties;
 
@@ -246,7 +249,7 @@ public class ItemGenerator {
         val weapon = new Weapon();
         weapon.setAttributes(weaponAttributes);
         weapon.setChatId(chatId);
-        weapon.setEffects(itemEffectsGenerator.generateEffects());
+        weapon.setEffects(effectService.saveItemEffects(itemEffectsGenerator.generateEffects()));
         return calculateParameters(weapon);
     }
 
@@ -259,7 +262,6 @@ public class ItemGenerator {
         weapon.setCriticalHitChance(defaultAttributes.getCriticalHitChance());
         weapon.setChanceToMiss(defaultAttributes.getChanceToMiss());
         weapon.setChanceToKnockOut(defaultAttributes.getChanceToKnockOut());
-        weapon.setAdditionalFirstHit(0);
         if (STAFF.equals(weapon.getAttributes().getWeaponType())) {
             weapon.setHasMagic(true);
             weapon.setMagicType(MagicType.values()[getRandomInt(0, MagicType.values().length - 1)]);
@@ -269,9 +271,6 @@ public class ItemGenerator {
         weapon.setAttack((int) (weapon.getAttack() * handlingAdjustmentAttributes.getAttackRatio()));
         weapon.setChanceToMiss(weapon.getChanceToMiss() * handlingAdjustmentAttributes.getChanceToMissRatio());
         weapon.setCriticalHitChance(weapon.getCriticalHitChance() * handlingAdjustmentAttributes.getCriticalChanceRatio());
-        if (!weapon.getAttributes().getSize().equals(LARGE)) {
-            weapon.setAdditionalFirstHit(getRandomInt(1, 3)); //TODO: adjust
-        }
 
         val weaponMaterialAdjustmentAttributes = properties.getWeaponMaterialAdjustmentAttributes().get(weapon.getAttributes().getWeaponMaterial());
         weapon.setAttack((int) (weapon.getAttack() * weaponMaterialAdjustmentAttributes.getAttackRatio()));
@@ -285,7 +284,7 @@ public class ItemGenerator {
         if (DRAGON_BONE.equals(weapon.getAttributes().getWeaponMaterial()) && WeaponHandlerMaterial.DRAGON_BONE.equals(weapon.getAttributes().getWeaponHandlerMaterial())) {
             weapon.setCompleteDragonBone(true);
             weapon.setHasMagic(true);
-            weapon.setMagicType(MagicType.FIRE);
+            weapon.setMagicType(MagicType.CHAOTIC);//TODO: add magic coordinates to store type
         }
 
         val completeMaterialAdjustmentAttributes= properties.getCompleteMaterialAdjustmentAttributes();
@@ -296,7 +295,6 @@ public class ItemGenerator {
             weapon.setChanceToMiss(weapon.getChanceToMiss() * completeMaterialAdjustment.getChanceToMissRatio());
             weapon.setCriticalHitChance(weapon.getCriticalHitChance() * completeMaterialAdjustment.getCriticalChanceRatio());
             weapon.setChanceToKnockOut(weapon.getChanceToKnockOut() * completeMaterialAdjustment.getKnockOutChanceRatio());
-            weapon.setAdditionalFirstHit(weapon.getAdditionalFirstHit() + completeMaterialAdjustment.getFirstHitAddition());
         } else {
             val weaponHandlerAdjustment = properties.getWeaponHandlerMaterialAdjustmentAttributes().get(weapon.getAttributes().getWeaponHandlerMaterial());
             weapon.setAttack((int) (weapon.getAttack() * weaponHandlerAdjustment.getAttackRatio()));
@@ -350,7 +348,7 @@ public class ItemGenerator {
         val wearable = new Wearable();
         wearable.setAttributes(wearableAttributes);
         wearable.setChatId(chatId);
-        wearable.setEffects(itemEffectsGenerator.generateEffects());
+        wearable.setEffects(effectService.saveItemEffects(itemEffectsGenerator.generateEffects()));
         return calculateParameters(wearable);
     }
 

@@ -17,13 +17,19 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.apache.commons.math3.util.FastMath.*;
+import static org.apache.commons.math3.util.FastMath.max;
+import static org.apache.commons.math3.util.FastMath.min;
 
 @Slf4j
 @Component
@@ -92,7 +98,7 @@ public class ItemService {
         log.debug("Expected weight: {}, max items amount: {}", expectedWeight, maxItems);
 
         val lowest = itemRepository.findFirstByOrderByWeightAsc(chatId, PageRequest.of(0, 1)).stream().map(ItemWeightProjection::getWeight).findFirst().get();
-        val highest = itemRepository.findFirstByOrderByWeightDesc(chatId, PageRequest.of(0,1)).stream().map(ItemWeightProjection::getWeight).findFirst().get();
+        val highest = itemRepository.findFirstByOrderByWeightDesc(chatId, PageRequest.of(0, 1)).stream().map(ItemWeightProjection::getWeight).findFirst().get();
         log.debug("Items weight range: {} - {}", lowest, highest);
 
         var weight = max(lowest, min(highest, expectedWeight / maxItems));
@@ -127,7 +133,7 @@ public class ItemService {
             val closestGreaterWeight = closestGreaterWeightList.getFirst().getWeight();
 
             if (closestGreaterWeight - weight < weight - closestLesserWeight) {
-                return itemRepository.findByChatIdAndWeightAndIdNotIn(chatId, closestGreaterWeight, usedItemIds,PageRequest.of(0, limit));
+                return itemRepository.findByChatIdAndWeightAndIdNotIn(chatId, closestGreaterWeight, usedItemIds, PageRequest.of(0, limit));
             } else {
                 return itemRepository.findByChatIdAndWeightAndIdNotIn(chatId, closestLesserWeight, usedItemIds, PageRequest.of(0, limit));
             }
@@ -157,6 +163,24 @@ public class ItemService {
                 return itemMapper.mapToWeapon(itemDocument);
             } else return null;
         }).collect(Collectors.toSet());
+    }
+
+    public Item findItem(Long chatId, String itemId) {
+        val itemDocument = itemRepository.findByChatIdAndId(chatId, itemId).orElseThrow(() -> {
+            throw new NoSuchElementException();
+        });
+        switch (itemDocument.getItemType()) {
+            case WEAPON -> {
+                return ItemMapper.INSTANCE.mapToWeapon(itemDocument);
+            }
+            case WEARABLE -> {
+                return ItemMapper.INSTANCE.mapToWearable(itemDocument);
+            }
+            case USABLE -> {
+                return ItemMapper.INSTANCE.mapToUsable(itemDocument);
+            }
+        }
+        return null;
     }
 
     public void dropCollection(Long chatId) {

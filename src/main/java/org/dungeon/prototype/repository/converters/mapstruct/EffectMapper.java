@@ -3,6 +3,7 @@ package org.dungeon.prototype.repository.converters.mapstruct;
 import org.dungeon.prototype.model.document.item.EffectDocument;
 import org.dungeon.prototype.model.effect.DirectPlayerEffect;
 import org.dungeon.prototype.model.effect.Effect;
+import org.dungeon.prototype.model.effect.Expirable;
 import org.dungeon.prototype.model.effect.ItemEffect;
 import org.dungeon.prototype.model.effect.MonsterEffect;
 import org.dungeon.prototype.model.effect.PlayerEffect;
@@ -15,6 +16,9 @@ import org.mapstruct.Mappings;
 import org.mapstruct.Named;
 import org.mapstruct.factory.Mappers;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import static org.dungeon.prototype.model.effect.EffectApplicant.ITEM;
 import static org.dungeon.prototype.model.effect.EffectApplicant.PLAYER;
 
@@ -24,9 +28,15 @@ public interface EffectMapper {
 
     @Mappings({
             @Mapping(target = "attribute", source = "effect", qualifiedByName = "mapAttributeToDocument"),
-            @Mapping(target = "turnsLasts", source = "effect", qualifiedByName = "mapTurnsLastsToDocument")
+            @Mapping(target = "turnsLasts", source = "effect", qualifiedByName = "mapTurnsLastsToDocument"),
+            @Mapping(target = "isAccumulated", source = "effect", qualifiedByName = "mapIsAccumulatedToDocument"),
+            @Mapping(target = "hasFirstTurnPassed", source = "effect", qualifiedByName = "mapHasFirstTurnPassedToDocument")
     })
     EffectDocument mapToDocument(Effect effect);
+
+    default List<EffectDocument> mapToDocuments(List<Effect> effects){
+        return effects.stream().map(this::mapToDocument).collect(Collectors.toList());
+    }
 
     default PlayerEffect mapToPlayerEffect(EffectDocument document) {
         if (document.getApplicableTo().equals(ITEM)) {
@@ -41,6 +51,8 @@ public interface EffectMapper {
     DirectPlayerEffect mapToDirectPlayerEffect(EffectDocument document);
 
     ItemEffect mapToItemEffect(EffectDocument document);
+
+    List<ItemEffect> mapToItemEffects(List<EffectDocument> document);
 
     MonsterEffect mapToMonsterEffect(EffectDocument document);
 
@@ -57,8 +69,26 @@ public interface EffectMapper {
 
     @Named("mapTurnsLastsToDocument")
     default Integer mapTurnsLastsToDocument(Effect effect) {
-        if (effect instanceof DirectPlayerEffect) {
-            return ((DirectPlayerEffect) effect).getTurnsLasts();
+        if (effect instanceof Expirable) {
+            return ((Expirable) effect).getTurnsLasts();
+        } else {
+            return null;
+        }
+    }
+
+    @Named("mapIsAccumulatedToDocument")
+    default Boolean mapIsAccumulatedToDocument(Effect effect) {
+        if (effect instanceof Expirable) {
+            return ((Expirable) effect).getIsAccumulated();
+        } else {
+            return null;
+        }
+    }
+
+    @Named("mapHasFirstTurnPassedToDocument")
+    default Boolean mapHasFirstTurnPassedToDocument(Effect effect) {
+        if (effect instanceof Expirable) {
+            return ((Expirable) effect).getHasFirstTurnPassed();
         } else {
             return null;
         }
@@ -73,7 +103,7 @@ public interface EffectMapper {
     }
 
     default PlayerEffectAttribute mapToPlayerAttribute(EffectAttribute effectAttribute) {
-        if (effectAttribute instanceof DirectPlayerEffect) {
+        if (effectAttribute instanceof PlayerEffectAttribute) {
             return (PlayerEffectAttribute) effectAttribute;
         } else {
             return null;

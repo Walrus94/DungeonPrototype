@@ -15,7 +15,6 @@ public class Weapon extends Item {
     private WeaponAttributes attributes;
 
     private Integer attack;
-    private Integer additionalFirstHit;
     private Double criticalHitChance;
     private Double chanceToMiss;
     private Double chanceToKnockOut;

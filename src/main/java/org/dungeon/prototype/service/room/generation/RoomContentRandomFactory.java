@@ -2,20 +2,24 @@ package org.dungeon.prototype.service.room.generation;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.dungeon.prototype.model.effect.Action;
+import org.dungeon.prototype.model.effect.DirectPlayerEffect;
+import org.dungeon.prototype.model.effect.attributes.PlayerEffectAttribute;
 import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.monster.Monster;
 import org.dungeon.prototype.model.monster.MonsterAttack;
-import org.dungeon.prototype.model.room.content.RoomContent;
 import org.dungeon.prototype.model.room.RoomType;
 import org.dungeon.prototype.model.room.content.HealthShrine;
 import org.dungeon.prototype.model.room.content.ManaShrine;
 import org.dungeon.prototype.model.room.content.Merchant;
 import org.dungeon.prototype.model.room.content.MonsterRoom;
 import org.dungeon.prototype.model.room.content.NormalRoom;
+import org.dungeon.prototype.model.room.content.RoomContent;
 import org.dungeon.prototype.model.room.content.Treasure;
 import org.dungeon.prototype.properties.GenerationProperties;
 import org.dungeon.prototype.repository.MonsterRepository;
 import org.dungeon.prototype.repository.converters.mapstruct.MonsterMapper;
+import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.item.ItemService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -39,6 +43,8 @@ public class RoomContentRandomFactory {
     @Autowired
     private ItemService itemService;
     @Autowired
+    private EffectService effectService;
+    @Autowired
     private MonsterRoomGenerationService monsterRoomGenerationService;
     @Autowired
     private MonsterRepository monsterRepository;
@@ -51,10 +57,38 @@ public class RoomContentRandomFactory {
             case WEREWOLF, VAMPIRE, SWAMP_BEAST, DRAGON, ZOMBIE -> getMonster(expectedWeightAbs, roomType);
             case TREASURE -> getTreasure(chatId, expectedWeightAbs, usedItemIds);
             case MERCHANT -> getMerchant(chatId, expectedWeightAbs, usedItemIds);
-            case HEALTH_SHRINE -> new HealthShrine();
-            case MANA_SHRINE -> new ManaShrine();
+            case HEALTH_SHRINE -> getHealthShrine(expectedWeightAbs);
+            case MANA_SHRINE -> getManaShrine(expectedWeightAbs);
             default -> new NormalRoom();
         };
+    }
+
+    private ManaShrine getManaShrine(Integer expectedWeightAbs) {
+        val manaShrine = new ManaShrine();
+        DirectPlayerEffect manaRegeneration = new DirectPlayerEffect();
+        //TODO: configure according to weight
+        manaRegeneration.setAttribute(PlayerEffectAttribute.MANA);
+        manaRegeneration.setTurnsLasts(3);
+        manaRegeneration.setAction(Action.ADD);
+        manaRegeneration.setAmount(15);
+        manaRegeneration.setIsAccumulated(true);
+        manaRegeneration = (DirectPlayerEffect) effectService.savePlayerEffect(manaRegeneration);
+        manaShrine.setEffect(manaRegeneration);
+        return manaShrine;
+    }
+
+    private HealthShrine getHealthShrine(Integer expectedWeightAbs) {
+        val healthShrine = new HealthShrine();
+        DirectPlayerEffect regeneration = new DirectPlayerEffect();
+        regeneration.setAttribute(PlayerEffectAttribute.HEALTH);
+        //TODO: configure according to weight
+        regeneration.setTurnsLasts(5);
+        regeneration.setAction(Action.ADD);
+        regeneration.setAmount(20);
+        regeneration.setIsAccumulated(true);
+        regeneration = (DirectPlayerEffect) effectService.savePlayerEffect(regeneration);
+        healthShrine.setEffect(regeneration);
+        return healthShrine;
     }
 
     private Merchant getMerchant(Long chatId, Integer expectedWeight, Set<String> usedItemIds) {

@@ -11,16 +11,23 @@ import static java.util.Objects.isNull;
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = false)
-public class MonsterEffect extends Effect {
+public class MonsterEffect extends Effect implements Expirable {
     MonsterEffectAttribute attribute;
     private Integer turnsLasts;
+    private Boolean isAccumulated;
     @Override
-    Boolean isPermanent() {
+    public Boolean isPermanent() {
         return isNull(turnsLasts) || !(turnsLasts > 0);
     }
 
     @Override
-    Boolean isNegative() {
+    public Boolean isNegative() {
         return GenerationUtil.isNegative(action, amount, multiplier);
     }
+
+    @Override
+    public Integer decreaseTurnsLasts() {
+        return turnsLasts--;
+    }
+
 }

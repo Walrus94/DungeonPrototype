@@ -1,13 +1,13 @@
 package org.dungeon.prototype.repository.converters;
 
-import org.dungeon.prototype.model.effect.attributes.PlayerEffectAttribute;
+import org.dungeon.prototype.model.effect.attributes.EffectAttribute;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.convert.WritingConverter;
 
 @WritingConverter
-public class PlayerEffectAttributeWritingConverter implements Converter<PlayerEffectAttribute, String> {
+public class EffectAttributeWritingConverter implements Converter<EffectAttribute, String> {
     @Override
-    public String convert(PlayerEffectAttribute source) {
+    public String convert(EffectAttribute source) {
         return source.getValue();
     }
 }

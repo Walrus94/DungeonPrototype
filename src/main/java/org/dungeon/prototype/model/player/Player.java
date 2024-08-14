@@ -3,19 +3,18 @@ package org.dungeon.prototype.model.player;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.dungeon.prototype.model.Direction;
 import org.dungeon.prototype.model.Point;
 import org.dungeon.prototype.model.effect.PlayerEffect;
+import org.dungeon.prototype.model.effect.attributes.PlayerEffectAttribute;
 import org.dungeon.prototype.model.inventory.Inventory;
 import org.dungeon.prototype.service.PlayerLevelService;
-import org.springframework.data.annotation.Transient;
 
 import java.util.EnumMap;
 import java.util.List;
-
-import static org.apache.commons.lang3.math.NumberUtils.max;
-import static org.apache.commons.lang3.math.NumberUtils.min;
-import static org.dungeon.prototype.model.effect.Action.ADD;
+import java.util.Map;
+import java.util.PriorityQueue;
 
 @Data
 @Slf4j
@@ -38,14 +37,23 @@ public class Player {
     private Integer defense;
     private Integer maxDefense;
     private Inventory inventory;
-    private List<PlayerEffect> playerEffects;
+    private Map<PlayerEffectAttribute, PriorityQueue<PlayerEffect>> effects;
     EnumMap<PlayerAttribute, Integer> attributes;
 
     //TODO: move to service and use queries through repository
-    @Transient
-    public void addXp(Integer xpReward) {
+    public boolean addXp(Integer xpReward) {
         xp += xpReward;
-        playerLevel = PlayerLevelService.getLevel(xp);
+        log.debug("Rewarded xp: {}, total: {}", xpReward, xp);
+        val level = PlayerLevelService.getLevel(xp);
+        if (level == playerLevel + 1) {
+            playerLevel++;
+            log.debug("Level {} achieved!", playerLevel);
+            refillHp();
+            refillMana();
+            nextLevelXp = PlayerLevelService.calculateXPForLevel(playerLevel + 1);
+            return true;
+        }
+        return false;
     }
     public void decreaseDefence(int amount) {
         defense -= amount;
@@ -55,6 +63,9 @@ public class Player {
     }
     public void addGold(int amount) {
         gold += amount;
+    }
+    public void removeGold(int amount) {
+        gold = amount > gold ? 0 : gold - amount;
     }
     public void refillHp() {
         hp = maxHp;
@@ -67,19 +78,7 @@ public class Player {
     }
 
     public void addEffects(List<PlayerEffect> effects) {
-        effects.forEach(playerEffect -> {
-            switch (playerEffect.getAttribute()) {
-                case HEALTH -> hp = playerEffect.getAction().equals(ADD) ?
-                        min(maxHp, max(0, hp + playerEffect.getAmount())) :
-                        min(maxHp, max(0, ((Double)(hp * playerEffect.getMultiplier())).intValue()));
-                case MANA -> mana = playerEffect.getAction().equals(ADD) ?
-                        min(maxMana, max(0, mana + playerEffect.getAmount())) :
-                        min(maxMana, max(0, ((Double)(mana * playerEffect.getMultiplier())).intValue()));
-                case ARMOR -> defense = playerEffect.getAction().equals(ADD) ?
-                        min(maxDefense, max(0, defense + playerEffect.getAmount())) :
-                        min(maxDefense, max(0, ((Double)(defense * playerEffect.getMultiplier())).intValue()));
-            }
-            effects.add(playerEffect);
-        });
+        effects.forEach(playerEffect ->
+                this.effects.get(playerEffect.getAttribute()).offer(playerEffect));
     }
 }

@@ -11,6 +11,7 @@ import org.dungeon.prototype.model.room.RoomType;
 import org.dungeon.prototype.model.room.RoomsSegment;
 import org.dungeon.prototype.model.ui.level.GridSection;
 import org.dungeon.prototype.model.ui.level.LevelMap;
+import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.service.level.WalkerBuilderIterator;
 
 import java.nio.charset.StandardCharsets;
@@ -33,11 +34,12 @@ import static org.dungeon.prototype.util.RandomUtil.flipAdjustedCoin;
 public class LevelUtil {
     public static RoomType getMonsterKilledRoomType(RoomType roomType) {
         return switch (roomType) {
-            case WEREWOLF -> RoomType.WEREWOLF_KILLED;
-            case VAMPIRE -> RoomType.VAMPIRE_KILLED;
-            case SWAMP_BEAST -> RoomType.SWAMP_BEAST_KILLED;
-            case DRAGON -> RoomType.DRAGON_KILLED;
-            case ZOMBIE -> RoomType.ZOMBIE_KILLED;
+            //TODO: investigate why KILLED type appears occasionally
+            case WEREWOLF, WEREWOLF_KILLED -> RoomType.WEREWOLF_KILLED;
+            case VAMPIRE, VAMPIRE_KILLED -> RoomType.VAMPIRE_KILLED;
+            case SWAMP_BEAST, SWAMP_BEAST_KILLED -> RoomType.SWAMP_BEAST_KILLED;
+            case DRAGON, DRAGON_KILLED -> RoomType.DRAGON_KILLED;
+            case ZOMBIE, ZOMBIE_KILLED -> RoomType.ZOMBIE_KILLED;
             default -> throw new IllegalStateException("Unexpected value: " + roomType);
         };
     }
@@ -114,6 +116,15 @@ public class LevelUtil {
         };
     }
 
+    public static Direction getDirectionSwitchByCallBackData(Direction direction, CallbackType callBackData) {
+        return switch (callBackData) {
+            case LEFT -> turnLeft(direction);
+            case RIGHT -> turnRight(direction);
+            case BACK -> getOppositeDirection(direction);
+            default -> direction;
+        };
+    }
+
     public static Direction turnLeft(Direction direction) {
         return switch (direction) {
             case N -> W;
@@ -130,6 +141,17 @@ public class LevelUtil {
             case S -> W;
             case W -> N;
         };
+    }
+
+    //TODO: get rid of it
+    public static String getErrorMessageByCallBackData(CallbackType callBackData) {
+        return switch (callBackData) {
+                case LEFT -> "Left door is locked!";
+                case RIGHT -> "Right door is locked!";
+                case FORWARD -> "Middle door is locked!";
+                case BACK -> "Door on the back is locked!";
+                default -> "Wrong callBack data!";
+            };
     }
 
     public static Point getNextPointInDirection(Point point, Direction direction) {

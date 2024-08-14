@@ -1,12 +1,10 @@
 package org.dungeon.prototype.service.effect;
 
 import lombok.val;
+import org.dungeon.prototype.model.effect.Action;
 import org.dungeon.prototype.model.effect.ItemEffect;
 import org.dungeon.prototype.model.effect.attributes.PlayerEffectAttribute;
-import org.dungeon.prototype.model.effect.Action;
 import org.dungeon.prototype.properties.ItemsGenerationProperties;
-import org.dungeon.prototype.repository.EffectRepository;
-import org.dungeon.prototype.repository.converters.mapstruct.EffectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -16,15 +14,18 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.dungeon.prototype.model.effect.attributes.PlayerEffectAttribute.*;
-import static org.dungeon.prototype.util.RandomUtil.*;
+import static org.dungeon.prototype.model.effect.attributes.PlayerEffectAttribute.CHANCE_TO_DODGE;
+import static org.dungeon.prototype.model.effect.attributes.PlayerEffectAttribute.CRITICAL_HIT_CHANCE;
+import static org.dungeon.prototype.model.effect.attributes.PlayerEffectAttribute.KNOCK_OUT_CHANCE;
+import static org.dungeon.prototype.model.effect.attributes.PlayerEffectAttribute.MISS_CHANCE;
+import static org.dungeon.prototype.util.RandomUtil.getRandomEffectAddition;
+import static org.dungeon.prototype.util.RandomUtil.getRandomEffectMultiplier;
+import static org.dungeon.prototype.util.RandomUtil.getRandomInt;
 
 @Component
 public class ItemEffectsGenerator {
     @Autowired
     ItemsGenerationProperties itemsGenerationProperties;
-    @Autowired
-    EffectRepository effectRepository;
     @Value("${generation.items.effects.minimum-amount-per-item}")
     private Integer minEffectsAmount;
     @Value("${generation.items.effects.maximum-amount-per-item}")
@@ -47,8 +48,7 @@ public class ItemEffectsGenerator {
                 effect.setMultiplier(getRandomEffectMultiplier(properties.getRandomEffectMultiplierMap()));
                 effect.setWeight((int) ((effect.getMultiplier() - 1.0) * properties.getWeightMultiplierRatio()));
             }
-            val savedEffect = effectRepository.save(EffectMapper.INSTANCE.mapToDocument(effect));
-            return EffectMapper.INSTANCE.mapToItemEffect(savedEffect);
+            return effect;
         }).limit(amount).collect(Collectors.toList());
     }
 }

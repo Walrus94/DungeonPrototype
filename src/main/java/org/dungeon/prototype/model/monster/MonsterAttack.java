@@ -1,9 +1,9 @@
 package org.dungeon.prototype.model.monster;
 
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Data;
 
-@Getter
+@Data
 @AllArgsConstructor(staticName = "of")
 public class MonsterAttack {
     private MonsterAttackType attackType;

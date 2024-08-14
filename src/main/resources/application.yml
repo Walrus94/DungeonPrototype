@@ -8,97 +8,163 @@ huggingface:
   api:
     url: http://localhost:5000/generate
 
-keyboard:
-  emoji:
-    treasure: "\uD83D\uDCB0"
-  template-replacement: "?"
-  buttons:
-    start-game:
-      callback: btn_start_game
-      name: Start Game
-    continue-game:
-      callback: btn_continue_game
-      name: Continue Game
-    next-level:
-      callback: btn_next_level
-      name: Next Level
-    left:
-      callback: btn_left
-      name: Left
-    right:
-      callback: btn_right
-      name: Right
-    forward:
-      callback: btn_forward
-      name: Forward
-    back:
-      callback: btn_turn_back
-      name: Turn Back
-    attack:
-      callback: btn_attack
-      name: Attack!
-    secondary-attack:
-      callback: btn_attack_sec
-      name: Secondary attack!
-    menu:
-      callback: btn_menu
-      name: Menu
-    map:
-      callback: btn_menu
-      name: Map
-    menu-back:
-      callback: btn_menu_back
-      name: Back
-    shrine:
-      callback: btn_shrine_use
-      name: Use
-    merchant:
-      callback: btn_merchant
-      name: Buy and sell!
-    restore-armor:
-      callback: btn_restore_armor
-      name: Restore Armor
-    sharpen-weapon:
-      callback: btn_sharpen_weapon
-      name: Sharpen Weapon
-    treasure-open:
-      callback: btn_treasure_open
-      name: Open
-    treasure-gold-collected:
-      callback: btn_treasure_gold_collected
-      name: ${keyboard.template-replacement} ${keyboard.emoji.treasure}
-    item-collected:
-      callback: btn_treasure_item_collected_${keyboard.template-replacement}
-      name: ${keyboard.template-replacement}
-    collect-all:
-      callback: btn_treasure_collect_all
-      name: Collect all
-    inventory:
-      callback: btn_inventory
-      name: Inventory
-    head:
-      callback: btn_inventory_head_${keyboard.template-replacement}
-      name: ${keyboard.template-replacement} (un-equip)
-    vest:
-      callback: btn_inventory_vest_${keyboard.template-replacement}
-      name: ${keyboard.template-replacement} (un-equip)
-    gloves:
-      callback: btn_inventory_gloves_${keyboard.template-replacement}
-      name: ${keyboard.template-replacement} (un-equip)
-    boots:
-      callback: btn_inventory_boots_${keyboard.template-replacement}
-      name: ${keyboard.template-replacement} (un-equip)
-    right-hand:
-      callback: btn_inventory_primary_weapon_${keyboard.template-replacement}
-      name: ${keyboard.template-replacement} (un-equip)
-    left-hand:
-      callback: btn_inventory_secondary_weapon_${keyboard.template-replacement}
-      name: ${keyboard.template-replacement} (un-equip)
-    item-inventory:
-      callback: btn_inventory_item_${keyboard.template-replacement}
-      name: ${keyboard.template-replacement} (equip)
-    item-merchant:
-      callback: btn_merchant_item_${keyboard.template-replacement}
+messaging:
+  bar-blocks: 5
+  xp-bar-blocks: 10
+  constants:
+    emoji:
+      treasure: "\uD83D\uDCB0"
+      heart: "\uD83D\uDC9F"
+      red-square: "\uD83D\uDFE5"
+      diamond: "\uD83D\uDC8E"
+      blue-square: "\uD83D\uDFE6"
+      black-heart: "🖤"
+      sword: "\uD83D\uDDE1"
+      dagger: "🔪"
+      shield: "\uD83D\uDEE1"
+      stonks: "\uD83D\uDCC8"
+      brown-block: "\uD83D\uDFEB"
+      orange-block: "🟧"
+      axe: "\uD83E\uDE93"
+
+  keyboard:
+    template-placeholder: "?"
+    buttons:
+      start-game:
+        callback: btn_start_game
+        name: Start Game
+      continue-game:
+        callback: btn_continue_game
+        name: Continue Game
+      next-level:
+        callback: btn_next_level
+        name: Next Level
+      left:
+        callback: btn_left
+        name: Left
+      right:
+        callback: btn_right
+        name: Right
+      forward:
+        callback: btn_forward
+        name: Forward
+      back:
+        callback: btn_turn_back
+        name: Turn Back
+      attack:
+        callback: btn_attack
+        name: Attack!
+      secondary-attack:
+        callback: btn_attack_sec
+        name: Secondary attack!
+      map:
+        callback: btn_map
+        name: Map
+      menu-back:
+        callback: btn_menu_back
+        name: Back
+      shrine:
+        callback: btn_shrine_use
+        name: Use
+      merchant-buy-menu:
+        callback: btn_merchant_buy_menu
+        name: Buy items!
+      merchant-buy-menu-back:
+        callback: btn_merchant_buy_menu
+        name: Back
+      merchant-sell-menu:
+        callback: btn_merchant_sell_menu
+        name: Sell items!
+      merchant-sell-menu-back:
+        callback: btn_merchant_sell_menu
+        name: Back
+      restore-armor:
+        callback: btn_restore_armor
+        name: Restore Armor
+      sharpen-weapon:
+        callback: btn_sharpen_weapon
+        name: Sharpen Weapon
+      treasure-open:
+        callback: btn_treasure_open
+        name: Open
+      treasure-gold-collected:
+        callback: btn_treasure_gold_collected
+        name: ${messaging.keyboard.template-placeholder} ${messaging.constants.emoji.treasure}
+      item-collected:
+        callback: btn_treasure_item_collected_${messaging.keyboard.template-placeholder}
+        name: ${messaging.keyboard.template-placeholder}
+      collect-all:
+        callback: btn_treasure_collect_all
+        name: Collect all
+      inventory:
+        callback: btn_inventory
+        name: Inventory
+      head:
+        callback: btn_inventory_display_head_${messaging.keyboard.template-placeholder}
+        name: ${messaging.keyboard.template-placeholder}
+      vest:
+        callback: btn_inventory_display_vest_${messaging.keyboard.template-placeholder}
+        name: ${messaging.keyboard.template-placeholder}
+      gloves:
+        callback: btn_inventory_display_gloves_${messaging.keyboard.template-placeholder}
+        name: ${messaging.keyboard.template-placeholder}
+      boots:
+        callback: btn_inventory_display_boots_${messaging.keyboard.template-placeholder}
+        name: ${messaging.keyboard.template-placeholder}
+      right-hand:
+        callback: btn_inventory_display_primary_weapon_${messaging.keyboard.template-placeholder}
+        name: ${messaging.keyboard.template-placeholder}
+      left-hand:
+        callback: btn_inventory_display_secondary_weapon_${messaging.keyboard.template-placeholder}
+        name: ${messaging.keyboard.template-placeholder}
+      item-inventory:
+        callback: btn_inventory_display_item_${messaging.keyboard.template-placeholder}
+        name: ${messaging.keyboard.template-placeholder}
+      item-inventory-back:
+        callback: btn_inventory
+        name: Back
+      item-inventory-equip:
+        callback: btn_inventory_item_equip_${messaging.keyboard.template-placeholder}
+        name: (equip)
+      item-inventory-un-equip:
+        callback: btn_inventory_item_un_equip_${messaging.keyboard.template-placeholder}
+        name: (un-equip)
+      merchant-sell-display-head:
+        callback: btn_merchant_display_head_${messaging.keyboard.template-placeholder}
+        name: ${messaging.keyboard.template-placeholder}
+      merchant-sell-display-vest:
+        callback: btn_merchant_display_vest_${messaging.keyboard.template-placeholder}
+        name: ${messaging.keyboard.template-placeholder}
+      merchant-sell-display-gloves:
+        callback: btn_merchant_display_gloves_${messaging.keyboard.template-placeholder}
+        name: ${messaging.keyboard.template-placeholder}
+      merchant-sell-display-boots:
+        callback: btn_merchant_display_boots_${messaging.keyboard.template-placeholder}
+        name: ${messaging.keyboard.template-placeholder}
+      merchant-sell-display-right-hand:
+        callback: btn_merchant_display_primary_weapon_${messaging.keyboard.template-placeholder}
+        name: ${messaging.keyboard.template-placeholder}
+      merchant-sell-display-left-hand:
+        callback: btn_merchant_display_secondary_weapon_${messaging.keyboard.template-placeholder}
+        name: ${messaging.keyboard.template-placeholder}
+      merchant-sell-display-item:
+        callback: btn_merchant_display_item_${messaging.keyboard.template-placeholder}
+        name: ${messaging.keyboard.template-placeholder}
+      merchant-item-sell:
+        name:
+        callback: btn_merchant_list_item_sell_${messaging.keyboard.template-placeholder}
+      merchant-item-buy:
+        name:
+        callback: btn_merchant_list_item_buy_${messaging.keyboard.template-placeholder}
+      merchant-sell-price:
+        callback: btn_merchant_sell_${messaging.keyboard.template-placeholder}
+        name: ${messaging.keyboard.template-placeholder} ${messaging.constants.emoji.treasure}
+      merchant-buy-price:
+        callback: btn_merchant_buy_${messaging.keyboard.template-placeholder}
+        name: ${messaging.keyboard.template-placeholder} ${messaging.constants.emoji.treasure}
+      player-attribute-upgrade:
+        callback: btn_player_attribute_upgrade_${messaging.keyboard.template-placeholder}
+        name:
 
 generation:
   level:
@@ -300,19 +366,16 @@ generation:
           chance-to-miss-ratio: 0.3
           critical-chance-ratio: 1.7
           knock-out-chance-ratio: 1.0
-          first-hit-addition: 5
         wood:
           attack-ratio: 1.0
           chance-to-miss-ratio: 1.0
           critical-chance-ratio: 1.0
           knock-out-chance-ratio: 1.1
-          first-hit-addition: 0
         steel:
           attack-ratio: 1.1
           chance-to-miss-ratio: 1.0
           critical-chance-ratio: 1.0
           knock-out-chance-ratio: 1.0
-          first-hit-addition: 0
       size-adjustment-attributes:
         small:
           attack-ratio: 0.9

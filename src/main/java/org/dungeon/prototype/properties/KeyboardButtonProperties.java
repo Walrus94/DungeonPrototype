@@ -8,9 +8,9 @@ import java.util.Map;
 
 @Data
 @ConfigurationPropertiesScan
-@ConfigurationProperties("keyboard")
+@ConfigurationProperties("messaging.keyboard")
 public class KeyboardButtonProperties {
-    private String templateReplacement;
+    private String templatePlaceholder;
     private Map<CallbackType, KeyboardButtonAttributes> buttons;
     @Data
     public static class KeyboardButtonAttributes {

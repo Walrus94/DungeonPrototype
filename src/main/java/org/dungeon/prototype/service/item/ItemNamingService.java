@@ -120,15 +120,10 @@ public class ItemNamingService {
     }
 
     private String generatePrompt(WearableAttributes wearableAttributes) {
-        return wearableAttributes.getQuality() + " "
-                + wearableAttributes.getWearableType() + " made of " +
-                wearableAttributes.getWearableMaterial() + " name is";
+        return wearableAttributes.toString() + " name is";
     }
 
     private String generatePrompt(WeaponAttributes weaponAttributes) {
-        return weaponAttributes.getQuality() + " " + weaponAttributes.getSize() + " sized " + weaponAttributes.getHandling() +
-                " " + weaponAttributes.getWeaponType() + " made of " + weaponAttributes.getWeaponMaterial() +
-                " with handler made of " + weaponAttributes.getWeaponHandlerMaterial() +
-                " and attack type is " + weaponAttributes.getWeaponAttackType() + " name is";
+        return weaponAttributes.toString() + " name is";
     }
 }

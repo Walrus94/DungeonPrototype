@@ -2,6 +2,7 @@ package org.dungeon.prototype.model.monster;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.apache.commons.math3.util.FastMath;
 import org.dungeon.prototype.model.effect.MonsterEffect;
 import org.dungeon.prototype.util.GenerationUtil;
 
@@ -26,16 +27,17 @@ public class Monster {
     private MonsterAttack secondaryAttack;
 
     private List<MonsterEffect> effects;
+    private Iterator<MonsterAttack> attackPattern;
 
-    private Iterator<MonsterAttack> currentAttack;
-    public List<MonsterAttack> getDefaultAttackPattern() {
+    private MonsterAttack currentAttack;
+    public Iterator<MonsterAttack> getDefaultAttackPattern() {
         return GenerationUtil.getDefaultAttackPattern().stream().mapToObj(value -> {
             if (value == 1) {
                 return getSecondaryAttack();
             } else {
                 return getPrimaryAttack();
             }
-        }).collect(Collectors.toList());
+        }).toList().iterator();
     }
 
     public Integer getWeight() {
@@ -43,16 +45,12 @@ public class Monster {
     }
 
     public void decreaseHp(Integer amount) {
-        hp -= amount;
+        hp = FastMath.max(hp - amount, 0);
     }
 
     public void addEffect(MonsterEffect monsterEffect) {
         switch (monsterEffect.getAttribute()) {
-            case ATTACK -> {
-
-            }
-            case HEALTH -> {
-            }
+            case MONSTER_ATTACK, MONSTER_HEALTH -> effects.add(monsterEffect);
             case MOVING -> {
                 if (effects.stream().anyMatch(effect -> MOVING.equals(effect.getAttribute()))) {
                     effects.stream().filter(effect -> MOVING.equals(effect.getAttribute()))

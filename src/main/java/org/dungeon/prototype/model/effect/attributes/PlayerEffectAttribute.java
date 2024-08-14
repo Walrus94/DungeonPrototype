@@ -10,7 +10,6 @@ public enum PlayerEffectAttribute implements EffectAttribute {
      ARMOR("Armor"),
      CRITICAL_HIT_CHANCE("Critical hit chance"),
      MISS_CHANCE("Miss chance"),
-     ADDITIONAL_FIRST_HIT("Additional first hit"),
      KNOCK_OUT_CHANCE("Knock out chance"),
      CHANCE_TO_DODGE("Chance to dodge");
 

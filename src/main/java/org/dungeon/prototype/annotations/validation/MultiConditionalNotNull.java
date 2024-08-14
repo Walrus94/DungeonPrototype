@@ -1,4 +1,4 @@
-package org.dungeon.prototype.validation;
+package org.dungeon.prototype.annotations.validation;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;

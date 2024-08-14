@@ -10,8 +10,11 @@ import org.mapstruct.Mappings;
 import org.mapstruct.Named;
 import org.mapstruct.factory.Mappers;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static java.util.Objects.isNull;
 
 @Mapper(uses = {ArmorSetMapper.class, WeaponSetMapper.class, ItemMapper.class})
 public interface InventoryMapper {
@@ -27,6 +30,9 @@ public interface InventoryMapper {
 
     @Named("mapItems")
     default List<Item> mapItems(List<ItemDocument> documents) {
+        if (isNull(documents) || documents.isEmpty()) {
+            return new ArrayList<>();
+        }
         return documents.stream().map(document -> switch (document.getItemType()) {
             case WEAPON -> ItemMapper.INSTANCE.mapToWeapon(document);
             case WEARABLE -> ItemMapper.INSTANCE.mapToWearable(document);

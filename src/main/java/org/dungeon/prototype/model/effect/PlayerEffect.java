@@ -12,7 +12,7 @@ import static org.dungeon.prototype.model.effect.attributes.PlayerEffectAttribut
 public abstract class PlayerEffect extends Effect {
     protected PlayerEffectAttribute attribute;
     @Override
-    Boolean isNegative() {
+    public Boolean isNegative() {
         if (attribute.equals(MISS_CHANCE)){
             return !GenerationUtil.isNegative(action, amount, multiplier);
         } else {

@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;
 
-@Mapper(uses = {MonsterMapper.class, ItemMapper.class})
+@Mapper(uses = {MonsterMapper.class, EffectMapper.class, ItemMapper.class})
 public interface RoomContentMapper {
     RoomContentMapper INSTANCE = Mappers.getMapper(RoomContentMapper.class);
 
@@ -36,7 +36,8 @@ public interface RoomContentMapper {
             @Mapping(target = "items", ignore = true),
             @Mapping(target = "chanceToBreakWeapon", ignore = true),
             @Mapping(target = "attackBonus", ignore = true),
-            @Mapping(target = "armorRestored", ignore = true)
+            @Mapping(target = "armorRestored", ignore = true),
+            @Mapping(target = "effect", ignore = true)
     })
     RoomContentDocument mapToDocument(NoContentRoom roomContent);
 
@@ -45,6 +46,7 @@ public interface RoomContentMapper {
             @Mapping(target = "chanceToBreakWeapon", ignore = true),
             @Mapping(target = "attackBonus", ignore = true),
             @Mapping(target = "armorRestored", ignore = true),
+            @Mapping(target = "effect", ignore = true),
             @Mapping(target = "gold", source = "roomContent", qualifiedByName = "mapGoldToDocument")
     })
     RoomContentDocument mapToDocument(BonusRoom roomContent);
@@ -54,7 +56,8 @@ public interface RoomContentMapper {
             @Mapping(target = "items", ignore = true),
             @Mapping(target = "chanceToBreakWeapon", ignore = true),
             @Mapping(target = "attackBonus", ignore = true),
-            @Mapping(target = "armorRestored", ignore = true)
+            @Mapping(target = "armorRestored", ignore = true),
+            @Mapping(target = "effect", ignore = true)
     })
     RoomContentDocument mapToDocument(MonsterRoom roomContent);
 
@@ -71,7 +74,8 @@ public interface RoomContentMapper {
     @Mappings({
             @Mapping(target = "monster", ignore = true),
             @Mapping(target = "gold", ignore = true),
-            @Mapping(target = "items", ignore = true)
+            @Mapping(target = "items", ignore = true),
+            @Mapping(target = "effect", ignore = true)
     })
     RoomContentDocument mapToDocument(Anvil anvil);
 
@@ -102,8 +106,16 @@ public interface RoomContentMapper {
                 yield room;
             }
 
-            case MANA_SHRINE -> new ManaShrine();
-            case HEALTH_SHRINE -> new HealthShrine();
+            case MANA_SHRINE -> {
+                val room = new ManaShrine();
+                room.setEffect(EffectMapper.INSTANCE.mapToItemEffect(document.getEffect()));
+                yield room;
+            }
+            case HEALTH_SHRINE -> {
+                val room = new HealthShrine();
+                room.setEffect(EffectMapper.INSTANCE.mapToItemEffect(document.getEffect()));
+                yield room;
+            }
         };
     }
 
@@ -127,7 +139,8 @@ public interface RoomContentMapper {
                     DRAGON_KILLED, WEREWOLF_KILLED, SWAMP_BEAST_KILLED, ZOMBIE_KILLED, VAMPIRE_KILLED,
                     SHRINE_DRAINED, TREASURE_LOOTED -> RoomContentMapper.INSTANCE.mapToDocument((NoContentRoom) roomContent);
             case MERCHANT, TREASURE -> RoomContentMapper.INSTANCE.mapToDocument((BonusRoom) roomContent);
-            case HEALTH_SHRINE, MANA_SHRINE -> RoomContentMapper.INSTANCE.mapToDocument((Shrine) roomContent);
+            case HEALTH_SHRINE -> RoomContentMapper.INSTANCE.mapToDocument((HealthShrine) roomContent);
+            case MANA_SHRINE -> RoomContentMapper.INSTANCE.mapToDocument((ManaShrine) roomContent);
         };
     }
 

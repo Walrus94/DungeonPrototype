@@ -16,6 +16,8 @@ public class EffectDocument {
     private String id;
     private EffectApplicant applicableTo;
     private EffectAttribute attribute;
+    private Boolean isAccumulated;
+    private Boolean hasFirstTurnPassed;
     private Action action;
     private Integer turnsLasts;
     private Integer amount;

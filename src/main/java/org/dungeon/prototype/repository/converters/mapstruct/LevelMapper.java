@@ -7,7 +7,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.Mappings;
 import org.mapstruct.factory.Mappers;
 
-@Mapper(uses = {RoomMapper.class, PointMapper.class})
+@Mapper(uses = {RoomMapper.class, MonsterMapper.class, PointMapper.class})
 public interface LevelMapper {
     LevelMapper INSTANCE = Mappers.getMapper(LevelMapper.class);
 

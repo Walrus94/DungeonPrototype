@@ -33,7 +33,6 @@ public interface ItemMapper {
 
     @Mappings({
             @Mapping(target = "attack", expression = "java(((org.dungeon.prototype.model.document.item.specs.WeaponSpecs) document.getSpecs()).getAttack())"),
-            @Mapping(target = "additionalFirstHit", expression = "java(((org.dungeon.prototype.model.document.item.specs.WeaponSpecs) document.getSpecs()).getAdditionalFirstHit())"),
             @Mapping(target = "criticalHitChance", expression = "java(((org.dungeon.prototype.model.document.item.specs.WeaponSpecs) document.getSpecs()).getCriticalHitChance())"),
             @Mapping(target = "chanceToMiss", expression = "java(((org.dungeon.prototype.model.document.item.specs.WeaponSpecs) document.getSpecs()).getChanceToMiss())"),
             @Mapping(target = "chanceToKnockOut", expression = "java(((org.dungeon.prototype.model.document.item.specs.WeaponSpecs) document.getSpecs()).getChanceToKnockOut())"),
@@ -54,7 +53,6 @@ public interface ItemMapper {
             WeaponSpecs specs = new WeaponSpecs();
             specs.setAttack(weapon.getAttack());
             specs.setChanceToKnockOut(weapon.getChanceToKnockOut());
-            specs.setAdditionalFirstHit(weapon.getAdditionalFirstHit());
             specs.setCriticalHitChance(weapon.getCriticalHitChance());
             specs.setCompleteDragonBone(weapon.isCompleteDragonBone());
             specs.setChanceToMiss(weapon.getChanceToMiss());

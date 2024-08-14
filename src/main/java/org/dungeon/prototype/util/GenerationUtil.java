@@ -12,18 +12,15 @@ import java.util.BitSet;
 public class GenerationUtil {
 
     public static int calculateWeight(Weapon weapon) {
-        var weight = weapon.getAttack() + weapon.getAdditionalFirstHit();
-        if (weapon.getCriticalHitChance() > 0.0) {
-            weight *= weapon.getCriticalHitChance() * 100;
+        var weight = weapon.getAttack();
+        if (weapon.getCriticalHitChance().intValue() * 100 > 0) {
+            weight *= weapon.getCriticalHitChance().intValue() * 100;
         }
-        if (weapon.getCriticalHitChance() > 0.0) {
-            weight *= weapon.getCriticalHitChance() * 100;
+        if (weapon.getChanceToKnockOut().intValue() * 100 > 0) {
+            weight *= weapon.getChanceToKnockOut().intValue() * 100;
         }
-        if (weapon.getChanceToKnockOut() > 0.0) {
-            weight *= weapon.getChanceToKnockOut() * 100;
-        }
-        if (weapon.getChanceToMiss() > 0.0) {
-            weight /= weapon.getChanceToMiss() * 100;
+        if (weapon.getChanceToMiss().intValue() * 100 > 0) {
+            weight /= weapon.getChanceToMiss().intValue() * 100;
         }
         log.debug("Calculated weight: {}", weight);
         return weight;
@@ -34,7 +31,6 @@ public class GenerationUtil {
         weapon.setChanceToKnockOut(weapon.getChanceToKnockOut() * multiplier);
         weapon.setCriticalHitChance(weapon.getCriticalHitChance() * multiplier);
         weapon.setChanceToMiss(weapon.getChanceToMiss() / multiplier);
-        weapon.setAdditionalFirstHit((int) (weapon.getAdditionalFirstHit() * multiplier));
     }
 
     public static BitSet getDefaultAttackPattern() {

@@ -15,4 +15,12 @@ public class WeaponAttributes implements ItemAttributes {
     private Quality quality;
     private Size size;
     private WeaponAttackType weaponAttackType;
+
+    @Override
+    public String toString() {
+        return quality + " " + size + " sized " + handling + " " +
+                weaponType + " made of " + weaponMaterial +
+                " with handler made of " + weaponHandlerMaterial +
+                " and attack type is " + weaponAttackType;
+    }
 }

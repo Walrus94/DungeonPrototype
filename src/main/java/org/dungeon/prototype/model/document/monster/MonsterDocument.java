@@ -26,7 +26,8 @@ public class MonsterDocument {
     private Integer hp;
     private Integer xpReward;
 
-    private Iterator<MonsterAttack> currentAttack;
+    private Iterator<MonsterAttack> attackPattern;
+    private MonsterAttack currentAttack;
 
     private List<EffectDocument> effects = new ArrayList<>();
 

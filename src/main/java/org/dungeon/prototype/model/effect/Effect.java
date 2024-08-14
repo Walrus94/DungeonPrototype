@@ -2,7 +2,7 @@ package org.dungeon.prototype.model.effect;
 
 import lombok.Data;
 import org.dungeon.prototype.model.effect.attributes.EffectAttribute;
-import org.dungeon.prototype.validation.MultiConditionalNotNull;
+import org.dungeon.prototype.annotations.validation.MultiConditionalNotNull;
 
 @Data
 @MultiConditionalNotNull(conditions = {
@@ -27,7 +27,23 @@ public abstract class Effect {
 
     protected Integer weight;
 
+
+    protected Boolean hasFirstTurnPassed = false;
+
     public abstract EffectAttribute getAttribute();
-    abstract Boolean isPermanent();
-    abstract Boolean isNegative();
+    public abstract Boolean isPermanent();
+    public abstract Boolean isNegative();
+
+    @Override
+    public String toString() {
+        switch (action) {
+            case ADD -> {
+                return "Adds " + amount + " to " + getAttribute().toString();
+            }
+            case MULTIPLY -> {
+                return "Multiplies " + getAttribute().toString() + " by " + multiplier;
+            }
+        }
+        return super.toString();
+    }
 }

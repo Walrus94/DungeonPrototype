@@ -1,6 +1,8 @@
 package org.dungeon.prototype.model.inventory;
 
 import lombok.Data;
+import org.dungeon.prototype.model.inventory.items.Weapon;
+import org.dungeon.prototype.model.inventory.items.Wearable;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -20,7 +22,7 @@ public class Inventory {
     }
 
     public boolean addItem(Item item) {
-        if (items.size() == maxItems) {
+        if (isFull()) {
             return false;
         } else {
             return items.add(item);
@@ -33,5 +35,31 @@ public class Inventory {
         } else {
             return this.items.addAll(items);
         }
+    }
+
+    public void remove(Item item) {
+        if (items.remove(item)) {
+            return;
+        }
+        if (item instanceof Wearable && armorSet.getArmorItems().contains(item)) {
+            switch (((Wearable)item).getAttributes().getWearableType()) {
+                case HELMET -> armorSet.setHelmet(null);
+                case VEST -> armorSet.setVest(null);
+                case GLOVES -> armorSet.setGloves(null);
+                case BOOTS -> armorSet.setBoots(null);
+            }
+        }
+        if (item instanceof Weapon) {
+            if (item.equals(weaponSet.getSecondaryWeapon())) {
+                weaponSet.setSecondaryWeapon(null);
+            }
+            if (item.equals(weaponSet.getPrimaryWeapon())) {
+                weaponSet.setPrimaryWeapon(null);
+            }
+        }
+    }
+
+    public boolean isFull() {
+        return maxItems.equals(items.size());
     }
 }

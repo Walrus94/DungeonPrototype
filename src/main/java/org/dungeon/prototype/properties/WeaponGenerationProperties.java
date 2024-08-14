@@ -46,7 +46,6 @@ public class WeaponGenerationProperties {
         private Double chanceToMissRatio;
         private Double criticalChanceRatio;
         private Double knockOutChanceRatio;
-        private Integer firstHitAddition;
     }
 
     @Data

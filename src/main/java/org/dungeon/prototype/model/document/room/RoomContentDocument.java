@@ -2,10 +2,11 @@ package org.dungeon.prototype.model.document.room;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.dungeon.prototype.model.document.item.EffectDocument;
 import org.dungeon.prototype.model.document.item.ItemDocument;
 import org.dungeon.prototype.model.document.monster.MonsterDocument;
 import org.dungeon.prototype.model.room.RoomType;
-import org.dungeon.prototype.validation.MultiConditionalNotNull;
+import org.dungeon.prototype.annotations.validation.MultiConditionalNotNull;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -40,6 +41,9 @@ public class RoomContentDocument {
     private Integer gold;
     @DBRef
     private List<ItemDocument> items;
+
+    @DBRef
+    private EffectDocument effect;
 
     private Double chanceToBreakWeapon;
     private Integer attackBonus;

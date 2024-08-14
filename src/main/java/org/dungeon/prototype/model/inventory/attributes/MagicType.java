@@ -3,10 +3,10 @@ package org.dungeon.prototype.model.inventory.attributes;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum MagicType implements EnumAttribute {
-    FIRE("Fire"),
-    WATER("Water"),
-    LIFE("Life"),
-    DEATH("Death");
+    ARCANE("Arcane"),
+    CHAOTIC("Chaotic"),
+    DIVINE("Divine"),
+    NECROMANTIC("Necromantic");
 
     private final String value;
 

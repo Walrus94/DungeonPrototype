@@ -4,8 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.model.inventory.ArmorSet;
 import org.dungeon.prototype.model.inventory.Inventory;
-import org.dungeon.prototype.model.inventory.WeaponSet;
-import org.dungeon.prototype.model.inventory.attributes.wearable.WearableType;
 import org.dungeon.prototype.model.inventory.items.Wearable;
 import org.dungeon.prototype.model.player.Player;
 import org.dungeon.prototype.properties.PlayerProperties;
@@ -13,7 +11,6 @@ import org.dungeon.prototype.repository.PlayerRepository;
 import org.dungeon.prototype.repository.converters.mapstruct.PlayerMapper;
 import org.dungeon.prototype.repository.projections.NicknameProjection;
 import org.dungeon.prototype.service.inventory.InventoryService;
-import org.dungeon.prototype.service.item.ItemService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -28,8 +25,6 @@ public class PlayerService {
     PlayerRepository playerRepository;
     @Autowired
     PlayerProperties playerProperties;
-    @Autowired
-    ItemService itemService;
     @Autowired
     InventoryService inventoryService;
 
@@ -68,25 +63,8 @@ public class PlayerService {
         return player;
     }
 
-    private ArmorSet getDefaultArmorSet(Long chatId) {
-        val vest = itemService.getMostLightweightWearable(chatId, WearableType.VEST);
-        val armorSet = new ArmorSet();
-        armorSet.setVest(vest);
-        return armorSet;
-    }
-
-    private WeaponSet getDefaultWeaponSet(Long chatId) {
-        WeaponSet weaponSet = new WeaponSet();
-        val weapon = itemService.getMostLightWeightMainWeapon(chatId);
-        weaponSet.addWeapon(weapon);
-        return weaponSet;
-    }
-
     public void addDefaultInventory(Player player, Long chatId) {
-        Inventory inventory = new Inventory();
-        inventory.setArmorSet(getDefaultArmorSet(chatId));
-        inventory.setWeaponSet(getDefaultWeaponSet(chatId));
-        inventory = inventoryService.saveOrUpdateInventory(inventory);
+        Inventory inventory = inventoryService.getDefaultInventory(chatId);
         player.setInventory(inventory);
         player.addEffects(inventory
                 .getItems()

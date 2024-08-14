@@ -4,8 +4,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum MonsterEffectAttribute implements EffectAttribute {
-    ATTACK("Attack"),
-    HEALTH("Health"),
+    MONSTER_ATTACK("Monster attack"),
+    MONSTER_HEALTH("Monster health"),
     MOVING("Moving");
     private final String value;
 

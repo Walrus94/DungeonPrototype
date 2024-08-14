@@ -22,11 +22,7 @@ public class WeaponSet {
     public boolean addWeapon(Weapon weapon) {
         switch (weapon.getAttributes().getHandling()) {
             case TWO_HANDED -> {
-                if (Objects.nonNull(primaryWeapon) || Objects.nonNull(secondaryWeapon)) {
-                    return false;
-                }
-                primaryWeapon = weapon;
-                return true;
+                return !Objects.nonNull(primaryWeapon) && !Objects.nonNull(secondaryWeapon);
             }
             case SINGLE_HANDED -> {
                 if (Objects.nonNull(primaryWeapon) && TWO_HANDED.equals(primaryWeapon.getAttributes().getHandling())) {
@@ -42,6 +38,8 @@ public class WeaponSet {
     }
 
     public List<Weapon> getWeapons() {
-        return Stream.of(primaryWeapon, secondaryWeapon).collect(Collectors.toList());
+        return Stream.of(primaryWeapon, secondaryWeapon)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 }

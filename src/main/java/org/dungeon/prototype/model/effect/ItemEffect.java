@@ -17,4 +17,16 @@ public class ItemEffect extends PlayerEffect {
     public Boolean isPermanent() {
         return true;
     }
+    @Override
+    public String toString() {
+        switch (action) {
+            case ADD -> {
+                return "Adds " + amount + " to " + getAttribute().toString();
+            }
+            case MULTIPLY -> {
+                return "Multiplies " + getAttribute().toString() + " by " + multiplier;
+            }
+        }
+        return super.toString();
+    }
 }

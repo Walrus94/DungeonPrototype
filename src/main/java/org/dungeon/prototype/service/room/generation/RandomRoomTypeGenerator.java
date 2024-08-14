@@ -10,12 +10,20 @@ import org.dungeon.prototype.model.room.RoomType;
 import org.dungeon.prototype.model.room.RoomsSegment;
 import org.dungeon.prototype.model.room.content.*;
 import org.dungeon.prototype.model.ui.level.GridSection;
+import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.room.RoomService;
 import org.dungeon.prototype.util.LevelUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -40,6 +48,8 @@ public class RandomRoomTypeGenerator {
     private MonsterRoomGenerationService monsterRoomGenerationService;
     @Autowired
     private RoomService roomService;
+    @Autowired
+    private EffectService effectService;
     public LevelRoomTypeClusters generateClusters(Level level, Player player) {
         log.debug("Initializing room type generator parameters...");
         val levelRoomTypeClusters = new LevelRoomTypeClusters();
