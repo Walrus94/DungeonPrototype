@@ -21,6 +21,12 @@ public class BattleService {
     @Autowired
     private BattleProperties battleProperties;
 
+    /**
+     *
+     * @param player player being attacked
+     * @param monster that attacks
+     * @return player after monster attack
+     */
     public Player monsterAttacks(Player player, Monster monster) {
         if (monster.getEffects().stream().anyMatch(monsterEffect -> MOVING.equals(monsterEffect.getAttribute()))) {
             return player;
