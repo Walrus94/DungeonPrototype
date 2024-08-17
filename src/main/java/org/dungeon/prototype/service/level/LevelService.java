@@ -125,22 +125,6 @@ public class LevelService {
         log.debug("Player continued level {}, current point: {}", levelNumber, player.getCurrentRoom());
         return true;
     }
-    private Level startNewLevel(Long chatId, Player player, Integer levelNumber) {
-        var level = generateLevel(chatId, player, levelNumber);
-        val direction = level.getStart().getAdjacentRooms().entrySet().stream()
-                .filter(entry -> Objects.nonNull(entry.getValue()) && entry.getValue())
-                .map(Map.Entry::getKey)
-                .findFirst().orElse(null);
-        player.setDirection(direction);
-        player.setCurrentRoom(level.getStart().getPoint());
-        player.setCurrentRoomId(level.getStart().getId());
-        if (levelRepository.existsByChatId(chatId)) {
-            levelRepository.removeByChatId(chatId);
-        }
-        playerService.updatePlayer(player);
-        return saveOrUpdateLevel(level);
-    }
-
     @AfterTurnUpdate
     @SendRoomMessage
     public boolean moveToRoom(Long chatId, CallbackType callBackData) {
@@ -246,6 +230,10 @@ public class LevelService {
         return LevelMapper.INSTANCE.mapToLevel(levelDocument);
     }
 
+    public void remove(Long chatId) {
+        levelRepository.removeByChatId(chatId);
+    }
+
     private Integer getLevelNumber(Long chatId) {
         //TODO: adjust query
         val projection = levelRepository.findNumberByChatId(chatId).orElseGet(() -> {
@@ -255,8 +243,20 @@ public class LevelService {
         return projection.getNumber();
     }
 
-    public void remove(Long chatId) {
-        levelRepository.removeByChatId(chatId);
+    private Level startNewLevel(Long chatId, Player player, Integer levelNumber) {
+        var level = generateLevel(chatId, player, levelNumber);
+        val direction = level.getStart().getAdjacentRooms().entrySet().stream()
+                .filter(entry -> Objects.nonNull(entry.getValue()) && entry.getValue())
+                .map(Map.Entry::getKey)
+                .findFirst().orElse(null);
+        player.setDirection(direction);
+        player.setCurrentRoom(level.getStart().getPoint());
+        player.setCurrentRoomId(level.getStart().getId());
+        if (levelRepository.existsByChatId(chatId)) {
+            levelRepository.removeByChatId(chatId);
+        }
+        playerService.updatePlayer(player);
+        return saveOrUpdateLevel(level);
     }
 
     public boolean hasLevel(Long chatId) {

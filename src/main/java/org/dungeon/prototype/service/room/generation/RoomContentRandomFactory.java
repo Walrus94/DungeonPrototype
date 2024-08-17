@@ -73,6 +73,7 @@ public class RoomContentRandomFactory {
         manaRegeneration.setAction(Action.ADD);
         manaRegeneration.setAmount(15);
         manaRegeneration.setIsAccumulated(true);
+        manaRegeneration.setWeight(15 * 3);
         manaRegeneration = (DirectPlayerEffect) effectService.savePlayerEffect(manaRegeneration);
         manaShrine.setEffect(manaRegeneration);
         return manaShrine;
@@ -87,6 +88,7 @@ public class RoomContentRandomFactory {
         regeneration.setAction(Action.ADD);
         regeneration.setAmount(20);
         regeneration.setIsAccumulated(true);
+        regeneration.setWeight(20 * 5);
         regeneration = (DirectPlayerEffect) effectService.savePlayerEffect(regeneration);
         healthShrine.setEffect(regeneration);
         return healthShrine;

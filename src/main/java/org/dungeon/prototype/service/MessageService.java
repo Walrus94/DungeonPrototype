@@ -127,7 +127,7 @@ public class MessageService {
     }
 
     @PhotoMessageSending
-    public SendPhoto sendRoomMessage(Long chatId, Player player,  Room room) {
+    public SendPhoto sendRoomMessage(Long chatId, Player player, Room room) {
         String caption;
         if (room.getRoomContent() instanceof MonsterRoom monsterRoom) {
             caption = getRoomMessageCaption(player, monsterRoom.getMonster());
