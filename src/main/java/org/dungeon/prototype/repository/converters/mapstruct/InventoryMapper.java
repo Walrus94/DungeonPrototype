@@ -12,6 +12,7 @@ import org.mapstruct.factory.Mappers;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;
@@ -33,10 +34,12 @@ public interface InventoryMapper {
         if (isNull(documents) || documents.isEmpty()) {
             return new ArrayList<>();
         }
-        return documents.stream().map(document -> switch (document.getItemType()) {
-            case WEAPON -> ItemMapper.INSTANCE.mapToWeapon(document);
-            case WEARABLE -> ItemMapper.INSTANCE.mapToWearable(document);
-            case USABLE -> ItemMapper.INSTANCE.mapToUsable(document);
-        }).collect(Collectors.toList());
+        return documents.stream()
+                .filter(Objects::nonNull)
+                .map(document -> switch (document.getItemType()) {
+                    case WEAPON -> ItemMapper.INSTANCE.mapToWeapon(document);
+                    case WEARABLE -> ItemMapper.INSTANCE.mapToWearable(document);
+                    case USABLE -> ItemMapper.INSTANCE.mapToUsable(document);
+                }).collect(Collectors.toCollection(ArrayList::new));
     }
 }

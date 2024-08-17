@@ -2,22 +2,31 @@ package org.dungeon.prototype.service.level;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.dungeon.prototype.annotations.aspect.AfterTurnUpdate;
+import org.dungeon.prototype.annotations.aspect.SendMapMessage;
+import org.dungeon.prototype.annotations.aspect.SendRoomMessage;
 import org.dungeon.prototype.model.Level;
 import org.dungeon.prototype.model.Point;
-import org.dungeon.prototype.model.document.level.LevelDocument;
 import org.dungeon.prototype.model.player.Player;
 import org.dungeon.prototype.model.room.Room;
-import org.dungeon.prototype.model.room.content.NormalRoom;
-import org.dungeon.prototype.model.room.content.RoomContent;
 import org.dungeon.prototype.model.room.RoomType;
 import org.dungeon.prototype.model.room.RoomsSegment;
+import org.dungeon.prototype.model.room.content.EmptyRoom;
 import org.dungeon.prototype.model.room.content.EndRoom;
+import org.dungeon.prototype.model.room.content.HealthShrine;
+import org.dungeon.prototype.model.room.content.ManaShrine;
+import org.dungeon.prototype.model.room.content.NormalRoom;
+import org.dungeon.prototype.model.room.content.RoomContent;
 import org.dungeon.prototype.model.room.content.StartRoom;
 import org.dungeon.prototype.model.ui.level.GridSection;
 import org.dungeon.prototype.model.ui.level.LevelMap;
+import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.properties.GenerationProperties;
 import org.dungeon.prototype.repository.LevelRepository;
 import org.dungeon.prototype.repository.converters.mapstruct.LevelMapper;
+import org.dungeon.prototype.service.PlayerService;
+import org.dungeon.prototype.service.inventory.InventoryService;
+import org.dungeon.prototype.service.item.ItemService;
 import org.dungeon.prototype.service.room.RoomService;
 import org.dungeon.prototype.service.room.generation.RandomRoomTypeGenerator;
 import org.dungeon.prototype.service.room.generation.RoomTypesCluster;
@@ -29,6 +38,7 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -41,7 +51,10 @@ import static org.apache.commons.math3.util.FastMath.min;
 import static org.apache.commons.math3.util.FastMath.toIntExact;
 import static org.dungeon.prototype.util.LevelUtil.calculateMaxLengthInDirection;
 import static org.dungeon.prototype.util.LevelUtil.generateEmptyMapGrid;
+import static org.dungeon.prototype.util.LevelUtil.getDirectionSwitchByCallBackData;
+import static org.dungeon.prototype.util.LevelUtil.getErrorMessageByCallBackData;
 import static org.dungeon.prototype.util.LevelUtil.getIcon;
+import static org.dungeon.prototype.util.LevelUtil.getMonsterKilledRoomType;
 import static org.dungeon.prototype.util.LevelUtil.getNextPointInDirection;
 import static org.dungeon.prototype.util.LevelUtil.getOppositeDirection;
 import static org.dungeon.prototype.util.LevelUtil.getRandomValidDirection;
@@ -58,11 +71,61 @@ public class LevelService {
     @Autowired
     private RoomService roomService;
     @Autowired
+    private PlayerService playerService;
+    @Autowired
+    private ItemService itemService;
+    @Autowired
+    private InventoryService inventoryService;
+    @Autowired
     private RandomRoomTypeGenerator randomRoomTypeGenerator;
     @Autowired
     private GenerationProperties generationProperties;
 
-    public Level startNewLevel(Long chatId, Player player, Integer levelNumber) {
+    @SendRoomMessage
+    public boolean startNewGame(Long chatId) {
+        itemService.generateItems(chatId);
+        val defaultInventory = inventoryService.getDefaultInventory(chatId);
+        var player = playerService.getPlayerPreparedForNewGame(chatId, defaultInventory);
+        log.debug("Player loaded: {}", player);
+        val level = startNewLevel(chatId, player, 1);
+        if (nonNull(level)) {
+            log.debug("Player started level 1, current point: {}", level.getStart().getPoint());
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    @SendRoomMessage
+    public boolean nextLevel(Long chatId) {
+        val player = playerService.getPlayer(chatId);
+        val number = getLevelNumber(chatId) + 1;
+        val level = startNewLevel(chatId, player, number);
+        player.setCurrentRoom(level.getStart().getPoint());
+        player.setCurrentRoomId(level.getStart().getId());
+        player.setDirection(level.getStart().getAdjacentRooms().entrySet().stream()
+                .filter(entry -> nonNull(entry.getValue()) && entry.getValue())
+                .map(Map.Entry::getKey)
+                .findFirst().orElse(null));
+        player.restoreArmor();
+        playerService.updatePlayer(player);
+        log.debug("Player started level {}, current point, {}", number, level.getStart().getPoint());
+        return true;
+    }
+
+    @SendRoomMessage
+    public boolean continueGame(Long chatId) {
+        val player = playerService.getPlayer(chatId);
+        val levelNumber = getLevelNumber(chatId);
+        val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+        if (Objects.isNull(currentRoom)) {
+            log.error("Couldn't find current room by id: {}", player.getCurrentRoomId());
+            return false;
+        }
+        log.debug("Player continued level {}, current point: {}", levelNumber, player.getCurrentRoom());
+        return true;
+    }
+    private Level startNewLevel(Long chatId, Player player, Integer levelNumber) {
         var level = generateLevel(chatId, player, levelNumber);
         val direction = level.getStart().getAdjacentRooms().entrySet().stream()
                 .filter(entry -> Objects.nonNull(entry.getValue()) && entry.getValue())
@@ -74,13 +137,105 @@ public class LevelService {
         if (levelRepository.existsByChatId(chatId)) {
             levelRepository.removeByChatId(chatId);
         }
+        playerService.updatePlayer(player);
         return saveOrUpdateLevel(level);
+    }
+
+    @AfterTurnUpdate
+    @SendRoomMessage
+    public boolean moveToRoom(Long chatId, CallbackType callBackData) {
+        var player = playerService.getPlayer(chatId);
+        var level = getLevel(chatId);
+        val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+        if (Objects.isNull(currentRoom)) {
+            log.error("Unable to find room with id {}", player.getCurrentRoomId());
+            return false;
+        }
+        val newDirection = getDirectionSwitchByCallBackData(player.getDirection(), callBackData);
+        val errorMessage = getErrorMessageByCallBackData(callBackData);
+        if (!currentRoom.getAdjacentRooms().containsKey(newDirection) || !currentRoom.getAdjacentRooms().get((newDirection))) {
+            log.error(errorMessage);
+            return false;
+        }
+        val nextRoom = level.getRoomByCoordinates(getNextPointInDirection(currentRoom.getPoint(), newDirection));
+        if (nextRoom == null) {
+            log.error(errorMessage);
+            return false;
+        }
+        if (level.getLevelMap().isContainsRoom(nextRoom.getPoint().getX(), nextRoom.getPoint().getY()) ||
+                level.getLevelMap().addRoom(level.getGrid()[nextRoom.getPoint().getX()][nextRoom.getPoint().getY()])) {
+            player.setCurrentRoom(nextRoom.getPoint());
+            player.setCurrentRoomId(nextRoom.getId());
+            player.setDirection(newDirection);
+            player = playerService.updatePlayer(player);
+            level = saveOrUpdateLevel(level);
+            if (nonNull(player) && nonNull(level)) {
+                log.debug("Moving to {} door: {}, updated direction: {}", callBackData.toString().toLowerCase(), nextRoom.getPoint(), player.getDirection());
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void updateAfterMonsterKill(Level level, Room currentRoom) {
+        val roomType = getMonsterKilledRoomType(currentRoom.getRoomContent().getRoomType());
+        currentRoom.setRoomContent(new EmptyRoom(roomType));
+        roomService.saveOrUpdateRoomContent(currentRoom.getRoomContent());
+        roomService.saveOrUpdateRoom(currentRoom);
+        level.updateRoomType(currentRoom.getPoint(), roomType);
+        saveOrUpdateLevel(level);
+    }
+
+    public void updateAfterTreasureLooted(Level level, Room currentRoom) {
+        currentRoom.setRoomContent(new EmptyRoom(RoomType.TREASURE_LOOTED));
+        roomService.saveOrUpdateRoom(currentRoom);
+        level.updateRoomType(currentRoom.getPoint(), RoomType.TREASURE_LOOTED);
+        saveOrUpdateLevel(level);
+    }
+
+    @SendRoomMessage
+    public boolean shrineRefill(Long chatId) {
+        val player = playerService.getPlayer(chatId);
+        val level = getLevel(chatId);
+        val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+        if (Objects.isNull(currentRoom)) {
+            log.error("Unable to find room by Id:, {}", player.getCurrentRoomId());
+            return false;
+        }
+        //TODO: fix shrines working
+        if (!RoomType.HEALTH_SHRINE.equals(currentRoom.getRoomContent().getRoomType()) &&
+                !RoomType.MANA_SHRINE.equals(currentRoom.getRoomContent().getRoomType())) {
+            log.error("No shrine to use!");
+            return false;
+        }
+        level.updateRoomType(currentRoom.getPoint(), RoomType.SHRINE_DRAINED);
+        if (currentRoom.getRoomContent().getRoomType().equals(RoomType.HEALTH_SHRINE)) {
+            player.addEffects(List.of(((HealthShrine) currentRoom.getRoomContent()).getEffect()));
+        }
+        if (currentRoom.getRoomContent().getRoomType().equals(RoomType.MANA_SHRINE)) {
+            player.addEffects(List.of(((ManaShrine) currentRoom.getRoomContent()).getEffect()));
+        }
+        return nonNull(playerService.updatePlayer(player));
     }
 
     public Level saveOrUpdateLevel(Level level) {
         val levelDocument = LevelMapper.INSTANCE.mapToDocument(level);
         val savedLevelDocument = levelRepository.save(levelDocument);
         return LevelMapper.INSTANCE.mapToLevel(savedLevelDocument);
+    }
+
+    @SendRoomMessage
+    public boolean sendOrUpdateRoomMessage(Long chatId) {
+        val player = playerService.getPlayer(chatId);
+        val room = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+        return nonNull(room);
+    }
+
+    @SendMapMessage
+    public String sendOrUpdateMapMessage(Long chatId) {
+        val player = playerService.getPlayer(chatId);
+        val level = getLevel(chatId);
+       return printMap(level.getGrid(), level.getLevelMap(), player.getCurrentRoom(), player.getDirection());
     }
 
     public Level getLevel(Long chatId) {
@@ -91,13 +246,13 @@ public class LevelService {
         return LevelMapper.INSTANCE.mapToLevel(levelDocument);
     }
 
-    public Integer getLevelNumber(Long chatId) {
+    private Integer getLevelNumber(Long chatId) {
         //TODO: adjust query
-        LevelDocument level = levelRepository.findByChatId(chatId).orElseGet(() -> {
+        val projection = levelRepository.findNumberByChatId(chatId).orElseGet(() -> {
             log.error("Unable to fetch level number by chatId");
             return null;
         });
-        return level.getNumber();
+        return projection.getNumber();
     }
 
     public void remove(Long chatId) {

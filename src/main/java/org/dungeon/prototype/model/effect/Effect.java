@@ -34,6 +34,13 @@ public abstract class Effect {
     public abstract Boolean isPermanent();
     public abstract Boolean isNegative();
 
+    public boolean isApplicable() {
+        if (!getHasFirstTurnPassed()) {
+            return true;
+        }
+        return !isPermanent() && ((Expirable) this).getIsAccumulated();
+    }
+
     @Override
     public String toString() {
         switch (action) {

@@ -24,6 +24,7 @@ import org.dungeon.prototype.service.item.ItemService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Set;
 
@@ -159,6 +160,8 @@ public class RoomContentRandomFactory {
         monster.setXpReward(monster.getPrimaryAttack().getAttack() * properties.getWeightPrimaryAttackMultiplier() +
                 monster.getSecondaryAttack().getAttack() * properties.getWeightSecondaryAttackMultiplier() +
                 monster.getMaxHp());
+        monster.setAttackPattern(monster.getDefaultAttackPattern());
+        monster.setEffects(new ArrayList<>());
         val monsterDocument = MonsterMapper.INSTANCE.mapToDocument(monster);
         return MonsterMapper.INSTANCE.mapToMonster(monsterRepository.save(monsterDocument));
     }

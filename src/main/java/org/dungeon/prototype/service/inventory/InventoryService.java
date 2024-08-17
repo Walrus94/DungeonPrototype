@@ -2,6 +2,8 @@ package org.dungeon.prototype.service.inventory;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.dungeon.prototype.annotations.aspect.*;
+import org.dungeon.prototype.aspect.dto.InventoryItemResponseDto;
 import org.dungeon.prototype.model.inventory.ArmorSet;
 import org.dungeon.prototype.model.inventory.Inventory;
 import org.dungeon.prototype.model.inventory.Item;
@@ -9,15 +11,27 @@ import org.dungeon.prototype.model.inventory.WeaponSet;
 import org.dungeon.prototype.model.inventory.attributes.wearable.WearableType;
 import org.dungeon.prototype.model.inventory.items.Weapon;
 import org.dungeon.prototype.model.inventory.items.Wearable;
+import org.dungeon.prototype.model.room.content.Merchant;
+import org.dungeon.prototype.model.room.content.Treasure;
+import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.repository.ArmorSetRepository;
 import org.dungeon.prototype.repository.InventoryRepository;
 import org.dungeon.prototype.repository.WeaponSetRepository;
 import org.dungeon.prototype.repository.converters.mapstruct.ArmorSetMapper;
 import org.dungeon.prototype.repository.converters.mapstruct.InventoryMapper;
 import org.dungeon.prototype.repository.converters.mapstruct.WeaponSetMapper;
+import org.dungeon.prototype.service.PlayerService;
 import org.dungeon.prototype.service.item.ItemService;
+import org.dungeon.prototype.service.room.RoomService;
+import org.dungeon.prototype.util.MessageUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -26,18 +40,21 @@ import static java.util.Objects.nonNull;
 @Service
 public class InventoryService {
     @Autowired
+    PlayerService playerService;
+    @Autowired
     ItemService itemService;
     @Autowired
+    RoomService roomService;
+    @Autowired
     InventoryRepository inventoryRepository;
-
     @Autowired
     ArmorSetRepository armorSetRepository;
-
     @Autowired
     WeaponSetRepository weaponSetRepository;
 
     public Inventory getDefaultInventory(Long chatId) {
         Inventory inventory = new Inventory();
+        inventory.setItems(new ArrayList<>());
         inventory.setArmorSet(getDefaultArmorSet(chatId));
         inventory.setWeaponSet(getDefaultWeaponSet(chatId));
         inventory = saveOrUpdateInventory(inventory);
@@ -50,6 +67,154 @@ public class InventoryService {
         val inventoryDocument = InventoryMapper.INSTANCE.mapToDocument(inventory);
         val savedInventoryDocument = inventoryRepository.save(inventoryDocument);
         return InventoryMapper.INSTANCE.mapToEntity(savedInventoryDocument);
+    }
+
+    @SendTreasureMessage
+    public boolean collectAllTreasure(Long chatId) {
+        var player = playerService.getPlayer(chatId);
+        var currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+        val treasure = (Treasure) currentRoom.getRoomContent();
+        log.debug("Treasure contents - gold: {}, items: {}", treasure.getGold(), treasure.getItems());
+        val items = treasure.getItems();
+        val gold = treasure.getGold();
+
+        player.addGold(gold);
+        treasure.setGold(0);
+        if (!items.isEmpty()) {
+            if (!player.getInventory().addItems(items)) {
+                log.info("No room in the inventory!");
+                playerService.updatePlayer(player);
+                roomService.saveOrUpdateRoom(currentRoom);
+                return true;
+            } else {
+                treasure.setItems(Collections.emptySet());
+            }
+        }
+        playerService.updatePlayer(player);
+        roomService.saveOrUpdateRoom(currentRoom);
+        saveOrUpdateInventory(player.getInventory());
+        return true;
+    }
+
+    @SendTreasureMessage
+    public boolean collectTreasureItem(Long chatId, String itemId) {
+        val player = playerService.getPlayer(chatId);
+        val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+        val treasure = (Treasure) currentRoom.getRoomContent();
+
+        val items = treasure.getItems();
+        val collectedItem = items.stream().filter(item -> item.getId().equals(itemId)).findFirst().orElseGet(() -> {
+            log.error("No item with id {} found for chat {}!", itemId, chatId);
+            return null;
+        });
+        if (Objects.isNull(collectedItem)) {
+            return false;
+        }
+        if (player.getInventory().addItem(collectedItem)) {
+            items.remove(collectedItem);
+            treasure.setItems(items);
+            roomService.saveOrUpdateRoom(currentRoom);
+            playerService.updatePlayer(player);
+            saveOrUpdateInventory(player.getInventory());
+        } else {
+            log.info("No room in inventory!");
+            return false;
+        }
+        return true;
+    }
+
+    @SendInventoryMessage
+    public InventoryItemResponseDto sendOrUpdateInventoryMessage(Long chatId) {
+        return InventoryItemResponseDto.builder()
+                .chatId(chatId)
+                .inventoryType(CallbackType.INVENTORY)
+                .build();
+    }
+
+    @SendInventoryMessage
+    public InventoryItemResponseDto equipItem(Long chatId, String itemId) {
+        val player = playerService.getPlayer(chatId);
+        val item = itemService.findItem(chatId, itemId);
+        val inventory = player.getInventory();
+        val result = equipItem(inventory, item);
+        return InventoryItemResponseDto.builder()
+                .chatId(chatId)
+                .itemId(itemId)
+                .inventoryType(CallbackType.INVENTORY)
+                .isOk(result)
+                .build();
+    }
+
+    @SendInventoryMessage
+    public InventoryItemResponseDto unEquipItem(Long chatId, String itemId) {
+        val player = playerService.getPlayer(chatId);
+        val item= itemService.findItem(chatId, itemId);
+        val inventory = player.getInventory();
+        if ((inventory.getMaxItems().equals(inventory.getItems().size()))) {
+            //TODO implement prompt
+            return InventoryItemResponseDto.builder()
+                    .chatId(chatId)
+                    .itemId(itemId)
+                    .inventoryType(CallbackType.INVENTORY)
+                    .isOk(false)
+                    .build();
+        }
+        val result = unEquipItem(item, inventory);
+        return InventoryItemResponseDto.builder()
+                .chatId(chatId)
+                .itemId(itemId)
+                .inventoryType(CallbackType.INVENTORY)
+                .isOk(result)
+                .build();
+    }
+
+    @SendMerchantSellMenuMessage
+    public boolean sellItem(Long chatId, String itemId) {
+        val player = playerService.getPlayer(chatId);
+        val item = itemService.findItem(chatId, itemId);
+        val inventory = player.getInventory();
+        inventory.remove(Stream.concat(player.getInventory().getItems().stream(),
+                        Stream.concat(player.getInventory().getArmorSet().getArmorItems().stream(),
+                                player.getInventory().getArmorSet().getArmorItems().stream()))
+                .filter(Objects::nonNull)
+                .filter(item::equals)
+                .findFirst().orElse(null));
+        player.addGold(item.getSellingPrice());
+        saveOrUpdateInventory(inventory);
+        playerService.updatePlayer(player);
+        return true;
+    }
+
+    @SendMerchantBuyMenuMessage
+    public boolean buyItem(Long chatId, String itemId) {
+        val player = playerService.getPlayer(chatId);
+        val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+        if (player.getInventory().isFull()) {
+            log.warn("Inventory is full!");
+            return false;
+        }
+        val item = itemService.findItem(chatId, itemId);
+        if (player.getGold() < item.getBuyingPrice()) {
+            log.warn("Not enough money!");
+            return false;
+        }
+        player.getInventory().addItem(item);
+        ((Merchant) currentRoom.getRoomContent()).getItems().remove(item);
+        player.removeGold(item.getSellingPrice());
+        playerService.updatePlayer(player);
+        roomService.saveOrUpdateRoom(currentRoom);
+        saveOrUpdateInventory(player.getInventory());
+        return true;
+    }
+
+    @SendInventoryItem
+    public InventoryItemResponseDto openInventoryItemInfo(Long chatId, String itemId, CallbackType inventoryType, Optional<CallbackType> callbackType) {
+        return InventoryItemResponseDto.builder()
+                .chatId(chatId)
+                .itemId(itemId)
+                .inventoryType(inventoryType)
+                .itemType(callbackType.map(MessageUtil::formatItemType).orElse(null))
+                .build();
     }
 
     private WeaponSet saveOrUpdateWeaponSet(WeaponSet weaponSet) {

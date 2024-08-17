@@ -13,8 +13,8 @@ public interface LevelRepository extends MongoRepository<LevelDocument, Long> {
     @Query(value = "{ '_id' : ?0 }")
     Optional<LevelDocument> findByChatId(@Param("_id") Long chatId);
 
-    @Query(value = "{ 'chatId': ?0, 'number': ?1 }", fields = "{ 'number': 1 }")
-    Optional<LevelNumberProjection> findNumberByChatId(Long chatId);
+    @Query(value = "{ '_id': ?0}", fields = "{ 'number': 1, '_id': 0 }")
+    Optional<LevelNumberProjection> findNumberByChatId(@Param("_id") Long chatId);
 
     void removeByChatId(Long chatId);
 

@@ -2,7 +2,6 @@ package org.dungeon.prototype.model;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.dungeon.prototype.model.monster.Monster;
 import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.RoomType;
 import org.dungeon.prototype.model.room.RoomsSegment;
@@ -38,8 +37,6 @@ public class Level {
     private Map<Point, Room> roomsMap = new HashMap<>();
 
     private final Queue<WalkerDistributeIterator> distributeIterators = new LinkedList<>();
-
-    private Monster activeMonster = null;
 
     public Room getRoomByCoordinates(Point currentPoint) {
         return roomsMap.get(currentPoint);

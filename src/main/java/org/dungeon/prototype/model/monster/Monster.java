@@ -6,7 +6,7 @@ import org.apache.commons.math3.util.FastMath;
 import org.dungeon.prototype.model.effect.MonsterEffect;
 import org.dungeon.prototype.util.GenerationUtil;
 
-import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,17 +27,17 @@ public class Monster {
     private MonsterAttack secondaryAttack;
 
     private List<MonsterEffect> effects;
-    private Iterator<MonsterAttack> attackPattern;
+    private LinkedList<MonsterAttack> attackPattern;
 
     private MonsterAttack currentAttack;
-    public Iterator<MonsterAttack> getDefaultAttackPattern() {
+    public LinkedList<MonsterAttack> getDefaultAttackPattern() {
         return GenerationUtil.getDefaultAttackPattern().stream().mapToObj(value -> {
             if (value == 1) {
                 return getSecondaryAttack();
             } else {
                 return getPrimaryAttack();
             }
-        }).toList().iterator();
+        }).collect(Collectors.toCollection(LinkedList::new));
     }
 
     public Integer getWeight() {
