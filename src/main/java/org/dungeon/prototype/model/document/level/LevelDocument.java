@@ -1,9 +1,7 @@
 package org.dungeon.prototype.model.document.level;
 
-import com.mongodb.lang.Nullable;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.dungeon.prototype.model.document.monster.MonsterDocument;
 import org.dungeon.prototype.model.document.room.RoomDocument;
 import org.dungeon.prototype.model.ui.level.GridSection;
 import org.dungeon.prototype.model.ui.level.LevelMap;
@@ -28,7 +26,4 @@ public class LevelDocument {
     private LevelMap levelMap;
     @DBRef
     private Map<String, RoomDocument> roomsMap;
-    @DBRef
-    @Nullable
-    private MonsterDocument activeMonster;
 }

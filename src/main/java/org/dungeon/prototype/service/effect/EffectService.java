@@ -36,7 +36,7 @@ public class EffectService {
         removeExpiredEffects(monster);
         val monsterAttack = monster.getCurrentAttack();
         monster.getEffects().stream()
-                .filter(this::isApplicable)
+                .filter(Effect::isApplicable)
                 .forEach(monsterEffect -> {
                     switch (monsterEffect.getAttribute()) {
                         case MONSTER_ATTACK -> {
@@ -118,6 +118,7 @@ public class EffectService {
 
     private Integer summarizeEffects(PriorityQueue<PlayerEffect> effects, Integer initialValue) {
         val effectsMap = effects.stream()
+                .filter(Effect::isApplicable)
                 .collect(Collectors.groupingBy(Effect::getAction));
         return effectsMap.values().stream().mapToInt(playerEffects -> {
             Double multiplyFactor = playerEffects.stream()
@@ -130,13 +131,6 @@ public class EffectService {
                     .reduce(multiplyFactor.intValue(), Integer::sum);
         }).findFirst().orElse(initialValue);
 
-    }
-
-    private boolean isApplicable(Effect effect) {
-        if (!effect.getHasFirstTurnPassed()) {
-            return true;
-        }
-        return !effect.isPermanent() && ((Expirable) effect).getIsAccumulated();
     }
 
     public void removeExpiredEffects(Monster monster) {

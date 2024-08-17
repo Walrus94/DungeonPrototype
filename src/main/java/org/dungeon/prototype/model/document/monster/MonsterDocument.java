@@ -8,8 +8,7 @@ import org.dungeon.prototype.model.monster.MonsterClass;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 
 @Data
@@ -26,9 +25,9 @@ public class MonsterDocument {
     private Integer hp;
     private Integer xpReward;
 
-    private Iterator<MonsterAttack> attackPattern;
+    private LinkedList<MonsterAttack> attackPattern;
     private MonsterAttack currentAttack;
 
-    private List<EffectDocument> effects = new ArrayList<>();
+    private List<EffectDocument> effects;
 
 }

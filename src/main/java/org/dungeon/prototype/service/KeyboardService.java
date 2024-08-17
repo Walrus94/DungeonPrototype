@@ -21,9 +21,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 
 import static org.dungeon.prototype.properties.CallbackType.ATTACK;
@@ -72,6 +70,7 @@ import static org.dungeon.prototype.properties.CallbackType.VEST;
 import static org.dungeon.prototype.util.LevelUtil.getOppositeDirection;
 import static org.dungeon.prototype.util.LevelUtil.turnLeft;
 import static org.dungeon.prototype.util.LevelUtil.turnRight;
+import static org.dungeon.prototype.util.MessageUtil.formatItemType;
 import static org.dungeon.prototype.util.RoomGenerationUtils.getMonsterRoomTypes;
 
 @Service
@@ -80,9 +79,6 @@ public class KeyboardService {
 
     @Autowired
     private KeyboardButtonProperties keyboardButtonProperties;
-
-    @Autowired
-    private MessageService messageService;
 
     private String templatePlaceholder;
 
@@ -96,6 +92,12 @@ public class KeyboardService {
                 .keyboard(List.of(List.of(
                         hasSavedGame ? getButton(CONTINUE_GAME) : getButton(START_GAME)
                 )))
+                .build();
+    }
+
+    public InlineKeyboardMarkup getDeathMessageInlineKeyboardMarkup() {
+        return InlineKeyboardMarkup.builder()
+                .keyboardRow(List.of(getButton(START_GAME)))
                 .build();
     }
 
@@ -123,9 +125,9 @@ public class KeyboardService {
             case TREASURE -> row2.add(getButton(TREASURE_OPEN));
             case WEREWOLF, SWAMP_BEAST, VAMPIRE, DRAGON, ZOMBIE -> {
                 val weaponSet = player.getInventory().getWeaponSet();
-                row1.add(getButton(ATTACK));
+                row1.add(getButton(ATTACK, player.getAttack(true).toString()));
                 if (Objects.nonNull(weaponSet.getSecondaryWeapon())) {
-                    row1.add(getButton(SECONDARY_ATTACK));
+                    row1.add(getButton(SECONDARY_ATTACK, player.getAttack(false).toString()));
                 }
             }
             case HEALTH_SHRINE, MANA_SHRINE -> row2.add(getButton(SHRINE));
@@ -373,7 +375,7 @@ public class KeyboardService {
 
     private InlineKeyboardButton getListItemButton(Item item, CallbackType equippedType, KeyboardButtonProperties.KeyboardButtonAttributes itemButtonAttributes) {
         return InlineKeyboardButton.builder()
-                .text(itemButtonAttributes.getName().replace(templatePlaceholder, messageService.formatItemType(equippedType) + ": " + item.getName()))
+                .text(itemButtonAttributes.getName().replace(templatePlaceholder, formatItemType(equippedType) + ": " + item.getName()))
                 .callbackData(itemButtonAttributes.getCallback().replace(templatePlaceholder, item.getId()))
                 .build();
     }
@@ -443,12 +445,5 @@ public class KeyboardService {
                 .text(buttonProperties.getName().replace(templatePlaceholder, item.getBuyingPrice().toString()))
                 .callbackData(buttonProperties.getCallback().replace(templatePlaceholder, item.getId()))
                 .build();
-    }
-
-    public Optional<CallbackType> getCallbackType(String callData) {
-        return keyboardButtonProperties.getButtons().entrySet().stream()
-                .filter(entry -> callData.equals(entry.getValue().getCallback()))
-                .map(Map.Entry::getKey)
-                .findFirst();
     }
 }

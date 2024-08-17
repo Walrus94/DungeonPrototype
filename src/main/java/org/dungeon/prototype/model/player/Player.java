@@ -6,15 +6,23 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.model.Direction;
 import org.dungeon.prototype.model.Point;
+import org.dungeon.prototype.model.effect.Effect;
 import org.dungeon.prototype.model.effect.PlayerEffect;
 import org.dungeon.prototype.model.effect.attributes.PlayerEffectAttribute;
 import org.dungeon.prototype.model.inventory.Inventory;
-import org.dungeon.prototype.service.PlayerLevelService;
 
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.stream.Collectors;
+
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+import static org.apache.commons.math3.util.FastMath.max;
+import static org.dungeon.prototype.model.effect.Action.ADD;
+import static org.dungeon.prototype.model.effect.Action.MULTIPLY;
 
 @Data
 @Slf4j
@@ -37,29 +45,19 @@ public class Player {
     private Integer defense;
     private Integer maxDefense;
     private Inventory inventory;
-    private Map<PlayerEffectAttribute, PriorityQueue<PlayerEffect>> effects;
+    private Map<PlayerEffectAttribute, PriorityQueue<PlayerEffect>> effects = new HashMap<>();
     EnumMap<PlayerAttribute, Integer> attributes;
 
     //TODO: move to service and use queries through repository
-    public boolean addXp(Integer xpReward) {
+    public void addXp(Integer xpReward) {
         xp += xpReward;
         log.debug("Rewarded xp: {}, total: {}", xpReward, xp);
-        val level = PlayerLevelService.getLevel(xp);
-        if (level == playerLevel + 1) {
-            playerLevel++;
-            log.debug("Level {} achieved!", playerLevel);
-            refillHp();
-            refillMana();
-            nextLevelXp = PlayerLevelService.calculateXPForLevel(playerLevel + 1);
-            return true;
-        }
-        return false;
     }
     public void decreaseDefence(int amount) {
         defense -= amount;
     }
     public void decreaseHp(int amount) {
-        hp -= amount;
+        hp = max(0, hp - amount);
     }
     public void addGold(int amount) {
         gold += amount;
@@ -75,6 +73,40 @@ public class Player {
     }
     public void restoreArmor() {
         defense = maxDefense;
+    }
+
+    public Integer getAttack(Boolean isPrimaryWeapon) {
+        var weaponSet = inventory.getWeaponSet();
+        Integer attack = attributes.get(PlayerAttribute.POWER);
+        if (isPrimaryWeapon) {
+            if (nonNull(weaponSet.getPrimaryWeapon())) {
+                attack += weaponSet.getPrimaryWeapon().getAttack();
+            }
+        } else {
+            attack += nonNull(weaponSet.getSecondaryWeapon()) ? weaponSet.getSecondaryWeapon().getAttack() : 0;
+        }
+        attack = applyEffects(attack);
+        return attack;
+    }
+
+    private Integer applyEffects(Integer attack) {
+        val effectsQueue = effects.get(PlayerEffectAttribute.ATTACK);
+        if (isNull(effectsQueue)) {
+            return attack;
+        }
+        val effectsMap = effectsQueue.stream()
+                .filter(Effect::isApplicable)
+                .collect(Collectors.groupingBy(Effect::getAction));
+        return effectsMap.values().stream().mapToInt(playerEffects -> {
+            Double multiplyFactor = playerEffects.stream()
+                    .filter(e -> MULTIPLY.equals(e.getAction()))
+                    .map(Effect::getMultiplier)
+                    .reduce(attack.doubleValue(), (m1, m2) -> m1 * m2);
+            return playerEffects.stream()
+                    .filter(e -> ADD.equals(e.getAction()))
+                    .map(Effect::getAmount)
+                    .reduce(multiplyFactor.intValue(), Integer::sum);
+        }).findFirst().orElse(attack);
     }
 
     public void addEffects(List<PlayerEffect> effects) {

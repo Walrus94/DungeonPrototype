@@ -2,39 +2,74 @@ package org.dungeon.prototype.service;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.dungeon.prototype.annotations.aspect.SendRoomMessage;
+import org.dungeon.prototype.annotations.aspect.AfterTurnUpdate;
 import org.dungeon.prototype.model.effect.MonsterEffect;
 import org.dungeon.prototype.model.monster.Monster;
 import org.dungeon.prototype.model.player.Player;
+import org.dungeon.prototype.model.room.content.MonsterRoom;
 import org.dungeon.prototype.properties.BattleProperties;
+import org.dungeon.prototype.service.level.LevelService;
+import org.dungeon.prototype.service.room.RoomService;
 import org.dungeon.prototype.util.RandomUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 import static org.dungeon.prototype.model.effect.attributes.MonsterEffectAttribute.MOVING;
 import static org.dungeon.prototype.model.player.PlayerAttribute.POWER;
+import static org.dungeon.prototype.util.RoomGenerationUtils.getMonsterRoomTypes;
 
 @Slf4j
 @Service
 public class BattleService {
 
     @Autowired
+    private PlayerService playerService;
+    @Autowired
+    private LevelService levelService;
+    @Autowired
+    private RoomService roomService;
+    @Autowired
+    private MonsterService monsterService;
+    @Autowired
     private BattleProperties battleProperties;
 
-    /**
-     *
-     * @param player player being attacked
-     * @param monster that attacks
-     * @return player after monster attack
-     */
-    public Player monsterAttacks(Player player, Monster monster) {
-        if (monster.getEffects().stream().anyMatch(monsterEffect -> MOVING.equals(monsterEffect.getAttribute()))) {
-            return player;
+    @AfterTurnUpdate
+    @SendRoomMessage
+    public boolean attack(Long chatId, boolean isPrimaryAttack) {
+        var player = playerService.getPlayer(chatId);
+        val level = levelService.getLevel(chatId);
+        val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+        if (!getMonsterRoomTypes().contains(currentRoom.getRoomContent().getRoomType())) {
+            log.error("No monster to attack!");
+            return false;
         }
-        if (isNull(monster.getAttackPattern()) || !monster.getAttackPattern().hasNext()) {
+        var monster = ((MonsterRoom) currentRoom.getRoomContent()).getMonster();
+        log.debug("Attacking monster: {}", monster);
+        playerAttacks(monster, player, isPrimaryAttack);
+
+        if (monster.getHp() < 1) {
+            log.debug("Monster killed!");
+            levelService.updateAfterMonsterKill(level, currentRoom);
+            player.addXp(monster.getXpReward());
+        } else {
+            monsterAttacks(player, monster);
+            monsterService.saveOrUpdateMonster(monster);
+        }
+        playerService.updatePlayer(player);
+        return true;
+    }
+
+    private void monsterAttacks(Player player, Monster monster) {
+        if (nonNull(monster.getEffects()) && monster.getEffects().stream().anyMatch(monsterEffect -> MOVING.equals(monsterEffect.getAttribute()))) {
+            return;
+        }
+        if (isNull(monster.getAttackPattern()) || monster.getAttackPattern().isEmpty()) {
             monster.setAttackPattern(monster.getDefaultAttackPattern());
         }
-        monster.setCurrentAttack(monster.getAttackPattern().next());
+        monster.setCurrentAttack(monster.getAttackPattern().poll());
 
         val monsterAttack = monster.getCurrentAttack();
         val armorSet = player.getInventory().getArmorSet();
@@ -42,7 +77,7 @@ public class BattleService {
         log.debug("Chance to dodge: {}", chanceToDodge);
         if (RandomUtil.flipAdjustedCoin(chanceToDodge)) {
             log.debug("Monster attack dodged!");
-            return player;
+            return;
         }
         val attackTypeMap = battleProperties.getPlayerDefenseRatioMatrix().get(monsterAttack.getAttackType()).getMaterialDefenseRatioMap();
         log.debug("Monster attack: {}", monsterAttack.getAttackType());
@@ -60,10 +95,9 @@ public class BattleService {
             player.decreaseHp(diff);
             log.debug("Player's health decreased by: {}", diff);
         }
-        return player;
     }
 
-    public Monster playerAttacks(Monster monster, Player player, boolean isPrimaryAttack) {
+    private void playerAttacks(Monster monster, Player player, boolean isPrimaryAttack) {
         val inventory = player.getInventory();
         val weapon = isPrimaryAttack ? inventory.getWeaponSet().getPrimaryWeapon() :
                 inventory.getWeaponSet().getSecondaryWeapon();
@@ -73,14 +107,13 @@ public class BattleService {
             log.debug("Player attacks with bare hands!");
             monster.decreaseHp(playerAttack);
             log.debug("Monster health decreased by {}", playerAttack);
-            return monster;
         } else {
             playerAttack = player.getAttributes().get(POWER) + weapon.getAttack();
             val chanceToMiss = weapon.getChanceToMiss();
             log.debug("Chance to miss: {}", chanceToMiss);
             if (RandomUtil.flipAdjustedCoin(chanceToMiss)) {
                 log.debug("Player missed!");
-                return monster;
+                return;
             }
             val criticalHitChance = weapon.getCriticalHitChance();
             log.debug("Critical hit chance: {}", criticalHitChance);
@@ -102,7 +135,6 @@ public class BattleService {
             val decreaseAmount = (int) (playerAttack * monsterDefenseRatioMap.get(monster.getMonsterClass()));
             monster.decreaseHp(decreaseAmount);
             log.debug("Monster health decreased by {}", decreaseAmount);
-            return monster;
         }
     }
 }

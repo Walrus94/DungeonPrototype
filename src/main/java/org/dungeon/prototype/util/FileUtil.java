@@ -4,6 +4,10 @@ import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import org.dungeon.prototype.model.room.RoomType;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+
 @Slf4j
 @UtilityClass
 public class FileUtil {
@@ -48,5 +52,17 @@ public class FileUtil {
             case ANVIL -> ANVIL_ROOM_ASSET;
             default -> DEFAULT_ROOM_ASSET;
         };
+    }
+
+    public static byte[] loadImageAsByteArray(InputStream inputStream) throws IOException {
+        try (ByteArrayOutputStream buffer = new ByteArrayOutputStream()) {
+            int nRead;
+            byte[] data = new byte[1024];
+            while ((nRead = inputStream.read(data, 0, data.length)) != -1) {
+                buffer.write(data, 0, nRead);
+            }
+            buffer.flush();
+            return buffer.toByteArray();
+        }
     }
 }

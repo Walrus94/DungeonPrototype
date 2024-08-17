@@ -53,10 +53,10 @@ messaging:
         name: Turn Back
       attack:
         callback: btn_attack
-        name: Attack!
+        name: ${messaging.constants.emoji.sword} ${messaging.keyboard.template-placeholder}
       secondary-attack:
         callback: btn_attack_sec
-        name: Secondary attack!
+        name: ${messaging.constants.emoji.dagger} ${messaging.keyboard.template-placeholder}
       map:
         callback: btn_map
         name: Map
