@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static org.dungeon.prototype.properties.CallbackType.ATTACK;
 import static org.dungeon.prototype.properties.CallbackType.BACK;
@@ -115,8 +116,13 @@ public class KeyboardService {
             row1.add(getButton(RIGHT));
         }
         List<InlineKeyboardButton> row2 = new ArrayList<>();
+        if (adjacentRooms.containsKey(getOppositeDirection(direction)) && adjacentRooms.get(getOppositeDirection(direction))
+                && !isMonsterRoom) {
+            row2.add(getButton(BACK));
+        }
+        List<InlineKeyboardButton> row3 = new ArrayList<>();
         switch (roomContent.getRoomType()) {
-            case TREASURE -> row2.add(getButton(TREASURE_OPEN));
+            case TREASURE -> row3.add(getButton(TREASURE_OPEN));
             case WEREWOLF, SWAMP_BEAST, VAMPIRE, DRAGON, ZOMBIE -> {
                 val weaponSet = player.getInventory().getWeaponSet();
                 row1.add(getButton(ATTACK, player.getPrimaryAttack()));
@@ -124,30 +130,26 @@ public class KeyboardService {
                     row1.add(getButton(SECONDARY_ATTACK, player.getSecondaryAttack()));
                 }
             }
-            case HEALTH_SHRINE, MANA_SHRINE -> row2.add(getButton(SHRINE));
+            case HEALTH_SHRINE, MANA_SHRINE -> row3.add(getButton(SHRINE));
             case MERCHANT -> {
-                row2.add(getButton(MERCHANT_SELL_MENU));
-                row2.add(getButton(MERCHANT_BUY_MENU));
+                row3.add(getButton(MERCHANT_SELL_MENU));
+                row3.add(getButton(MERCHANT_BUY_MENU));
             }
-
             case ANVIL -> {
                 val anvil = (Anvil) room.getRoomContent();
                 if (!anvil.isArmorRestored()) {
-                    row2.add(getButton(RESTORE_ARMOR));
+                    row3.add(getButton(RESTORE_ARMOR));
                 }
-                row2.add(getButton(SHARPEN_WEAPON));
+                row3.add(getButton(SHARPEN_WEAPON));
             }
         }
-        row2.add(getButton(MAP));
+        List<InlineKeyboardButton> row4 = new ArrayList<>();
+        row4.add(getButton(MAP));
         if (!isMonsterRoom) {
-            row2.add(getButton(INVENTORY));
+            row4.add(getButton(INVENTORY));
         }
-        row2.add(getButton(PLAYER_STATS));
-        if (adjacentRooms.containsKey(getOppositeDirection(direction)) && adjacentRooms.get(getOppositeDirection(direction))
-                && !isMonsterRoom) {
-            row2.add(getButton(BACK));
-        }
-        inlineKeyboard.setKeyboard(List.of(row1, row2));
+        row4.add(getButton(PLAYER_STATS));
+        inlineKeyboard.setKeyboard(Stream.of(row1, row2, row3, row4).filter(list -> !list.isEmpty()).toList());
         return inlineKeyboard;
     }
 
