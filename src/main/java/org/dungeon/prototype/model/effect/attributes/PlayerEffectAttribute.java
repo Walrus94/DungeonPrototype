@@ -5,7 +5,11 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum PlayerEffectAttribute implements EffectAttribute {
      HEALTH("Health"),
+     HEALTH_MAX("Maximum health"),
+     HEALTH_MAX_ONLY("Maximum health only"),
      MANA("Mana"),
+     MANA_MAX("Maximum mana"),
+     MANA_MAX_ONLY("Maximum mana only"),
      ATTACK("Attack"),
      ARMOR("Armor"),
      CRITICAL_HIT_CHANCE("Critical hit chance"),

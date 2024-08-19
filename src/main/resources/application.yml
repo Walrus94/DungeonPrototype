@@ -60,6 +60,9 @@ messaging:
       map:
         callback: btn_map
         name: Map
+      player-stats:
+        callback: btn_stats
+        name: Stats
       menu-back:
         callback: btn_menu_back
         name: Back

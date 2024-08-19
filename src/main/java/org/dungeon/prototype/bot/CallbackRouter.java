@@ -73,6 +73,8 @@ public class CallbackRouter {
                     !levelService.sendOrUpdateMapMessage(chatId).isEmpty();
             case INVENTORY ->
                     inventoryService.sendOrUpdateInventoryMessage(chatId).isOk();
+            case PLAYER_STATS ->
+                playerService.sendPlayerStatsMessage(chatId);
             case MENU_BACK ->
                     levelService.sendOrUpdateRoomMessage(chatId);
             case COLLECT_ALL ->

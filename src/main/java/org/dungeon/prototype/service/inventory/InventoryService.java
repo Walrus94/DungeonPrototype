@@ -31,7 +31,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -160,6 +159,9 @@ public class InventoryService {
                     .build();
         }
         val result = unEquipItem(item, inventory);
+        if (result) {
+            player.removeItemEffects(item.getEffects());
+        }
         return InventoryItemResponseDto.builder()
                 .chatId(chatId)
                 .itemId(itemId)
@@ -173,16 +175,14 @@ public class InventoryService {
         val player = playerService.getPlayer(chatId);
         val item = itemService.findItem(chatId, itemId);
         val inventory = player.getInventory();
-        inventory.remove(Stream.concat(player.getInventory().getItems().stream(),
-                        Stream.concat(player.getInventory().getArmorSet().getArmorItems().stream(),
-                                player.getInventory().getArmorSet().getArmorItems().stream()))
-                .filter(Objects::nonNull)
-                .filter(item::equals)
-                .findFirst().orElse(null));
-        player.addGold(item.getSellingPrice());
-        saveOrUpdateInventory(inventory);
-        playerService.updatePlayer(player);
-        return true;
+        val result = inventory.removeItem(item);
+        if (result) {
+            player.removeItemEffects(item.getEffects());
+            player.addGold(item.getSellingPrice());
+            saveOrUpdateInventory(inventory);
+            playerService.updatePlayer(player);
+        }
+        return result;
     }
 
     @SendMerchantBuyMenuMessage
@@ -255,31 +255,13 @@ public class InventoryService {
     }
 
     public boolean unEquipItem(Item item, Inventory inventory) {
-        if (item instanceof Wearable wearable) {
-            val armorSet = inventory.getArmorSet();
-            switch (wearable.getAttributes().getWearableType()) {
-                case HELMET -> armorSet.setHelmet(null);
-                case VEST -> armorSet.setVest(null);
-                case GLOVES -> armorSet.setGloves(null);
-                case BOOTS -> armorSet.setBoots(null);
-            }
-            saveOrUpdateArmorSet(armorSet);
-        } else if (item instanceof Weapon weapon) {
-            val weaponSet = inventory.getWeaponSet();
-            if (weapon.equals(weaponSet.getSecondaryWeapon())) {
-                weaponSet.setSecondaryWeapon(null);
-            } else if (weapon.equals(weaponSet.getPrimaryWeapon())) {
-                if (nonNull(weaponSet.getSecondaryWeapon())) {
-                    weaponSet.setPrimaryWeapon(weaponSet.getSecondaryWeapon());
-                    weaponSet.setSecondaryWeapon(null);
-                } else {
-                    weaponSet.setPrimaryWeapon(null);
-                }
-            }
+        val unEquippedItem = inventory.unEquip(item);
+        if (unEquippedItem.isPresent() && inventory.addItem(unEquippedItem.get())) {
+            saveOrUpdateInventory(inventory);
+            return true;
+        } else {
+            return false;
         }
-        inventory.addItem(item);
-        saveOrUpdateInventory(inventory);
-        return true;
     }
 
     private boolean processUsable(Inventory inventory) {

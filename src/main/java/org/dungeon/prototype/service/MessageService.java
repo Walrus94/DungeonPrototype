@@ -4,7 +4,9 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.annotations.aspect.MessageSending;
 import org.dungeon.prototype.annotations.aspect.PhotoMessageSending;
+import org.dungeon.prototype.model.effect.Expirable;
 import org.dungeon.prototype.model.effect.ItemEffect;
+import org.dungeon.prototype.model.effect.PlayerEffect;
 import org.dungeon.prototype.model.inventory.Inventory;
 import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.inventory.items.Weapon;
@@ -29,6 +31,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.DecimalFormat;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -86,8 +89,8 @@ public class MessageService {
     public SendMessage sendMerchantSellMenuMessage(Long chatId, Player player) {
         return SendMessage.builder()
                 .chatId(chatId)
-                .text("Gold: " + player.getGold() +"\nSell your items:")
-                .replyMarkup(keyboardService.getInventoryReplyMarkup(player.getInventory(), MERCHANT_SELL_DISPLAY_ITEM, MERCHANT_SELL_PRICE, MERCHANT_SELL_PRICE, MERCHANT_BUY_MENU))
+                .text("Gold: " + player.getGold() + "\nSell your items:")
+                .replyMarkup(keyboardService.getInventoryReplyMarkup(player.getInventory(), MERCHANT_SELL_DISPLAY_ITEM, MERCHANT_SELL_PRICE, MERCHANT_SELL_PRICE, Collections.singletonList(MERCHANT_BUY_MENU)))
                 .build();
     }
 
@@ -102,7 +105,7 @@ public class MessageService {
 
     @MessageSending
     public SendMessage sendTreasureMessage(Long chatId, Treasure treasure) {
-        return  SendMessage.builder()
+        return SendMessage.builder()
                 .chatId(chatId)
                 .text("Treasure:")
                 .replyMarkup(keyboardService.getTreasureContentReplyMarkup(treasure))
@@ -117,6 +120,7 @@ public class MessageService {
                 .replyMarkup(keyboardService.getNewLevelUpgradeReplyMarkup(player))
                 .build();
     }
+
     @MessageSending
     public SendMessage sendDeathMessage(Long chatId) {
         return SendMessage.builder()
@@ -154,10 +158,20 @@ public class MessageService {
     }
 
     @MessageSending
+    public SendMessage sendPlayerStatsMessage(Long chatId, Player player) {
+        return SendMessage.builder()
+                .chatId(chatId)
+                .text(getPlayerStatsMessageCaption(player))
+                .parseMode("Markdown")
+                .replyMarkup(keyboardService.getPlayerStatsReplyMarkup())
+                .build();
+    }
+
+    @MessageSending
     public SendMessage sendInventoryMessage(Long chatId, Inventory inventory) {
         return SendMessage.builder()
                 .chatId(chatId)
-                .replyMarkup(keyboardService.getInventoryReplyMarkup(inventory, ITEM_INVENTORY, ITEM_INVENTORY_UN_EQUIP, ITEM_INVENTORY_EQUIP, MAP))
+                .replyMarkup(keyboardService.getInventoryReplyMarkup(inventory, ITEM_INVENTORY, ITEM_INVENTORY_UN_EQUIP, ITEM_INVENTORY_EQUIP, List.of(MAP, PLAYER_STATS)))
                 .text("Inventory")
                 .build();
     }
@@ -184,11 +198,9 @@ public class MessageService {
     public String getRoomMessageCaption(Player player, Monster monster) {
         val emoji = messagingConstants.getEmoji();
         return emoji.get(HEART) + " : " + generateBar(player.getHp(), player.getMaxHp(), emoji.get(RED_SQUARE)) + "\n" +
-                " -> " + emoji.get(BLACK_HEART) + " : " + generateBar(monster.getHp(), monster.getMaxHp(), emoji.get(RED_SQUARE))+ "\n" +
+                " -> " + emoji.get(BLACK_HEART) + " : " + generateBar(monster.getHp(), monster.getMaxHp(), emoji.get(RED_SQUARE)) + "\n" +
                 emoji.get(DIAMOND) + ": " + generateBar(player.getMana(), player.getMaxMana(), emoji.get(BLUE_SQUARE)) + "\n" +
-                (nonNull(player.getInventory().getWeaponSet().getPrimaryWeapon()) ? emoji.get(SWORD) + ": " + player.getInventory().getWeaponSet().getPrimaryWeapon().getAttack(): "") +
                 " -> " + emoji.get(AXE) + monster.getPrimaryAttack().getAttack() + "\n" +
-                (nonNull(player.getInventory().getWeaponSet().getSecondaryWeapon()) ? emoji.get(DAGGER) + player.getInventory().getWeaponSet().getSecondaryWeapon().getAttack() + "\n" : "") +
                 " -> " + emoji.get(AXE) + monster.getSecondaryAttack().getAttack() + "\n" +
                 emoji.get(SHIELD) + ": " + player.getDefense() + "\n" +
                 "Gold: " + player.getGold() + " " + emoji.get(TREASURE) + "\n" +
@@ -199,9 +211,7 @@ public class MessageService {
         val emoji = messagingConstants.getEmoji();
         return emoji.get(HEART) + ": " + generateBar(player.getHp(), player.getMaxHp(), emoji.get(RED_SQUARE)) + "\n" +
                 emoji.get(DIAMOND) + ": " + generateBar(player.getMana(), player.getMaxMana(), emoji.get(BLUE_SQUARE)) + "\n" +
-                (nonNull(player.getInventory().getWeaponSet().getPrimaryWeapon()) ? emoji.get(SWORD) + ": " + player.getInventory().getWeaponSet().getPrimaryWeapon().getAttack() + "\n" : "") +
-                (nonNull(player.getInventory().getWeaponSet().getSecondaryWeapon()) ? emoji.get(DAGGER) + player.getInventory().getWeaponSet().getSecondaryWeapon().getAttack() + "\n" : "") +
-                emoji.get(SHIELD)+ ": " + player.getDefense() + "\n" +
+                emoji.get(SHIELD) + ": " + player.getDefense() + "\n" +
                 "Gold: " + player.getGold() + " " + emoji.get(TREASURE) + "\n" +
                 emoji.get(STONKS) + ": " + generateXpBar(player.getXp(), player.getPlayerLevel(), player.getNextLevelXp());
     }
@@ -223,6 +233,7 @@ public class MessageService {
         val effectsDescription = getEffectsDescription(item.getEffects());
         return itemDescription + effectsDescription;
     }
+
     private static String getEffectsDescription(List<ItemEffect> effects) {
         return "Effects: \n" + effects.stream().map(ItemEffect::toString).collect(Collectors.joining("\n"));
     }
@@ -290,5 +301,34 @@ public class MessageService {
                 messagingConstants.getEmoji().get(ORANGE_BLOCK).repeat(max(0, filledLength)) +
                 emojis.get(BROWN_BLOCK).repeat(max(0, emptyLength)) +
                 xpForNextLevel + " XP";
+    }
+
+    private String getPlayerStatsMessageCaption(Player player) {
+        val emoji = messagingConstants.getEmoji();
+        val itemEffects = player.getEffects().stream()
+                .filter(effect -> effect instanceof ItemEffect).toList();
+        val expirableEffects = player.getEffects().stream()
+                .filter(effect -> !effect.isPermanent()).toList();
+        return "*Player's stats:* \n" +
+                emoji.get(HEART) + ": " + generateBar(player.getHp(), player.getMaxHp(), emoji.get(RED_SQUARE)) + "\n" +
+                emoji.get(DIAMOND) + ": " + generateBar(player.getMana(), player.getMaxMana(), emoji.get(BLUE_SQUARE)) + "\n" +
+                "_Basic Attributes:_ " +
+                player.getAttributes().entrySet().stream()
+                        .map(entry -> "- " + entry.getKey().toString() + ": " + entry.getValue())
+                        .collect(Collectors.joining("\n", "\n", "\n")) +
+                emoji.get(SHIELD) + ": " + player.getDefense() + " / " + player.getMaxDefense() + "\n" +
+                emoji.get(SWORD) + ": " + player.getPrimaryAttack() + "\n" +
+                (nonNull(player.getSecondaryAttack()) && player.getSecondaryAttack() > 0 ? emoji.get(DAGGER) + player.getSecondaryAttack() + "\n" : "")  +
+                (!itemEffects.isEmpty() ? "_Item effects:_ " +
+                itemEffects.stream()
+                        .map(PlayerEffect::toString)
+                        .collect(Collectors.joining("\n", "\n", "\n")) : "") +
+                (!expirableEffects.isEmpty() ? "_Expirable effects:_ " +
+                player.getEffects().stream()
+                                .filter(effect -> !effect.isPermanent())
+                                .map(effect -> effect + ", expires in " + ((Expirable) effect).getTurnsLasts() + " turns")
+                                .collect(Collectors.joining("\n", "\n", "\n")) : "") +
+                emoji.get(STONKS) + ": " + player.getXp() + " xp " + generateXpBar(player.getXp(), player.getPlayerLevel(), player.getNextLevelXp());
+
     }
 }

@@ -7,6 +7,7 @@ import org.dungeon.prototype.model.document.item.ItemSpecs;
 public class WeaponSpecs implements ItemSpecs {
     private Integer attack;
     private Double criticalHitChance;
+    private Double criticalHitMultiplier;
     private Double chanceToMiss;
     private Double chanceToKnockOut;
     private boolean isCompleteDragonBone;

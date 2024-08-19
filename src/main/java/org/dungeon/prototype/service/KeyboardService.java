@@ -57,6 +57,7 @@ import static org.dungeon.prototype.properties.CallbackType.MERCHANT_SELL_MENU_B
 import static org.dungeon.prototype.properties.CallbackType.MERCHANT_SELL_PRICE;
 import static org.dungeon.prototype.properties.CallbackType.NEXT_LEVEL;
 import static org.dungeon.prototype.properties.CallbackType.PLAYER_ATTRIBUTE_UPGRADE;
+import static org.dungeon.prototype.properties.CallbackType.PLAYER_STATS;
 import static org.dungeon.prototype.properties.CallbackType.RESTORE_ARMOR;
 import static org.dungeon.prototype.properties.CallbackType.RIGHT;
 import static org.dungeon.prototype.properties.CallbackType.RIGHT_HAND;
@@ -111,13 +112,14 @@ public class KeyboardService {
             row1.add(getButton(NEXT_LEVEL));
         }
         val direction = player.getDirection();
-        if (adjacentRooms.containsKey(turnLeft(direction)) && adjacentRooms.get(turnLeft(direction)) && !getMonsterRoomTypes().contains(roomContent.getRoomType())) {
+        val isMonsterRoom = getMonsterRoomTypes().contains(roomContent.getRoomType());
+        if (adjacentRooms.containsKey(turnLeft(direction)) && adjacentRooms.get(turnLeft(direction)) && !isMonsterRoom) {
             row1.add(getButton(LEFT));
         }
-        if (adjacentRooms.containsKey(direction) && adjacentRooms.get(direction) && !getMonsterRoomTypes().contains(roomContent.getRoomType())) {
+        if (adjacentRooms.containsKey(direction) && adjacentRooms.get(direction) && !isMonsterRoom) {
             row1.add(getButton(FORWARD));
         }
-        if (adjacentRooms.containsKey(turnRight(direction)) && adjacentRooms.get(turnRight(direction)) && !getMonsterRoomTypes().contains(roomContent.getRoomType())) {
+        if (adjacentRooms.containsKey(turnRight(direction)) && adjacentRooms.get(turnRight(direction)) && !isMonsterRoom) {
             row1.add(getButton(RIGHT));
         }
         List<InlineKeyboardButton> row2 = new ArrayList<>();
@@ -125,9 +127,9 @@ public class KeyboardService {
             case TREASURE -> row2.add(getButton(TREASURE_OPEN));
             case WEREWOLF, SWAMP_BEAST, VAMPIRE, DRAGON, ZOMBIE -> {
                 val weaponSet = player.getInventory().getWeaponSet();
-                row1.add(getButton(ATTACK, player.getAttack(true).toString()));
+                row1.add(getButton(ATTACK, player.getPrimaryAttack().toString()));
                 if (Objects.nonNull(weaponSet.getSecondaryWeapon())) {
-                    row1.add(getButton(SECONDARY_ATTACK, player.getAttack(false).toString()));
+                    row1.add(getButton(SECONDARY_ATTACK, player.getSecondaryAttack().toString()));
                 }
             }
             case HEALTH_SHRINE, MANA_SHRINE -> row2.add(getButton(SHRINE));
@@ -145,9 +147,12 @@ public class KeyboardService {
             }
         }
         row2.add(getButton(MAP));
-        row2.add(getButton(INVENTORY));
+        if (!isMonsterRoom) {
+            row2.add(getButton(INVENTORY));
+        }
+        row2.add(getButton(PLAYER_STATS));
         if (adjacentRooms.containsKey(getOppositeDirection(direction)) && adjacentRooms.get(getOppositeDirection(direction))
-                && !getMonsterRoomTypes().contains(roomContent.getRoomType())) {
+                && !isMonsterRoom) {
             row2.add(getButton(BACK));
         }
         inlineKeyboard.setKeyboard(List.of(row1, row2));
@@ -157,6 +162,7 @@ public class KeyboardService {
     public InlineKeyboardMarkup getMapInlineKeyboardMarkup() {
         List<InlineKeyboardButton> row = new ArrayList<>();
         row.add(getButton(INVENTORY));
+        row.add(getButton(PLAYER_STATS));
         row.add(getButton(MENU_BACK));
 
         return new InlineKeyboardMarkup(List.of(row));
@@ -184,7 +190,7 @@ public class KeyboardService {
         return inlineKeyboardMarkup;
     }
 
-    public InlineKeyboardMarkup getInventoryReplyMarkup(Inventory inventory, CallbackType unEquippedItem, CallbackType equippedItemAction, CallbackType unEquippedItemAction, CallbackType additionalMenu) {
+    public InlineKeyboardMarkup getInventoryReplyMarkup(Inventory inventory, CallbackType unEquippedItem, CallbackType equippedItemAction, CallbackType unEquippedItemAction, List<CallbackType> additionalMenus) {
         val armor = inventory.getArmorSet();
         val weapons = inventory.getWeaponSet();
 
@@ -222,7 +228,20 @@ public class KeyboardService {
             });
         }
         List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(getButton(additionalMenu));
+        additionalMenus.forEach(additionalMenu ->
+                row.add(getButton(additionalMenu)));
+        row.add(getButton(MENU_BACK));
+        buttons.add(row);
+        inlineKeyboardMarkup.setKeyboard(buttons);
+        return inlineKeyboardMarkup;
+    }
+
+    public InlineKeyboardMarkup getPlayerStatsReplyMarkup() {
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        row.add(getButton(MAP));
+        row.add(getButton(INVENTORY));
         row.add(getButton(MENU_BACK));
         buttons.add(row);
         inlineKeyboardMarkup.setKeyboard(buttons);
@@ -380,18 +399,6 @@ public class KeyboardService {
                 .build();
     }
 
-
-    public InlineKeyboardMarkup getMerchantSellItemInfoReplyMarkup(Item item) {
-        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
-        List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(getMerchantSellPriceButton(item));
-        row.add(getButton(MERCHANT_SELL_MENU_BACK));
-        buttons.add(row);
-        inlineKeyboardMarkup.setKeyboard(buttons);
-        return inlineKeyboardMarkup;
-    }
-
     public InlineKeyboardMarkup getMerchantBuyItemInfoReplyMarkup(Item item) {
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
@@ -427,14 +434,6 @@ public class KeyboardService {
         val buttonProperties = keyboardButtonProperties.getButtons().get(MERCHANT_ITEM_BUY);
         return InlineKeyboardButton.builder()
                 .text(item.getName())
-                .callbackData(buttonProperties.getCallback().replace(templatePlaceholder, item.getId()))
-                .build();
-    }
-
-    private InlineKeyboardButton getMerchantSellPriceButton(Item item) {
-        val buttonProperties = keyboardButtonProperties.getButtons().get(MERCHANT_SELL_PRICE);
-        return InlineKeyboardButton.builder()
-                .text(buttonProperties.getName().replace(templatePlaceholder, item.getSellingPrice().toString()))
                 .callbackData(buttonProperties.getCallback().replace(templatePlaceholder, item.getId()))
                 .build();
     }

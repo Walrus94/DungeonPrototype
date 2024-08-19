@@ -7,6 +7,7 @@ import org.dungeon.prototype.model.inventory.items.Wearable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Data
 public class Inventory {
@@ -37,29 +38,85 @@ public class Inventory {
         }
     }
 
-    public void remove(Item item) {
+    public Optional<Item> unEquip(Item item) {
         if (items.remove(item)) {
-            return;
+            return Optional.empty();
         }
         if (item instanceof Wearable && armorSet.getArmorItems().contains(item)) {
             switch (((Wearable)item).getAttributes().getWearableType()) {
-                case HELMET -> armorSet.setHelmet(null);
-                case VEST -> armorSet.setVest(null);
-                case GLOVES -> armorSet.setGloves(null);
-                case BOOTS -> armorSet.setBoots(null);
+                case HELMET -> {
+                    armorSet.setHelmet(null);
+                    return Optional.of(item);
+                }
+                case VEST -> {
+                    armorSet.setVest(null);
+                    return Optional.of(item);
+                }
+                case GLOVES -> {
+                    armorSet.setGloves(null);
+                    return Optional.of(item);
+                }
+                case BOOTS -> {
+                    armorSet.setBoots(null);
+                    return Optional.of(item);
+                }
             }
+            return Optional.empty();
         }
         if (item instanceof Weapon) {
             if (item.equals(weaponSet.getSecondaryWeapon())) {
                 weaponSet.setSecondaryWeapon(null);
+                return Optional.of(item);
             }
             if (item.equals(weaponSet.getPrimaryWeapon())) {
                 weaponSet.setPrimaryWeapon(null);
+                return Optional.of(item);
             }
+            return Optional.empty();
         }
+        return Optional.empty();
     }
 
     public boolean isFull() {
         return maxItems.equals(items.size());
+    }
+
+    public boolean removeItem(Item item) {
+        if (items.remove(item)) {
+            return true;
+        }
+        if (item instanceof Wearable && armorSet.getArmorItems().contains(item)) {
+            switch (((Wearable)item).getAttributes().getWearableType()) {
+                case HELMET -> {
+                    armorSet.setHelmet(null);
+                    return true;
+                }
+                case VEST -> {
+                    armorSet.setVest(null);
+                    return true;
+                }
+                case GLOVES -> {
+                    armorSet.setGloves(null);
+                    return true;
+                }
+                case BOOTS -> {
+                    armorSet.setBoots(null);
+                    return true;
+                }
+            }
+            return false;
+        }
+        if (item instanceof Weapon) {
+            if (item.equals(weaponSet.getSecondaryWeapon())) {
+                weaponSet.setSecondaryWeapon(null);
+                return true;
+            }
+            if (item.equals(weaponSet.getPrimaryWeapon())) {
+                weaponSet.setPrimaryWeapon(null);
+                return true;
+            }
+            return false;
+        }
+        return false;
     }
 }

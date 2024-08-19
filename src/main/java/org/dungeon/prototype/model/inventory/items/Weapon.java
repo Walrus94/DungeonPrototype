@@ -16,6 +16,7 @@ public class Weapon extends Item {
 
     private Integer attack;
     private Double criticalHitChance;
+    private Double criticalHitMultiplier;
     private Double chanceToMiss;
     private Double chanceToKnockOut;
     private boolean isCompleteDragonBone;

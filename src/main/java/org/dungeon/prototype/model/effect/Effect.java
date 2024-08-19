@@ -4,6 +4,8 @@ import lombok.Data;
 import org.dungeon.prototype.model.effect.attributes.EffectAttribute;
 import org.dungeon.prototype.annotations.validation.MultiConditionalNotNull;
 
+import static org.apache.commons.lang3.BooleanUtils.isTrue;
+
 @Data
 @MultiConditionalNotNull(conditions = {
         @MultiConditionalNotNull.Condition(
@@ -35,7 +37,7 @@ public abstract class Effect {
     public abstract Boolean isNegative();
 
     public boolean isApplicable() {
-        if (!getHasFirstTurnPassed()) {
+        if (!isTrue(getHasFirstTurnPassed())) {
             return true;
         }
         return !isPermanent() && ((Expirable) this).getIsAccumulated();

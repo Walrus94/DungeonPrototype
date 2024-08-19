@@ -97,6 +97,13 @@ public class MessagingAspectProcessor {
         }
     }
 
+    @AfterReturning(value = "@annotation(org.dungeon.prototype.annotations.aspect.SendPlayerStatsMessage)", returning = "result")
+    public void sendPlayerStatsMessage(JoinPoint joinPoint, boolean result) {
+        if (result) {
+            handlePlayerStatsMessage(joinPoint);
+        }
+    }
+
     @AfterReturning(value = "@annotation(org.dungeon.prototype.annotations.aspect.SendInventoryMessage)", returning = "result")
     public void sendInventoryMessage(JoinPoint joinPoint, InventoryItemResponseDto result) {
         if (result.isOk()) {
@@ -140,6 +147,14 @@ public class MessagingAspectProcessor {
         Object[] args = joinPoint.getArgs();
         if (args.length > 0 && args[0] instanceof Long chatId) {
             messageService.sendMapMenuMessage(chatId, result);
+        }
+    }
+
+    private void handlePlayerStatsMessage(JoinPoint joinPoint) {
+        Object[] args = joinPoint.getArgs();
+        if (args.length > 0 && args[0] instanceof Long chatId) {
+            val player = playerService.getPlayer(chatId);
+            messageService.sendPlayerStatsMessage(chatId, player);
         }
     }
 

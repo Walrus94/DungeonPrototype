@@ -2,7 +2,7 @@ package org.dungeon.prototype.service.level;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.dungeon.prototype.annotations.aspect.AfterTurnUpdate;
+import org.dungeon.prototype.annotations.aspect.TurnUpdate;
 import org.dungeon.prototype.annotations.aspect.SendMapMessage;
 import org.dungeon.prototype.annotations.aspect.SendRoomMessage;
 import org.dungeon.prototype.model.Level;
@@ -125,7 +125,7 @@ public class LevelService {
         log.debug("Player continued level {}, current point: {}", levelNumber, player.getCurrentRoom());
         return true;
     }
-    @AfterTurnUpdate
+    @TurnUpdate
     @SendRoomMessage
     public boolean moveToRoom(Long chatId, CallbackType callBackData) {
         var player = playerService.getPlayer(chatId);
@@ -192,13 +192,13 @@ public class LevelService {
             log.error("No shrine to use!");
             return false;
         }
-        level.updateRoomType(currentRoom.getPoint(), RoomType.SHRINE_DRAINED);
         if (currentRoom.getRoomContent().getRoomType().equals(RoomType.HEALTH_SHRINE)) {
             player.addEffects(List.of(((HealthShrine) currentRoom.getRoomContent()).getEffect()));
         }
         if (currentRoom.getRoomContent().getRoomType().equals(RoomType.MANA_SHRINE)) {
             player.addEffects(List.of(((ManaShrine) currentRoom.getRoomContent()).getEffect()));
         }
+        level.updateRoomType(currentRoom.getPoint(), RoomType.SHRINE_DRAINED);
         return nonNull(playerService.updatePlayer(player));
     }
 

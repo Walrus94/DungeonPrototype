@@ -3,7 +3,7 @@ package org.dungeon.prototype.service;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.annotations.aspect.SendRoomMessage;
-import org.dungeon.prototype.annotations.aspect.AfterTurnUpdate;
+import org.dungeon.prototype.annotations.aspect.TurnUpdate;
 import org.dungeon.prototype.model.effect.MonsterEffect;
 import org.dungeon.prototype.model.monster.Monster;
 import org.dungeon.prototype.model.player.Player;
@@ -36,7 +36,7 @@ public class BattleService {
     @Autowired
     private BattleProperties battleProperties;
 
-    @AfterTurnUpdate
+    @TurnUpdate
     @SendRoomMessage
     public boolean attack(Long chatId, boolean isPrimaryAttack) {
         var player = playerService.getPlayer(chatId);
