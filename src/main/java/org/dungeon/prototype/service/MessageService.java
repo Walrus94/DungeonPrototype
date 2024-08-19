@@ -1,5 +1,6 @@
 package org.dungeon.prototype.service;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.annotations.aspect.MessageSending;
@@ -18,7 +19,6 @@ import org.dungeon.prototype.model.room.content.MonsterRoom;
 import org.dungeon.prototype.model.room.content.Treasure;
 import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.properties.MessagingConstants;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;

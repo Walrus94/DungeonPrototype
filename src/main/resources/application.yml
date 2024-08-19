@@ -29,6 +29,8 @@ messaging:
 
   keyboard:
     buttons:
+      bot-start:
+        callback: /start
       start-game:
         callback: btn_start_game
         name: Start Game

@@ -8,13 +8,13 @@ import org.dungeon.prototype.model.inventory.attributes.wearable.WearableAttribu
 import org.dungeon.prototype.model.inventory.items.naming.api.dto.ItemNameRequestDto;
 import org.dungeon.prototype.model.inventory.items.naming.api.dto.ItemNameResponseDto;
 import org.dungeon.prototype.model.inventory.items.naming.api.dto.ItemNameResponseListWrapperDto;
-import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;

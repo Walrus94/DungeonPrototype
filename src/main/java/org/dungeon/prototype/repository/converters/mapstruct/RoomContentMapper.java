@@ -1,5 +1,6 @@
 package org.dungeon.prototype.repository.converters.mapstruct;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.val;
 import org.dungeon.prototype.model.document.room.RoomContentDocument;
 import org.dungeon.prototype.model.inventory.Item;
@@ -14,7 +15,6 @@ import org.dungeon.prototype.model.room.content.NoContentRoom;
 import org.dungeon.prototype.model.room.content.RoomContent;
 import org.dungeon.prototype.model.room.content.Shrine;
 import org.dungeon.prototype.model.room.content.Treasure;
-import org.jetbrains.annotations.NotNull;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Mappings;

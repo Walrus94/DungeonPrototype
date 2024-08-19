@@ -6,14 +6,9 @@ import org.dungeon.prototype.service.MessageService;
 import org.dungeon.prototype.service.PlayerService;
 import org.dungeon.prototype.service.level.LevelService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.telegram.abilitybots.api.bot.AbilityBot;
-import org.telegram.abilitybots.api.objects.Ability;
-import org.telegram.abilitybots.api.objects.Locality;
-import org.telegram.abilitybots.api.objects.MessageContext;
-import org.telegram.abilitybots.api.objects.Privacy;
+import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
@@ -33,9 +28,10 @@ import static org.dungeon.prototype.bot.State.IDLE;
 
 @Slf4j
 @Component
-public class DungeonBot extends AbilityBot {
+public class DungeonBot extends TelegramLongPollingBot  {
     private static final long TIMEOUT_DURATION = Duration.ofMinutes(30).toMillis();
     private final Map<Long, ChatState> chatStateByIdMap;
+    private final String botUsername;
     @Autowired
     private PlayerService playerService;
     @Autowired
@@ -45,27 +41,10 @@ public class DungeonBot extends AbilityBot {
     @Autowired
     private CallbackRouter callbackRouter;
 
-    @Autowired
-    public DungeonBot(@Value("${bot.token}") String botToken, @Value("${bot.username}") String botUsername) {
-        super(botToken, botUsername);
+    public DungeonBot(String botToken, String botUsername) {
+        super(botToken);
+        this.botUsername = botUsername;
         chatStateByIdMap = new ConcurrentHashMap<>();
-    }
-
-    @Override
-    public long creatorId() {
-        return 151557417L;
-    }
-
-    @SuppressWarnings("unchecked")
-    public Ability start() {
-        return Ability.builder()
-                .name("start")
-                .info("Starts bot")
-                .locality(Locality.USER)
-                .privacy(Privacy.PUBLIC)
-                .flag(this::isStartAvailable)
-                .action(this::processStartAction)
-                .build();
     }
 
     private Boolean isStartAvailable(Update update) {
@@ -78,17 +57,24 @@ public class DungeonBot extends AbilityBot {
     }
 
     @Override
+    public String getBotUsername() {
+        return botUsername;
+    }
+
+    @Override
     public void onUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
             val chatId = update.getMessage().getChatId();
+            val messageText = update.getMessage().getText();
+            if (messageText.equals("/start")) {
+                processStartAction(chatId);
+            }
             if (chatStateByIdMap.containsKey(chatId) && AWAITING_NICKNAME.equals(chatStateByIdMap.get(chatId).getState())) {
                 val nickname = update.getMessage().getText();
                 val player = playerService.addNewPlayer(chatId, nickname);
                 log.debug("Player generated: {}", player);
                 chatStateByIdMap.get(chatId).setState(ACTIVE);
                 messageService.sendStartMessage(chatId, nickname, false);
-            } else {
-                super.onUpdateReceived(update);
             }
         } else if (update.hasCallbackQuery()) {
             val callbackQuery = update.getCallbackQuery();
@@ -96,10 +82,8 @@ public class DungeonBot extends AbilityBot {
                     update.getMessage().getChatId() :
                     callbackQuery.getMessage().getChatId();
             if (!callbackRouter.handleCallbackQuery(chatId, callbackQuery)) {
-                super.onUpdateReceived(update);
+                log.warn("Unable to handle callback {}", callbackQuery.getId());
             }
-        } else {
-            super.onUpdateReceived(update);
         }
     }
 
@@ -125,18 +109,14 @@ public class DungeonBot extends AbilityBot {
         });
     }
 
-    private void processStartAction(MessageContext messageContext) {
-        val chatId = messageContext.chatId();
+    private void processStartAction(Long chatId) {
         if (!chatStateByIdMap.containsKey(chatId)) {
             chatStateByIdMap.put(chatId, new ChatState());
         } else {
             chatStateByIdMap.get(chatId).setState(ACTIVE);
         }
-        val nickName = messageContext.user().getUserName() == null ?
-                messageContext.user().getFirstName() :
-                messageContext.user().getUserName();
         if (!playerService.hasPlayer(chatId)) {
-            sendRegisterMessage(chatId, nickName);
+            sendRegisterMessage(chatId);
         } else {
             val hasSavedGame = levelService.hasLevel(chatId);
             val nickname = playerService.getNicknameByChatId(chatId);
@@ -144,15 +124,14 @@ public class DungeonBot extends AbilityBot {
         }
     }
 
-    private boolean sendRegisterMessage(Long chatId, String nickName) {
+    private boolean sendRegisterMessage(Long chatId) {
         chatStateByIdMap.get(chatId).setState(AWAITING_NICKNAME);
-        return sendPromptMessage(chatId, "Welcome to dungeon!\nPlease, enter nickname to register", nickName);
+        return sendPromptMessage(chatId, "Welcome to dungeon!\nPlease, enter nickname to register");
     }
 
-    private boolean sendPromptMessage(Long chatId, String text, String suggested) {
+    private boolean sendPromptMessage(Long chatId, String text) {
         ForceReplyKeyboard keyboard = ForceReplyKeyboard.builder()
                 .forceReply(false)
-                .inputFieldPlaceholder(suggested)
                 .build();
         SendMessage message = SendMessage.builder()
                 .chatId(chatId)
