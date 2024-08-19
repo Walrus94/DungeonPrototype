@@ -71,11 +71,7 @@ public class RoomService {
         player.addGold(treasure.getGold());
         treasure.setGold(0);
         saveOrUpdateRoom(currentRoom);
-        if (treasure.getGold() == 0 && treasure.getItems().isEmpty()) {
-
-            log.debug("Treasure looted!");
-            return false;
-        }
+        playerService.updatePlayer(player);
         return true;
     }
 

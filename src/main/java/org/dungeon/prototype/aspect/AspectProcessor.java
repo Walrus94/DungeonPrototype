@@ -5,6 +5,7 @@ import lombok.val;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
 import org.dungeon.prototype.model.room.content.MonsterRoom;
 import org.dungeon.prototype.service.MessageService;
 import org.dungeon.prototype.service.MonsterService;
@@ -32,17 +33,28 @@ public class AspectProcessor {
     private MonsterService monsterService;
     @Autowired
     private PlayerService playerService;
-
     @Autowired
     private MessageService messageService;
-
     @Autowired
     private ItemService itemService;
 
-    @AfterReturning(value = "@annotation(org.dungeon.prototype.annotations.aspect.AfterTurnUpdate)", returning = "result")
+    @Before(value = "@annotation(org.dungeon.prototype.annotations.aspect.TurnUpdate)")
+    public void beforeTurn(JoinPoint joinPoint) {
+        handleBeforeTurn(joinPoint);
+    }
+
+    @AfterReturning(value = "@annotation(org.dungeon.prototype.annotations.aspect.TurnUpdate)", returning = "result")
     public void afterTurn(JoinPoint joinPoint, boolean result) {
         if (result) {
             handleAfterTurn(joinPoint);
+        }
+    }
+
+    private void handleBeforeTurn(JoinPoint joinPoint) {
+        Object[] args = joinPoint.getArgs();
+        if (args.length > 0 && args[0] instanceof Long chatId) {
+            val player = playerService.getPlayer(chatId);
+            playerService.updatePlayer(effectService.updatePlayerEffects(player));
         }
     }
 
@@ -67,7 +79,6 @@ public class AspectProcessor {
                 player.setNextLevelXp(PlayerLevelService.calculateXPForLevel(playerLevel + 1));
                 messageService.sendLevelUpgradeMessage(player, chatId);
             }
-            playerService.updatePlayer(effectService.updatePlayerEffects(player));
             if (roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId()).getRoomContent() instanceof MonsterRoom monsterRoom) {
                 monsterService.saveOrUpdateMonster(effectService.updateMonsterEffects(monsterRoom.getMonster()));
             }

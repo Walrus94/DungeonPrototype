@@ -34,6 +34,7 @@ public interface ItemMapper {
     @Mappings({
             @Mapping(target = "attack", expression = "java(((org.dungeon.prototype.model.document.item.specs.WeaponSpecs) document.getSpecs()).getAttack())"),
             @Mapping(target = "criticalHitChance", expression = "java(((org.dungeon.prototype.model.document.item.specs.WeaponSpecs) document.getSpecs()).getCriticalHitChance())"),
+            @Mapping(target = "criticalHitMultiplier", expression = "java(((org.dungeon.prototype.model.document.item.specs.WeaponSpecs) document.getSpecs()).getCriticalHitMultiplier())"),
             @Mapping(target = "chanceToMiss", expression = "java(((org.dungeon.prototype.model.document.item.specs.WeaponSpecs) document.getSpecs()).getChanceToMiss())"),
             @Mapping(target = "chanceToKnockOut", expression = "java(((org.dungeon.prototype.model.document.item.specs.WeaponSpecs) document.getSpecs()).getChanceToKnockOut())"),
             @Mapping(target = "completeDragonBone", expression = "java(((org.dungeon.prototype.model.document.item.specs.WeaponSpecs) document.getSpecs()).isCompleteDragonBone())"),
@@ -54,6 +55,7 @@ public interface ItemMapper {
             specs.setAttack(weapon.getAttack());
             specs.setChanceToKnockOut(weapon.getChanceToKnockOut());
             specs.setCriticalHitChance(weapon.getCriticalHitChance());
+            specs.setCriticalHitMultiplier(weapon.getCriticalHitMultiplier());
             specs.setCompleteDragonBone(weapon.isCompleteDragonBone());
             specs.setChanceToMiss(weapon.getChanceToMiss());
             return specs;

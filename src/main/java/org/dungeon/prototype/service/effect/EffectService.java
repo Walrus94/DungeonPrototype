@@ -7,24 +7,25 @@ import org.dungeon.prototype.model.effect.Effect;
 import org.dungeon.prototype.model.effect.Expirable;
 import org.dungeon.prototype.model.effect.ItemEffect;
 import org.dungeon.prototype.model.effect.PlayerEffect;
+import org.dungeon.prototype.model.effect.attributes.PlayerEffectAttribute;
 import org.dungeon.prototype.model.monster.Monster;
 import org.dungeon.prototype.model.player.Player;
+import org.dungeon.prototype.model.player.PlayerAttribute;
 import org.dungeon.prototype.repository.EffectRepository;
 import org.dungeon.prototype.repository.converters.mapstruct.EffectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
-import java.util.PriorityQueue;
+import java.util.*;
 import java.util.stream.Collectors;
 
+import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.BooleanUtils.isFalse;
 import static org.apache.commons.math3.util.FastMath.max;
 import static org.apache.commons.math3.util.FastMath.min;
 import static org.dungeon.prototype.model.effect.Action.ADD;
 import static org.dungeon.prototype.model.effect.Action.MULTIPLY;
+import static org.dungeon.prototype.model.effect.attributes.PlayerEffectAttribute.*;
 
 @Slf4j
 @Service
@@ -67,20 +68,27 @@ public class EffectService {
 
     public Player updatePlayerEffects(Player player) {
         removeExpiredEffects(player);
-        player.getEffects().forEach((attribute, playerEffects) -> {
+        Map<PlayerEffectAttribute, PriorityQueue<PlayerEffect>> mappedEffects = player.getEffects().stream()
+                .collect(Collectors.groupingBy(PlayerEffect::getAttribute,
+                        Collectors.toCollection(() -> new PriorityQueue<>(Comparator.comparing(PlayerEffect::getAction)))
+                ));
+        calculateHealthEffects(player, mappedEffects);
+        calculateManaEffects(player, mappedEffects);
+        mappedEffects.forEach((attribute, playerEffects) -> {
             switch (attribute) {
-                case HEALTH -> {
-                    Integer value = summarizeEffects(playerEffects, player.getHp());
-                    player.setHp(min(0, max(player.getMaxHp(), value)));
+                case ATTACK -> {
+                    var weaponSet = player.getInventory().getWeaponSet();
+                    Integer attack = player.getAttributes().get(PlayerAttribute.POWER);
+                    Integer primaryAttack = attack;
+                    if (nonNull(weaponSet.getPrimaryWeapon())) {
+                        primaryAttack += weaponSet.getPrimaryWeapon().getAttack();
+                    }
+                    player.setPrimaryAttack(summarizeEffects(playerEffects, primaryAttack));
+                    if (nonNull(weaponSet.getSecondaryWeapon())) {
+                        val secondaryAttack = attack + weaponSet.getSecondaryWeapon().getAttack();
+                        player.setSecondaryAttack(summarizeEffects(playerEffects, secondaryAttack));
+                    }
                 }
-                case MANA -> {
-                    Integer value = summarizeEffects(playerEffects, player.getMana());
-                    player.setMana(min(0, max(player.getMaxHp(), value)));
-                }
-                case ATTACK -> player.getInventory().getWeaponSet().getWeapons().forEach(weapon -> {
-                    Integer value = summarizeEffects(playerEffects, weapon.getAttack());
-                    weapon.setAttack(value);
-                });
                 case ARMOR -> {
                     Integer value = summarizeEffects(playerEffects, player.getMaxDefense());
                     player.setMaxDefense(value);
@@ -98,7 +106,9 @@ public class EffectService {
                     weapon.setChanceToKnockOut(value);
                 });
                 case CHANCE_TO_DODGE -> {
-                    Double value = summarizeEffects(playerEffects, player.getInventory().getArmorSet().getBoots().getChanceToDodge());
+                    Double value = summarizeEffects(playerEffects, nonNull(player.getInventory().getArmorSet().getBoots()) ?
+                            player.getInventory().getArmorSet().getBoots().getChanceToDodge() :
+                            0.0);
                     player.getInventory().getArmorSet().getBoots().setChanceToDodge(value);
                 }
             }
@@ -106,8 +116,67 @@ public class EffectService {
         return player;
     }
 
+    public void savePlayerEffects(List<PlayerEffect> effects) {
+        val documents = EffectMapper.INSTANCE.mapToDocuments(effects.stream().map(playerEffect -> (Effect) playerEffect).collect(Collectors.toList()));
+        effectRepository.saveAll(documents);
+    }
+
+    public PlayerEffect savePlayerEffect(PlayerEffect effect) {
+        val document = EffectMapper.INSTANCE.mapToDocument(effect);
+        return EffectMapper.INSTANCE.mapToPlayerEffect(effectRepository.save(document));
+    }
+
+    public List<ItemEffect> saveItemEffects(List<ItemEffect> effects) {
+        List<EffectDocument> documents = EffectMapper.INSTANCE.mapToDocuments(effects.stream().map(itemEffect -> (Effect) itemEffect).collect(Collectors.toList()));
+        val savedItemEffectDocuments = effectRepository.saveAll(documents);
+        return EffectMapper.INSTANCE.mapToItemEffects(savedItemEffectDocuments);
+    }
+
+    private void calculateHealthEffects(Player player, Map<PlayerEffectAttribute, PriorityQueue<PlayerEffect>> mappedEffects) {
+        val MaxHpEffects = mappedEffects.entrySet().stream()
+                .filter(entry -> Set.of(HEALTH_MAX, HEALTH_MAX_ONLY).contains(entry.getKey()))
+                .map(Map.Entry::getValue)
+                .flatMap(Collection::stream)
+                .filter(Effect::isApplicable)
+                .collect(Collectors.toCollection(() ->
+                        new PriorityQueue<>(Comparator.comparing(PlayerEffect::getAction))));
+        val maxHp = summarizeEffects(MaxHpEffects, player.getMaxHp());
+        val hpEffects = mappedEffects.entrySet().stream()
+                .filter(entry -> Set.of(HEALTH, HEALTH_MAX).contains(entry.getKey()))
+                .map(Map.Entry::getValue)
+                .flatMap(Collection::stream)
+                .filter(Effect::isApplicable)
+                .collect(Collectors.toCollection(() ->
+                        new PriorityQueue<>(Comparator.comparing(PlayerEffect::getAction))));
+        val hp = summarizeEffects(hpEffects, player.getHp());
+        player.setMaxHp(maxHp);
+        player.setHp(max(0, min(maxHp, hp)));
+    }
+
+    private void calculateManaEffects(Player player, Map<PlayerEffectAttribute, PriorityQueue<PlayerEffect>> mappedEffects) {
+        val maxManaEffects = mappedEffects.entrySet().stream()
+                .filter(entry -> Set.of(MANA_MAX, MANA_MAX_ONLY).contains(entry.getKey()))
+                .map(Map.Entry::getValue)
+                .flatMap(Collection::stream)
+                .filter(Effect::isApplicable)
+                .collect(Collectors.toCollection(() ->
+                        new PriorityQueue<>(Comparator.comparing(PlayerEffect::getAction))));
+        val maxMana = summarizeEffects(maxManaEffects, player.getMaxMana());
+        val manaEffects = mappedEffects.entrySet().stream()
+                .filter(entry -> Set.of(MANA, MANA_MAX).contains(entry.getKey()))
+                .map(Map.Entry::getValue)
+                .flatMap(Collection::stream)
+                .filter(Effect::isApplicable)
+                .collect(Collectors.toCollection(() ->
+                        new PriorityQueue<>(Comparator.comparing(PlayerEffect::getAction))));
+        val mana = summarizeEffects(manaEffects, player.getMana());
+        player.setMaxMana(maxMana);
+        player.setMana(max(0, min(maxMana, mana)));
+    }
+
     private Double summarizeEffects(PriorityQueue<PlayerEffect> effects, Double initialValue) {
         val effectsMap = effects.stream()
+                .filter(Effect::isApplicable)
                 .collect(Collectors.groupingBy(Effect::getAction));
         return effectsMap.values().stream().mapToDouble(playerEffects -> playerEffects.stream()
                         .filter(e -> MULTIPLY.equals(e.getAction()))
@@ -133,7 +202,24 @@ public class EffectService {
 
     }
 
-    public void removeExpiredEffects(Monster monster) {
+    private void removeExpiredEffects(Player player) {
+        val effectsToRemove = player.getEffects().stream()
+                .filter(playerEffect -> playerEffect instanceof Expirable)
+                .map(playerEffect -> {
+                    val turnsLeft = ((Expirable) playerEffect).decreaseTurnsLasts();
+                    if (turnsLeft < 1) {
+                        return playerEffect;
+                    }
+                    return null;
+                })
+                .filter(Objects::nonNull)
+                .toList();
+        effectsToRemove.forEach(playerEffect -> player.getEffects()
+                .remove(playerEffect));
+        savePlayerEffects(player.getEffects());
+    }
+
+    private void removeExpiredEffects(Monster monster) {
         val effectsToRemove = monster.getEffects().stream()
                 .filter(monsterEffect -> !monsterEffect.isPermanent())
                 .map(monsterEffect -> {
@@ -146,39 +232,5 @@ public class EffectService {
                 .filter(Objects::nonNull)
                 .toList();
         monster.getEffects().removeAll(effectsToRemove);
-    }
-
-    public void removeExpiredEffects(Player player) {
-        val effectsToRemove = player.getEffects().values().stream()
-                .flatMap(Collection::stream)
-                .filter(playerEffect -> playerEffect instanceof Expirable)
-                .map(playerEffect -> {
-                    val turnsLeft = ((Expirable) playerEffect).decreaseTurnsLasts();
-                    if (turnsLeft < 1) {
-                        return playerEffect;
-                    }
-                    return null;
-                })
-                .filter(Objects::nonNull)
-                .toList();
-        effectsToRemove.forEach(playerEffect -> player.getEffects()
-                .get(playerEffect.getAttribute())
-                .remove(playerEffect));
-        savePlayerEffects(player.getEffects().values().stream().flatMap(Collection::stream).collect(Collectors.toList()));
-    }
-
-    public void savePlayerEffects(List<PlayerEffect> effects) {
-        val documents = EffectMapper.INSTANCE.mapToDocuments(effects.stream().map(playerEffect -> (Effect) playerEffect).collect(Collectors.toList()));
-        effectRepository.saveAll(documents);
-    }
-    public PlayerEffect savePlayerEffect(PlayerEffect effect) {
-        val document = EffectMapper.INSTANCE.mapToDocument(effect);
-        return EffectMapper.INSTANCE.mapToPlayerEffect(effectRepository.save(document));
-    }
-
-    public List<ItemEffect> saveItemEffects(List<ItemEffect> effects) {
-        List<EffectDocument> documents = EffectMapper.INSTANCE.mapToDocuments(effects.stream().map(itemEffect -> (Effect) itemEffect).collect(Collectors.toList()));
-        val savedItemEffectDocuments = effectRepository.saveAll(documents);
-        return EffectMapper.INSTANCE.mapToItemEffects(savedItemEffectDocuments);
     }
 }

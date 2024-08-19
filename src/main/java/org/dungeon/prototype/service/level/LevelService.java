@@ -2,7 +2,7 @@ package org.dungeon.prototype.service.level;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.dungeon.prototype.annotations.aspect.AfterTurnUpdate;
+import org.dungeon.prototype.annotations.aspect.TurnUpdate;
 import org.dungeon.prototype.annotations.aspect.SendMapMessage;
 import org.dungeon.prototype.annotations.aspect.SendRoomMessage;
 import org.dungeon.prototype.model.Level;
@@ -125,23 +125,7 @@ public class LevelService {
         log.debug("Player continued level {}, current point: {}", levelNumber, player.getCurrentRoom());
         return true;
     }
-    private Level startNewLevel(Long chatId, Player player, Integer levelNumber) {
-        var level = generateLevel(chatId, player, levelNumber);
-        val direction = level.getStart().getAdjacentRooms().entrySet().stream()
-                .filter(entry -> Objects.nonNull(entry.getValue()) && entry.getValue())
-                .map(Map.Entry::getKey)
-                .findFirst().orElse(null);
-        player.setDirection(direction);
-        player.setCurrentRoom(level.getStart().getPoint());
-        player.setCurrentRoomId(level.getStart().getId());
-        if (levelRepository.existsByChatId(chatId)) {
-            levelRepository.removeByChatId(chatId);
-        }
-        playerService.updatePlayer(player);
-        return saveOrUpdateLevel(level);
-    }
-
-    @AfterTurnUpdate
+    @TurnUpdate
     @SendRoomMessage
     public boolean moveToRoom(Long chatId, CallbackType callBackData) {
         var player = playerService.getPlayer(chatId);
@@ -208,13 +192,13 @@ public class LevelService {
             log.error("No shrine to use!");
             return false;
         }
-        level.updateRoomType(currentRoom.getPoint(), RoomType.SHRINE_DRAINED);
         if (currentRoom.getRoomContent().getRoomType().equals(RoomType.HEALTH_SHRINE)) {
             player.addEffects(List.of(((HealthShrine) currentRoom.getRoomContent()).getEffect()));
         }
         if (currentRoom.getRoomContent().getRoomType().equals(RoomType.MANA_SHRINE)) {
             player.addEffects(List.of(((ManaShrine) currentRoom.getRoomContent()).getEffect()));
         }
+        level.updateRoomType(currentRoom.getPoint(), RoomType.SHRINE_DRAINED);
         return nonNull(playerService.updatePlayer(player));
     }
 
@@ -246,6 +230,10 @@ public class LevelService {
         return LevelMapper.INSTANCE.mapToLevel(levelDocument);
     }
 
+    public void remove(Long chatId) {
+        levelRepository.removeByChatId(chatId);
+    }
+
     private Integer getLevelNumber(Long chatId) {
         //TODO: adjust query
         val projection = levelRepository.findNumberByChatId(chatId).orElseGet(() -> {
@@ -255,8 +243,20 @@ public class LevelService {
         return projection.getNumber();
     }
 
-    public void remove(Long chatId) {
-        levelRepository.removeByChatId(chatId);
+    private Level startNewLevel(Long chatId, Player player, Integer levelNumber) {
+        var level = generateLevel(chatId, player, levelNumber);
+        val direction = level.getStart().getAdjacentRooms().entrySet().stream()
+                .filter(entry -> Objects.nonNull(entry.getValue()) && entry.getValue())
+                .map(Map.Entry::getKey)
+                .findFirst().orElse(null);
+        player.setDirection(direction);
+        player.setCurrentRoom(level.getStart().getPoint());
+        player.setCurrentRoomId(level.getStart().getId());
+        if (levelRepository.existsByChatId(chatId)) {
+            levelRepository.removeByChatId(chatId);
+        }
+        playerService.updatePlayer(player);
+        return saveOrUpdateLevel(level);
     }
 
     public boolean hasLevel(Long chatId) {

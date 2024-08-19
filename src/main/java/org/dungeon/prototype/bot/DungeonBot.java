@@ -7,6 +7,7 @@ import org.dungeon.prototype.service.PlayerService;
 import org.dungeon.prototype.service.level.LevelService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.telegram.abilitybots.api.bot.AbilityBot;
 import org.telegram.abilitybots.api.objects.Ability;
@@ -21,14 +22,19 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ForceReplyKeyboard;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.util.HashMap;
+import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static java.util.Objects.nonNull;
+import static org.dungeon.prototype.bot.State.ACTIVE;
+import static org.dungeon.prototype.bot.State.AWAITING_NICKNAME;
+import static org.dungeon.prototype.bot.State.IDLE;
 
 @Slf4j
 @Component
 public class DungeonBot extends AbilityBot {
+    private static final long TIMEOUT_DURATION = Duration.ofMinutes(30).toMillis();
     private final Map<Long, ChatState> chatStateByIdMap;
     @Autowired
     private PlayerService playerService;
@@ -42,7 +48,7 @@ public class DungeonBot extends AbilityBot {
     @Autowired
     public DungeonBot(@Value("${bot.token}") String botToken, @Value("${bot.username}") String botUsername) {
         super(botToken, botUsername);
-        chatStateByIdMap = new HashMap<>();
+        chatStateByIdMap = new ConcurrentHashMap<>();
     }
 
     @Override
@@ -50,12 +56,14 @@ public class DungeonBot extends AbilityBot {
         return 151557417L;
     }
 
+    @SuppressWarnings("unchecked")
     public Ability start() {
         return Ability.builder()
                 .name("start")
                 .info("Starts bot")
                 .locality(Locality.USER)
                 .privacy(Privacy.PUBLIC)
+                .flag(this::isStartAvailable)
                 .action(this::processStartAction)
                 .build();
     }
@@ -63,7 +71,7 @@ public class DungeonBot extends AbilityBot {
     private Boolean isStartAvailable(Update update) {
         if (update.hasMessage()) {
             val chatId = update.getMessage().getChatId();
-            return !chatStateByIdMap.containsKey(chatId) || chatStateByIdMap.get(chatId).getState().equals(State.IDLE);
+            return !chatStateByIdMap.containsKey(chatId) || IDLE.equals(chatStateByIdMap.get(chatId).getState());
         } else {
             return true;
         }
@@ -73,11 +81,11 @@ public class DungeonBot extends AbilityBot {
     public void onUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
             val chatId = update.getMessage().getChatId();
-            if (chatStateByIdMap.containsKey(chatId) && chatStateByIdMap.get(chatId).getAwaitingNickname()) {
+            if (chatStateByIdMap.containsKey(chatId) && AWAITING_NICKNAME.equals(chatStateByIdMap.get(chatId).getState())) {
                 val nickname = update.getMessage().getText();
                 val player = playerService.addNewPlayer(chatId, nickname);
                 log.debug("Player generated: {}", player);
-                chatStateByIdMap.get(chatId).setAwaitingNickname(false);
+                chatStateByIdMap.get(chatId).setState(ACTIVE);
                 messageService.sendStartMessage(chatId, nickname, false);
             } else {
                 super.onUpdateReceived(update);
@@ -106,20 +114,23 @@ public class DungeonBot extends AbilityBot {
         }
     }
 
-//    public boolean openMerchantSellItem(Long chatId, String itemId) {
-//        val item = itemService.findItem(chatId, itemId);
-//        SendMessage message = SendMessage.builder()
-//                .chatId(chatId)
-//                .text(messageService.getMerchantSellItemInfoMessageCaption(item))
-//                .replyMarkup(keyboardService.getMerchantSellItemInfoReplyMarkup(item))
-//                .build();
-//        return sendMessage(message, chatId);
-//    }
+    @Scheduled(fixedRate = 60000)
+    public void checkChatTimeouts() {
+        val currentTime = System.currentTimeMillis();
+        chatStateByIdMap.forEach((chatId, chatState) -> {
+            if (!IDLE.equals(chatState.getState()) &&
+                    currentTime - chatState.getLastActiveTime() > TIMEOUT_DURATION) {
+                chatState.setState(IDLE);
+            }
+        });
+    }
 
     private void processStartAction(MessageContext messageContext) {
         val chatId = messageContext.chatId();
         if (!chatStateByIdMap.containsKey(chatId)) {
             chatStateByIdMap.put(chatId, new ChatState());
+        } else {
+            chatStateByIdMap.get(chatId).setState(ACTIVE);
         }
         val nickName = messageContext.user().getUserName() == null ?
                 messageContext.user().getFirstName() :
@@ -134,7 +145,7 @@ public class DungeonBot extends AbilityBot {
     }
 
     private boolean sendRegisterMessage(Long chatId, String nickName) {
-        chatStateByIdMap.get(chatId).setAwaitingNickname(true);
+        chatStateByIdMap.get(chatId).setState(AWAITING_NICKNAME);
         return sendPromptMessage(chatId, "Welcome to dungeon!\nPlease, enter nickname to register", nickName);
     }
 
@@ -160,6 +171,7 @@ public class DungeonBot extends AbilityBot {
             if (chatStateByIdMap.containsKey(chatId) && nonNull(chatStateByIdMap.get(chatId).getLastMessageId())) {
                 deleteMessage(chatId, chatStateByIdMap.get(chatId).getLastMessageId());
                 chatStateByIdMap.get(chatId).setLastMessageId(messageId);
+                chatStateByIdMap.get(chatId).setLastActiveTime(System.currentTimeMillis());
             } else {
                 if (!chatStateByIdMap.containsKey(chatId)) {
                     val chatState = new ChatState();
@@ -167,6 +179,7 @@ public class DungeonBot extends AbilityBot {
                     chatStateByIdMap.put(chatId, new ChatState());
                 } else {
                     chatStateByIdMap.get(chatId).setLastMessageId(messageId);
+                    chatStateByIdMap.get(chatId).setLastActiveTime(System.currentTimeMillis());
                 }
             }
             return true;
@@ -185,6 +198,7 @@ public class DungeonBot extends AbilityBot {
             if (chatStateByIdMap.containsKey(chatId) && nonNull(chatStateByIdMap.get(chatId).getLastMessageId())) {
                 deleteMessage(chatId, chatStateByIdMap.get(chatId).getLastMessageId());
                 chatStateByIdMap.get(chatId).setLastMessageId(messageId);
+                chatStateByIdMap.get(chatId).setLastActiveTime(System.currentTimeMillis());
             } else {
                 if (!chatStateByIdMap.containsKey(chatId)) {
                     val chatState = new ChatState();
@@ -192,6 +206,7 @@ public class DungeonBot extends AbilityBot {
                     chatStateByIdMap.put(chatId, new ChatState());
                 } else {
                     chatStateByIdMap.get(chatId).setLastMessageId(messageId);
+                    chatStateByIdMap.get(chatId).setLastActiveTime(System.currentTimeMillis());
                 }
             }
             return true;
