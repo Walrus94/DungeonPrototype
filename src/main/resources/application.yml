@@ -28,7 +28,6 @@ messaging:
       axe: "\uD83E\uDE93"
 
   keyboard:
-    template-placeholder: "?"
     buttons:
       start-game:
         callback: btn_start_game
@@ -53,10 +52,10 @@ messaging:
         name: Turn Back
       attack:
         callback: btn_attack
-        name: ${messaging.constants.emoji.sword} ${messaging.keyboard.template-placeholder}
+        name: ${messaging.constants.emoji.sword} %d
       secondary-attack:
         callback: btn_attack_sec
-        name: ${messaging.constants.emoji.dagger} ${messaging.keyboard.template-placeholder}
+        name: ${messaging.constants.emoji.dagger} %d
       map:
         callback: btn_map
         name: Map
@@ -92,10 +91,9 @@ messaging:
         name: Open
       treasure-gold-collected:
         callback: btn_treasure_gold_collected
-        name: ${messaging.keyboard.template-placeholder} ${messaging.constants.emoji.treasure}
+        name: "%d ${messaging.constants.emoji.treasure}"
       item-collected:
-        callback: btn_treasure_item_collected_${messaging.keyboard.template-placeholder}
-        name: ${messaging.keyboard.template-placeholder}
+        callback: btn_treasure_item_collected_%s
       collect-all:
         callback: btn_treasure_collect_all
         name: Collect all
@@ -103,71 +101,54 @@ messaging:
         callback: btn_inventory
         name: Inventory
       head:
-        callback: btn_inventory_display_head_${messaging.keyboard.template-placeholder}
-        name: ${messaging.keyboard.template-placeholder}
+        callback: btn_inventory_display_head_%s
       vest:
-        callback: btn_inventory_display_vest_${messaging.keyboard.template-placeholder}
-        name: ${messaging.keyboard.template-placeholder}
+        callback: btn_inventory_display_vest_%s
       gloves:
-        callback: btn_inventory_display_gloves_${messaging.keyboard.template-placeholder}
-        name: ${messaging.keyboard.template-placeholder}
+        callback: btn_inventory_display_gloves_%s
       boots:
-        callback: btn_inventory_display_boots_${messaging.keyboard.template-placeholder}
-        name: ${messaging.keyboard.template-placeholder}
+        callback: btn_inventory_display_boots_%s
       right-hand:
-        callback: btn_inventory_display_primary_weapon_${messaging.keyboard.template-placeholder}
-        name: ${messaging.keyboard.template-placeholder}
+        callback: btn_inventory_display_primary_weapon_%s
       left-hand:
-        callback: btn_inventory_display_secondary_weapon_${messaging.keyboard.template-placeholder}
-        name: ${messaging.keyboard.template-placeholder}
+        callback: btn_inventory_display_secondary_weapon_%s
       item-inventory:
-        callback: btn_inventory_display_item_${messaging.keyboard.template-placeholder}
-        name: ${messaging.keyboard.template-placeholder}
+        callback: btn_inventory_display_item_%s
       item-inventory-back:
         callback: btn_inventory
         name: Back
       item-inventory-equip:
-        callback: btn_inventory_item_equip_${messaging.keyboard.template-placeholder}
+        callback: btn_inventory_item_equip_%s
         name: (equip)
       item-inventory-un-equip:
-        callback: btn_inventory_item_un_equip_${messaging.keyboard.template-placeholder}
+        callback: btn_inventory_item_un_equip_%s
         name: (un-equip)
       merchant-sell-display-head:
-        callback: btn_merchant_display_head_${messaging.keyboard.template-placeholder}
-        name: ${messaging.keyboard.template-placeholder}
+        callback: btn_merchant_display_head_%s
       merchant-sell-display-vest:
-        callback: btn_merchant_display_vest_${messaging.keyboard.template-placeholder}
-        name: ${messaging.keyboard.template-placeholder}
+        callback: btn_merchant_display_vest_%s
       merchant-sell-display-gloves:
-        callback: btn_merchant_display_gloves_${messaging.keyboard.template-placeholder}
-        name: ${messaging.keyboard.template-placeholder}
+        callback: btn_merchant_display_gloves_%s
       merchant-sell-display-boots:
-        callback: btn_merchant_display_boots_${messaging.keyboard.template-placeholder}
-        name: ${messaging.keyboard.template-placeholder}
+        callback: btn_merchant_display_boots_%s
       merchant-sell-display-right-hand:
-        callback: btn_merchant_display_primary_weapon_${messaging.keyboard.template-placeholder}
-        name: ${messaging.keyboard.template-placeholder}
+        callback: btn_merchant_display_primary_weapon_%s
       merchant-sell-display-left-hand:
-        callback: btn_merchant_display_secondary_weapon_${messaging.keyboard.template-placeholder}
-        name: ${messaging.keyboard.template-placeholder}
+        callback: btn_merchant_display_secondary_weapon_%s
       merchant-sell-display-item:
-        callback: btn_merchant_display_item_${messaging.keyboard.template-placeholder}
-        name: ${messaging.keyboard.template-placeholder}
+        callback: btn_merchant_display_item_%s
       merchant-item-sell:
-        name:
-        callback: btn_merchant_list_item_sell_${messaging.keyboard.template-placeholder}
+        callback: btn_merchant_list_item_sell_%s
       merchant-item-buy:
-        name:
-        callback: btn_merchant_list_item_buy_${messaging.keyboard.template-placeholder}
+        callback: btn_merchant_list_item_buy_%s
       merchant-sell-price:
-        callback: btn_merchant_sell_${messaging.keyboard.template-placeholder}
-        name: ${messaging.keyboard.template-placeholder} ${messaging.constants.emoji.treasure}
+        callback: btn_merchant_sell_%s
+        name: "%d ${messaging.constants.emoji.treasure}"
       merchant-buy-price:
-        callback: btn_merchant_buy_${messaging.keyboard.template-placeholder}
-        name: ${messaging.keyboard.template-placeholder} ${messaging.constants.emoji.treasure}
+        callback: btn_merchant_buy_%s
+        name: "%d ${messaging.constants.emoji.treasure}"
       player-attribute-upgrade:
-        callback: btn_player_attribute_upgrade_${messaging.keyboard.template-placeholder}
-        name:
+        callback: btn_player_attribute_upgrade_%s
 
 generation:
   level:

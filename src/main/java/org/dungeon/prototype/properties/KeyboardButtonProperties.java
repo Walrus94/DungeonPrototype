@@ -10,7 +10,6 @@ import java.util.Map;
 @ConfigurationPropertiesScan
 @ConfigurationProperties("messaging.keyboard")
 public class KeyboardButtonProperties {
-    private String templatePlaceholder;
     private Map<CallbackType, KeyboardButtonAttributes> buttons;
     @Data
     public static class KeyboardButtonAttributes {

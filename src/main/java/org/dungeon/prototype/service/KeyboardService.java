@@ -1,6 +1,5 @@
 package org.dungeon.prototype.service;
 
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.val;
 import org.dungeon.prototype.model.inventory.Inventory;
@@ -81,13 +80,6 @@ public class KeyboardService {
     @Autowired
     private KeyboardButtonProperties keyboardButtonProperties;
 
-    private String templatePlaceholder;
-
-    @PostConstruct
-    public void init() {
-        this.templatePlaceholder = keyboardButtonProperties.getTemplatePlaceholder();
-    }
-
     public InlineKeyboardMarkup getStartInlineKeyboardMarkup(boolean hasSavedGame) {
         return InlineKeyboardMarkup.builder()
                 .keyboard(List.of(List.of(
@@ -127,9 +119,9 @@ public class KeyboardService {
             case TREASURE -> row2.add(getButton(TREASURE_OPEN));
             case WEREWOLF, SWAMP_BEAST, VAMPIRE, DRAGON, ZOMBIE -> {
                 val weaponSet = player.getInventory().getWeaponSet();
-                row1.add(getButton(ATTACK, player.getPrimaryAttack().toString()));
+                row1.add(getButton(ATTACK, player.getPrimaryAttack()));
                 if (Objects.nonNull(weaponSet.getSecondaryWeapon())) {
-                    row1.add(getButton(SECONDARY_ATTACK, player.getSecondaryAttack().toString()));
+                    row1.add(getButton(SECONDARY_ATTACK, player.getSecondaryAttack()));
                 }
             }
             case HEALTH_SHRINE, MANA_SHRINE -> row2.add(getButton(SHRINE));
@@ -173,12 +165,12 @@ public class KeyboardService {
         List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
         if (treasure.getGold() > 0) {
             List<InlineKeyboardButton> row = new ArrayList<>();
-            row.add(getButton(TREASURE_GOLD_COLLECTED, treasure.getGold().toString()));
+            row.add(getButton(TREASURE_GOLD_COLLECTED, treasure.getGold()));
             buttons.add(row);
         }
         treasure.getItems().forEach(item -> {
             List<InlineKeyboardButton> row = new ArrayList<>();
-            row.add(getItemListButton(item, ITEM_COLLECTED));
+            row.add(getItemListButton(item));
             buttons.add(row);
         });
         List<InlineKeyboardButton> row = new ArrayList<>();
@@ -274,17 +266,17 @@ public class KeyboardService {
                 .build();
     }
 
-    private InlineKeyboardButton getButton(CallbackType type, String value) {
+    private InlineKeyboardButton getButton(CallbackType type, Integer value) {
         return InlineKeyboardButton.builder()
-                .text(keyboardButtonProperties.getButtons().get(type).getName().replace(templatePlaceholder, value))
+                .text(keyboardButtonProperties.getButtons().get(type).getName().formatted(value))
                 .callbackData(keyboardButtonProperties.getButtons().get(type).getCallback())
                 .build();
     }
 
-    private InlineKeyboardButton getItemListButton(Item item, CallbackType listType) {
+    private InlineKeyboardButton getItemListButton(Item item) {
         return InlineKeyboardButton.builder()
-                .text(keyboardButtonProperties.getButtons().get(listType).getName().replace(templatePlaceholder, item.getName()))
-                .callbackData(keyboardButtonProperties.getButtons().get(listType).getCallback().replace(templatePlaceholder, item.getId()))
+                .text(item.getName())
+                .callbackData(keyboardButtonProperties.getButtons().get(ITEM_COLLECTED).getCallback().formatted(item.getId()))
                 .build();
     }
 
@@ -292,14 +284,13 @@ public class KeyboardService {
         List<InlineKeyboardButton> row = new ArrayList<>();
         val itemButtonProperties = keyboardButtonProperties.getButtons().get(itemType);
         val actionButtonProperties = keyboardButtonProperties.getButtons().get(itemAction);
-        val templateReplacement = templatePlaceholder;
         row.add(InlineKeyboardButton.builder()
-                .text(itemButtonProperties.getName().replace(templateReplacement, item.getName()))
-                .callbackData(itemButtonProperties.getCallback().replace(templateReplacement, item.getId()))
+                .text(item.getName())
+                .callbackData(itemButtonProperties.getCallback().formatted(item.getId()))
                 .build());
         row.add(InlineKeyboardButton.builder()
-                .text(actionButtonProperties.getName().replace(templatePlaceholder, item.getSellingPrice().toString()))
-                .callbackData(actionButtonProperties.getCallback().replace(templateReplacement, item.getId()))
+                .text(actionButtonProperties.getName().formatted(item.getSellingPrice()))
+                .callbackData(actionButtonProperties.getCallback().formatted(item.getId()))
                 .build());
         return row;
     }
@@ -326,8 +317,8 @@ public class KeyboardService {
         }
         List<InlineKeyboardButton> row = new ArrayList<>();
         row.add(InlineKeyboardButton.builder()
-                .text(actionButton.getName().replace(templatePlaceholder, item.getSellingPrice().toString()))
-                .callbackData(actionButton.getCallback().replace(templatePlaceholder, item.getId()))
+                .text(actionButton.getName().formatted(item.getSellingPrice()))
+                .callbackData(actionButton.getCallback().formatted(item.getId()))
                 .build());
         row.add(InlineKeyboardButton.builder()
                 .text(backButton.getName())
@@ -354,7 +345,7 @@ public class KeyboardService {
         List<InlineKeyboardButton> row = new ArrayList<>();
         row.add(InlineKeyboardButton.builder()
                 .text(actionButtonProperties.getName())
-                .callbackData(actionButtonProperties.getCallback().replace(keyboardButtonProperties.getTemplatePlaceholder(), sellPrice.toString()))
+                .callbackData(actionButtonProperties.getCallback().formatted(sellPrice))
                 .build());
         row.add(InlineKeyboardButton.builder()
                 .text(backButtonProperties.getName())
@@ -386,16 +377,16 @@ public class KeyboardService {
         List<InlineKeyboardButton> row = new ArrayList<>();
         row.add(getListItemButton(item, equippedType, itemButtonAttributes));
         row.add(InlineKeyboardButton.builder()
-                .text(unEquipButtonAttributes.getName().replace(templatePlaceholder, item.getSellingPrice().toString()))
-                .callbackData(unEquipButtonAttributes.getCallback().replace(templatePlaceholder, item.getId()))
+                .text(unEquipButtonAttributes.getName().formatted(item.getSellingPrice()))
+                .callbackData(unEquipButtonAttributes.getCallback().formatted(item.getId()))
                 .build());
         return row;
     }
 
     private InlineKeyboardButton getListItemButton(Item item, CallbackType equippedType, KeyboardButtonProperties.KeyboardButtonAttributes itemButtonAttributes) {
         return InlineKeyboardButton.builder()
-                .text(itemButtonAttributes.getName().replace(templatePlaceholder, formatItemType(equippedType) + ": " + item.getName()))
-                .callbackData(itemButtonAttributes.getCallback().replace(templatePlaceholder, item.getId()))
+                .text(formatItemType(equippedType) + ": " + item.getName())
+                .callbackData(itemButtonAttributes.getCallback().formatted(item.getId()))
                 .build();
     }
 
@@ -426,7 +417,7 @@ public class KeyboardService {
         val buttonProperties = keyboardButtonProperties.getButtons().get(PLAYER_ATTRIBUTE_UPGRADE);
         return InlineKeyboardButton.builder()
                 .text(playerAttribute.getValue() + ": " + value + " (+1)")
-                .callbackData(buttonProperties.getCallback().replace(keyboardButtonProperties.getTemplatePlaceholder(), playerAttribute.getValue()))
+                .callbackData(buttonProperties.getCallback().formatted(playerAttribute.getValue()))
                 .build();
     }
 
@@ -434,15 +425,15 @@ public class KeyboardService {
         val buttonProperties = keyboardButtonProperties.getButtons().get(MERCHANT_ITEM_BUY);
         return InlineKeyboardButton.builder()
                 .text(item.getName())
-                .callbackData(buttonProperties.getCallback().replace(templatePlaceholder, item.getId()))
+                .callbackData(buttonProperties.getCallback().formatted(item.getId()))
                 .build();
     }
 
     private InlineKeyboardButton getMerchantBuyPriceButton(Item item) {
         val buttonProperties = keyboardButtonProperties.getButtons().get(MERCHANT_BUY_PRICE);
         return InlineKeyboardButton.builder()
-                .text(buttonProperties.getName().replace(templatePlaceholder, item.getBuyingPrice().toString()))
-                .callbackData(buttonProperties.getCallback().replace(templatePlaceholder, item.getId()))
+                .text(buttonProperties.getName().formatted(item.getBuyingPrice()))
+                .callbackData(buttonProperties.getCallback().formatted(item.getId()))
                 .build();
     }
 }
