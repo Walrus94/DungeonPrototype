@@ -1,5 +1,6 @@
 package org.dungeon.prototype.service.item;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.math3.util.Pair;
@@ -22,7 +23,6 @@ import org.dungeon.prototype.properties.GenerationProperties;
 import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.effect.ItemEffectsGenerator;
 import org.dungeon.prototype.util.RandomUtil;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;

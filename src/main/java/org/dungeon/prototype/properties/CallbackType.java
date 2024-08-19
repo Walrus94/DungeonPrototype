@@ -1,6 +1,7 @@
 package org.dungeon.prototype.properties;
 
 public enum CallbackType {
+    BOT_START,
     CONTINUE_GAME,
     START_GAME,
     NEXT_LEVEL,

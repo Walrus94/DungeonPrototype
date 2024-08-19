@@ -1,5 +1,6 @@
 package org.dungeon.prototype.service.item;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.model.document.item.ItemDocument;
@@ -11,7 +12,6 @@ import org.dungeon.prototype.model.inventory.items.Wearable;
 import org.dungeon.prototype.repository.ItemRepository;
 import org.dungeon.prototype.repository.converters.mapstruct.ItemMapper;
 import org.dungeon.prototype.repository.projections.ItemWeightProjection;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;

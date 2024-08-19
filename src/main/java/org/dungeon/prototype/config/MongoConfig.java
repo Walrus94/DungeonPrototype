@@ -1,5 +1,6 @@
 package org.dungeon.prototype.config;
 
+import jakarta.validation.constraints.NotNull;
 import org.dungeon.prototype.repository.converters.DirectionReadingConverter;
 import org.dungeon.prototype.repository.converters.DirectionWritingConverter;
 import org.dungeon.prototype.repository.converters.EffectAttributeReadingConverter;
@@ -10,7 +11,6 @@ import org.dungeon.prototype.repository.converters.PointReadingConverter;
 import org.dungeon.prototype.repository.converters.PointWritingConverter;
 import org.dungeon.prototype.repository.converters.WearableTypeReadingConverter;
 import org.dungeon.prototype.repository.converters.WearableTypeWritingConverter;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
