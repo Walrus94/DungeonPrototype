@@ -66,15 +66,14 @@ public class DungeonBot extends TelegramLongPollingBot  {
         if (update.hasMessage() && update.getMessage().hasText()) {
             val chatId = update.getMessage().getChatId();
             val messageText = update.getMessage().getText();
-            if (messageText.equals("/start")) {
-                processStartAction(chatId);
-            }
-            if (chatStateByIdMap.containsKey(chatId) && AWAITING_NICKNAME.equals(chatStateByIdMap.get(chatId).getState())) {
-                val nickname = update.getMessage().getText();
-                val player = playerService.addNewPlayer(chatId, nickname);
-                log.debug("Player generated: {}", player);
-                chatStateByIdMap.get(chatId).setState(ACTIVE);
-                messageService.sendStartMessage(chatId, nickname, false);
+            if (!handleBotCommand(update, chatId, messageText)) {
+                if (chatStateByIdMap.containsKey(chatId) && AWAITING_NICKNAME.equals(chatStateByIdMap.get(chatId).getState())) {
+                    val nickname = update.getMessage().getText();
+                    val player = playerService.addNewPlayer(chatId, nickname);
+                    log.debug("Player generated: {}", player);
+                    chatStateByIdMap.get(chatId).setState(ACTIVE);
+                    messageService.sendStartMessage(chatId, nickname, false);
+                }
             }
         } else if (update.hasCallbackQuery()) {
             val callbackQuery = update.getCallbackQuery();
@@ -85,6 +84,16 @@ public class DungeonBot extends TelegramLongPollingBot  {
                 log.warn("Unable to handle callback {}", callbackQuery.getId());
             }
         }
+    }
+
+    private boolean handleBotCommand(Update update, Long chatId, String messageText) {
+        if (messageText.equals("/start")) {
+            val nickname = update.getMessage().getFrom().getUserName() == null ?
+                    update.getMessage().getFrom().getFirstName() :
+                    update.getMessage().getFrom().getUserName();
+            return processStartAction(chatId, nickname);
+        }
+        return false;
     }
 
     public void answerCallbackQuery(String callbackQueryId) {
@@ -109,29 +118,31 @@ public class DungeonBot extends TelegramLongPollingBot  {
         });
     }
 
-    private void processStartAction(Long chatId) {
+    private boolean processStartAction(Long chatId, String suggestedNickname) {
         if (!chatStateByIdMap.containsKey(chatId)) {
             chatStateByIdMap.put(chatId, new ChatState());
         } else {
             chatStateByIdMap.get(chatId).setState(ACTIVE);
         }
         if (!playerService.hasPlayer(chatId)) {
-            sendRegisterMessage(chatId);
+            return sendRegisterMessage(chatId, suggestedNickname);
         } else {
             val hasSavedGame = levelService.hasLevel(chatId);
             val nickname = playerService.getNicknameByChatId(chatId);
             messageService.sendStartMessage(chatId, nickname.orElse(""), hasSavedGame);
+            return true;
         }
     }
 
-    private boolean sendRegisterMessage(Long chatId) {
+    private boolean sendRegisterMessage(Long chatId, String suggestedNickname) {
         chatStateByIdMap.get(chatId).setState(AWAITING_NICKNAME);
-        return sendPromptMessage(chatId, "Welcome to dungeon!\nPlease, enter nickname to register");
+        return sendPromptMessage(chatId, "Welcome to dungeon!\nPlease, enter nickname to register", suggestedNickname);
     }
 
-    private boolean sendPromptMessage(Long chatId, String text) {
+    private boolean sendPromptMessage(Long chatId, String text, String suggestedPrompt) {
         ForceReplyKeyboard keyboard = ForceReplyKeyboard.builder()
                 .forceReply(false)
+                .inputFieldPlaceholder(suggestedPrompt)
                 .build();
         SendMessage message = SendMessage.builder()
                 .chatId(chatId)
