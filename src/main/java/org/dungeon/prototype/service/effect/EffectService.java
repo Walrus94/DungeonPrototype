@@ -106,10 +106,10 @@ public class EffectService {
                     weapon.setChanceToKnockOut(value);
                 });
                 case CHANCE_TO_DODGE -> {
-                    Double value = summarizeEffects(playerEffects, nonNull(player.getInventory().getArmorSet().getBoots()) ?
-                            player.getInventory().getArmorSet().getBoots().getChanceToDodge() :
-                            0.0);
-                    player.getInventory().getArmorSet().getBoots().setChanceToDodge(value);
+                    if (nonNull(player.getInventory().getArmorSet().getBoots())) {
+                        Double value = summarizeEffects(playerEffects, player.getInventory().getArmorSet().getBoots().getChanceToDodge());
+                        player.getInventory().getArmorSet().getBoots().setChanceToDodge(value);
+                    }
                 }
             }
         });

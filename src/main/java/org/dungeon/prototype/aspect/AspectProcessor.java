@@ -65,6 +65,8 @@ public class AspectProcessor {
             if (player.getHp() < 1) {
                 levelService.remove(chatId);
                 itemService.dropCollection(chatId);
+                player.getEffects().clear();
+                playerService.updatePlayer(player);
                 messageService.sendDeathMessage(chatId);
                 return;
             }
