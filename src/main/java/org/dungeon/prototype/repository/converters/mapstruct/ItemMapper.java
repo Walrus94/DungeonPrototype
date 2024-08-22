@@ -37,7 +37,7 @@ public interface ItemMapper {
             @Mapping(target = "criticalHitMultiplier", expression = "java(((org.dungeon.prototype.model.document.item.specs.WeaponSpecs) document.getSpecs()).getCriticalHitMultiplier())"),
             @Mapping(target = "chanceToMiss", expression = "java(((org.dungeon.prototype.model.document.item.specs.WeaponSpecs) document.getSpecs()).getChanceToMiss())"),
             @Mapping(target = "chanceToKnockOut", expression = "java(((org.dungeon.prototype.model.document.item.specs.WeaponSpecs) document.getSpecs()).getChanceToKnockOut())"),
-            @Mapping(target = "completeDragonBone", expression = "java(((org.dungeon.prototype.model.document.item.specs.WeaponSpecs) document.getSpecs()).isCompleteDragonBone())"),
+            @Mapping(target = "isCompleteDragonBone", expression = "java(((org.dungeon.prototype.model.document.item.specs.WeaponSpecs) document.getSpecs()).getIsCompleteDragonBone())"),
             @Mapping(target = "attributes", expression = "java((org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttributes) document.getAttributes())")
     })
     Weapon mapToWeapon(ItemDocument document);
@@ -56,7 +56,7 @@ public interface ItemMapper {
             specs.setChanceToKnockOut(weapon.getChanceToKnockOut());
             specs.setCriticalHitChance(weapon.getCriticalHitChance());
             specs.setCriticalHitMultiplier(weapon.getCriticalHitMultiplier());
-            specs.setCompleteDragonBone(weapon.isCompleteDragonBone());
+            specs.setIsCompleteDragonBone(weapon.getIsCompleteDragonBone());
             specs.setChanceToMiss(weapon.getChanceToMiss());
             return specs;
         } else if (item instanceof Wearable wearable) {

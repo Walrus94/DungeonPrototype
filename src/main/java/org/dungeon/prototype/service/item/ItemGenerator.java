@@ -282,9 +282,11 @@ public class ItemGenerator {
             weapon.setMagicType(MagicType.values()[getRandomInt(0, MagicType.values().length - 1)]);
         }
         if (DRAGON_BONE.equals(weapon.getAttributes().getWeaponMaterial()) && WeaponHandlerMaterial.DRAGON_BONE.equals(weapon.getAttributes().getWeaponHandlerMaterial())) {
-            weapon.setCompleteDragonBone(true);
+            weapon.setIsCompleteDragonBone(true);
             weapon.setHasMagic(true);
             weapon.setMagicType(MagicType.CHAOTIC);//TODO: add magic coordinates to store type
+        } else {
+            weapon.setIsCompleteDragonBone(false);
         }
 
         val completeMaterialAdjustmentAttributes= properties.getCompleteMaterialAdjustmentAttributes();

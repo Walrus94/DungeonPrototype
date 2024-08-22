@@ -17,7 +17,6 @@ import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.dungeon.prototype.properties.CallbackType.ATTACK;
 import static org.dungeon.prototype.properties.CallbackType.BOOTS;
 import static org.dungeon.prototype.properties.CallbackType.GLOVES;
 import static org.dungeon.prototype.properties.CallbackType.HEAD;
@@ -58,7 +57,7 @@ public class CallbackRouter {
             case LEFT, RIGHT, FORWARD, BACK ->
                     levelService.moveToRoom(chatId, callBackData);
             case ATTACK, SECONDARY_ATTACK ->
-                    battleService.attack(chatId, callBackData.equals(ATTACK));
+                    battleService.attack(chatId, callBackData);
             case TREASURE_OPEN ->
                     roomService.openTreasure(chatId);
             case TREASURE_GOLD_COLLECTED ->

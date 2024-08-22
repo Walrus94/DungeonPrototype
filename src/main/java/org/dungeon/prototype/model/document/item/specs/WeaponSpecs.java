@@ -10,5 +10,5 @@ public class WeaponSpecs implements ItemSpecs {
     private Double criticalHitMultiplier;
     private Double chanceToMiss;
     private Double chanceToKnockOut;
-    private boolean isCompleteDragonBone;
+    private Boolean isCompleteDragonBone;
 }

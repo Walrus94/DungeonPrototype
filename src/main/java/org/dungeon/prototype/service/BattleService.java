@@ -9,6 +9,7 @@ import org.dungeon.prototype.model.monster.Monster;
 import org.dungeon.prototype.model.player.Player;
 import org.dungeon.prototype.model.room.content.MonsterRoom;
 import org.dungeon.prototype.properties.BattleProperties;
+import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.service.level.LevelService;
 import org.dungeon.prototype.service.room.RoomService;
 import org.dungeon.prototype.util.RandomUtil;
@@ -19,6 +20,7 @@ import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.dungeon.prototype.model.effect.attributes.MonsterEffectAttribute.MOVING;
 import static org.dungeon.prototype.model.player.PlayerAttribute.POWER;
+import static org.dungeon.prototype.properties.CallbackType.ATTACK;
 import static org.dungeon.prototype.util.RoomGenerationUtils.getMonsterRoomTypes;
 
 @Slf4j
@@ -36,9 +38,16 @@ public class BattleService {
     @Autowired
     private BattleProperties battleProperties;
 
+    /**
+     * Processes "attack" action, which performs attacking monster with selected weapon,
+     * and his death or attack in response, which also may end up with death (of a player)
+     * @param chatId id of current chat
+     * @param attackType player's attack type, {@link CallbackType#ATTACK} or {@link CallbackType#SECONDARY_ATTACK}
+     * @return true if processed with no exceptions
+     */
     @TurnUpdate
     @SendRoomMessage
-    public boolean attack(Long chatId, boolean isPrimaryAttack) {
+    public boolean attack(Long chatId, CallbackType attackType) {
         var player = playerService.getPlayer(chatId);
         val level = levelService.getLevel(chatId);
         val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
@@ -48,7 +57,7 @@ public class BattleService {
         }
         var monster = ((MonsterRoom) currentRoom.getRoomContent()).getMonster();
         log.debug("Attacking monster: {}", monster);
-        playerAttacks(monster, player, isPrimaryAttack);
+        playerAttacks(monster, player, attackType);
 
         if (monster.getHp() < 1) {
             log.debug("Monster killed!");
@@ -97,9 +106,9 @@ public class BattleService {
         }
     }
 
-    private void playerAttacks(Monster monster, Player player, boolean isPrimaryAttack) {
+    private void playerAttacks(Monster monster, Player player, CallbackType attackType) {
         val inventory = player.getInventory();
-        val weapon = isPrimaryAttack ? inventory.getWeaponSet().getPrimaryWeapon() :
+        val weapon = ATTACK.equals(attackType) ? inventory.getWeaponSet().getPrimaryWeapon() :
                 inventory.getWeaponSet().getSecondaryWeapon();
         Integer playerAttack;
         if (isNull(weapon)) {

@@ -248,7 +248,7 @@ public class MessageService {
                 val chanceToMiss = weapon.getChanceToMiss();
                 val chanceToKnockOut = weapon.getChanceToKnockOut();
                 val criticalHitChance = weapon.getCriticalHitChance();
-                val isCompleteDragonBone = weapon.isCompleteDragonBone();
+                val isCompleteDragonBone = weapon.getIsCompleteDragonBone();
 
                 yield item.getName() + "\n" + description + "\n" +
                         "attack: " + attack + "\n" + "Chance to miss: " + DECIMAL_FORMAT.format(chanceToMiss) + "\n" +
