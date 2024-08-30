@@ -12,7 +12,7 @@ import org.dungeon.prototype.model.room.RoomsSegment;
 import org.dungeon.prototype.model.ui.level.GridSection;
 import org.dungeon.prototype.model.ui.level.LevelMap;
 import org.dungeon.prototype.properties.CallbackType;
-import org.dungeon.prototype.service.level.WalkerBuilderIterator;
+import org.dungeon.prototype.service.level.generation.WalkerBuilderIterator;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;

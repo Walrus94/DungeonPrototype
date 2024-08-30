@@ -11,6 +11,10 @@ import org.mapstruct.factory.Mappers;
 public interface LevelMapper {
     LevelMapper INSTANCE = Mappers.getMapper(LevelMapper.class);
 
+    static LevelMapper getInstance() {
+        return INSTANCE;
+    }
+
     LevelDocument mapToDocument(Level level);
 
     @Mappings({

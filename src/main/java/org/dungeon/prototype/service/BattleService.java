@@ -2,7 +2,6 @@ package org.dungeon.prototype.service;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.dungeon.prototype.annotations.aspect.SendRoomMessage;
 import org.dungeon.prototype.annotations.aspect.TurnUpdate;
 import org.dungeon.prototype.model.effect.MonsterEffect;
 import org.dungeon.prototype.model.monster.Monster;
@@ -11,6 +10,8 @@ import org.dungeon.prototype.model.room.content.MonsterRoom;
 import org.dungeon.prototype.properties.BattleProperties;
 import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.service.level.LevelService;
+import org.dungeon.prototype.service.message.MessageService;
+import org.dungeon.prototype.service.room.MonsterService;
 import org.dungeon.prototype.service.room.RoomService;
 import org.dungeon.prototype.util.RandomUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +37,8 @@ public class BattleService {
     @Autowired
     private MonsterService monsterService;
     @Autowired
+    private MessageService messageService;
+    @Autowired
     private BattleProperties battleProperties;
 
     /**
@@ -46,10 +49,8 @@ public class BattleService {
      * @return true if processed with no exceptions
      */
     @TurnUpdate
-    @SendRoomMessage
     public boolean attack(Long chatId, CallbackType attackType) {
         var player = playerService.getPlayer(chatId);
-        val level = levelService.getLevel(chatId);
         val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
         if (!getMonsterRoomTypes().contains(currentRoom.getRoomContent().getRoomType())) {
             log.error("No monster to attack!");
@@ -61,14 +62,14 @@ public class BattleService {
 
         if (monster.getHp() < 1) {
             log.debug("Monster killed!");
-            levelService.updateAfterMonsterKill(level, currentRoom);
+            levelService.updateAfterMonsterKill(currentRoom);
             player.addXp(monster.getXpReward());
         } else {
             monsterAttacks(player, monster);
             monsterService.saveOrUpdateMonster(monster);
         }
         playerService.updatePlayer(player);
-        return true;
+        return messageService.sendRoomMessage(chatId, player, currentRoom);
     }
 
     private void monsterAttacks(Player player, Monster monster) {
@@ -81,8 +82,8 @@ public class BattleService {
         monster.setCurrentAttack(monster.getAttackPattern().poll());
 
         val monsterAttack = monster.getCurrentAttack();
-        val armorSet = player.getInventory().getArmorSet();
-        val chanceToDodge = armorSet.getBoots() == null ? 0.0 : armorSet.getBoots().getChanceToDodge();
+        val inventory = player.getInventory();
+        val chanceToDodge = isNull(inventory.getBoots()) ? 0.0 : inventory.getBoots().getChanceToDodge();
         log.debug("Chance to dodge: {}", chanceToDodge);
         if (RandomUtil.flipAdjustedCoin(chanceToDodge)) {
             log.debug("Monster attack dodged!");
@@ -92,9 +93,9 @@ public class BattleService {
         log.debug("Monster attack: {}", monsterAttack.getAttackType());
         val diff = switch (monsterAttack.getAttackType()) {
             case SLASH, GROWL ->
-                    (int) (monsterAttack.getAttack() * (armorSet.getHelmet() == null ? 1.0 : attackTypeMap.get(armorSet.getHelmet().getAttributes().getWearableMaterial())));
+                    (int) (monsterAttack.getAttack() * (inventory.getHelmet() == null ? 1.0 : attackTypeMap.get(inventory.getHelmet().getAttributes().getWearableMaterial())));
             default ->
-                    (int) (monsterAttack.getAttack() * (armorSet.getVest() == null ? 1.0 : attackTypeMap.get(armorSet.getVest().getAttributes().getWearableMaterial())));
+                    (int) (monsterAttack.getAttack() * (inventory.getVest() == null ? 1.0 : attackTypeMap.get(inventory.getVest().getAttributes().getWearableMaterial())));
         };
 
         if (player.getDefense() > 0) {
@@ -108,8 +109,8 @@ public class BattleService {
 
     private void playerAttacks(Monster monster, Player player, CallbackType attackType) {
         val inventory = player.getInventory();
-        val weapon = ATTACK.equals(attackType) ? inventory.getWeaponSet().getPrimaryWeapon() :
-                inventory.getWeaponSet().getSecondaryWeapon();
+        val weapon = ATTACK.equals(attackType) ? inventory.getPrimaryWeapon() :
+                inventory.getSecondaryWeapon();
         Integer playerAttack;
         if (isNull(weapon)) {
             playerAttack = player.getAttributes().get(POWER);

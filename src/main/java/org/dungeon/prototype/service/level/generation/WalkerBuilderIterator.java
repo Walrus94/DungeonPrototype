@@ -1,4 +1,4 @@
-package org.dungeon.prototype.service.level;
+package org.dungeon.prototype.service.level.generation;
 
 import lombok.Builder;
 import lombok.Data;

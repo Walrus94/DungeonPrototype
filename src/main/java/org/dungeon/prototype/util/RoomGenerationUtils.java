@@ -37,8 +37,8 @@ public class RoomGenerationUtils {
 
     public static Integer calculateExpectedWeightAbs(Player player) {
         log.debug("Calculating expected absolute weight...");
-        val playerInventoryWeight = Stream.concat(player.getInventory().getItems().stream(), Stream.concat(player.getInventory().getArmorSet().getArmorItems().stream(),
-                player.getInventory().getWeaponSet().getWeapons().stream())).filter(Objects::nonNull).mapToInt(Item::getWeight).sum();
+        val playerInventoryWeight = Stream.concat(player.getInventory().getItems().stream(), Stream.concat(player.getInventory().getArmorItems().stream(),
+                player.getInventory().getWeapons().stream())).filter(Objects::nonNull).mapToInt(Item::getWeight).sum();
         log.debug("Player inventory weight: {}", playerInventoryWeight);
         log.debug("Player gold: {}, player level: {}, next level xp: {}, player xp: {}",
                 player.getGold(), player.getPlayerLevel(), player.getNextLevelXp(), player.getXp());

@@ -1,6 +1,7 @@
 package org.dungeon.prototype.config;
 
 import org.dungeon.prototype.bot.DungeonBot;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,7 +12,6 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 public class BotConfig {
 
     private final String botToken;
-
     private final String botUsername;
 
     public BotConfig(@Value("${bot.token}") String botToken,
@@ -21,11 +21,13 @@ public class BotConfig {
     }
 
     @Bean
+    @Qualifier("botToken")
     public String botToken() {
         return botToken;
     }
 
     @Bean
+    @Qualifier("botUsername")
     public String botUsername() {
         return botUsername;
     }

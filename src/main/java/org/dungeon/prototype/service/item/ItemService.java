@@ -43,6 +43,13 @@ public class ItemService {
     @Autowired
     private ItemRepository itemRepository;
 
+    /**
+     * Generates items for game: runs two async generators
+     * for {@link Wearable} and {@link Weapon} items
+     * for game and stores results to repository.
+     * Items should be removed when game is over
+     * @param chatId id of chat where game runs
+     */
     @Transactional
     public void generateItems(Long chatId) {
         CompletableFuture<Set<Weapon>> weaponsFuture = CompletableFuture.supplyAsync(() -> itemGenerator.generateWeapons(chatId));
@@ -116,6 +123,28 @@ public class ItemService {
         return items.isEmpty() ? Collections.emptySet() : generateItemsNamesAndConvertFromDoc(items);
     }
 
+    public Item findItem(Long chatId, String itemId) {
+        val itemDocument = itemRepository.findByChatIdAndId(chatId, itemId).orElseThrow(() -> {
+            throw new NoSuchElementException();
+        });
+        switch (itemDocument.getItemType()) {
+            case WEAPON -> {
+                return ItemMapper.INSTANCE.mapToWeapon(itemDocument);
+            }
+            case WEARABLE -> {
+                return ItemMapper.INSTANCE.mapToWearable(itemDocument);
+            }
+            case USABLE -> {
+                return ItemMapper.INSTANCE.mapToUsable(itemDocument);
+            }
+        }
+        return null;
+    }
+
+    public void dropCollection(Long chatId) {
+        itemRepository.deleteAllByChatId(chatId);
+    }
+
     private List<ItemDocument> findItems(Long chatId, int weight, int limit, Set<String> usedItemIds) {
         log.debug("Searching for item weighted {}...", weight);
 
@@ -163,27 +192,5 @@ public class ItemService {
                 return itemMapper.mapToWeapon(itemDocument);
             } else return null;
         }).collect(Collectors.toSet());
-    }
-
-    public Item findItem(Long chatId, String itemId) {
-        val itemDocument = itemRepository.findByChatIdAndId(chatId, itemId).orElseThrow(() -> {
-            throw new NoSuchElementException();
-        });
-        switch (itemDocument.getItemType()) {
-            case WEAPON -> {
-                return ItemMapper.INSTANCE.mapToWeapon(itemDocument);
-            }
-            case WEARABLE -> {
-                return ItemMapper.INSTANCE.mapToWearable(itemDocument);
-            }
-            case USABLE -> {
-                return ItemMapper.INSTANCE.mapToUsable(itemDocument);
-            }
-        }
-        return null;
-    }
-
-    public void dropCollection(Long chatId) {
-        itemRepository.deleteAllByChatId(chatId);
     }
 }

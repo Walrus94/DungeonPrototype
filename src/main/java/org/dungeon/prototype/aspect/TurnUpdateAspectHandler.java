@@ -7,13 +7,13 @@ import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.dungeon.prototype.model.room.content.MonsterRoom;
-import org.dungeon.prototype.service.MessageService;
-import org.dungeon.prototype.service.MonsterService;
+import org.dungeon.prototype.service.room.MonsterService;
 import org.dungeon.prototype.service.PlayerLevelService;
 import org.dungeon.prototype.service.PlayerService;
 import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.item.ItemService;
 import org.dungeon.prototype.service.level.LevelService;
+import org.dungeon.prototype.service.message.MessageService;
 import org.dungeon.prototype.service.room.RoomService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -22,7 +22,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Aspect
 @Component
-public class AspectProcessor {
+public class TurnUpdateAspectHandler {
     @Autowired
     private EffectService effectService;
     @Autowired
@@ -79,7 +79,7 @@ public class AspectProcessor {
                 player.refillHp();
                 player.refillMana();
                 player.setNextLevelXp(PlayerLevelService.calculateXPForLevel(playerLevel + 1));
-                messageService.sendLevelUpgradeMessage(player, chatId);
+                messageService.sendLevelUpgradeMessage(chatId, player);
             }
             if (roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId()).getRoomContent() instanceof MonsterRoom monsterRoom) {
                 monsterService.saveOrUpdateMonster(effectService.updateMonsterEffects(monsterRoom.getMonster()));

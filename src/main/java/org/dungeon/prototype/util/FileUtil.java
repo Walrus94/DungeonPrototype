@@ -2,8 +2,13 @@ package org.dungeon.prototype.util;
 
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.RoomType;
+import org.springframework.core.io.ClassPathResource;
+import org.telegram.telegrambots.meta.api.objects.InputFile;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,7 +36,21 @@ public class FileUtil {
     private static final String MERCHANT_ROOM_ASSET = "static/images/room/merchant.png";
     private static final String ANVIL_ROOM_ASSET = "static/images/room/anvil.png";
 
-    public static String getRoomAsset(RoomType roomType) {
+    public static InputFile getImage(Room room) {
+        ClassPathResource imgFile = new ClassPathResource(getRoomAsset(room.getRoomContent().getRoomType()));
+        try (InputStream inputStream = imgFile.getInputStream()) {
+            val imageData = loadImageAsByteArray(inputStream);
+            val inputFile = new InputFile();
+            inputFile.setMedia(new ByteArrayInputStream(imageData), imgFile.getFilename());
+            return inputFile;
+        } catch (IOException e) {
+            //TODO: improve exception handling
+            log.error("Error loading file: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private static String getRoomAsset(RoomType roomType) {
         return switch (roomType) {
             case WEREWOLF -> WEREWOLF_ROOM_ASSET;
             case WEREWOLF_KILLED -> WEREWOLF_KILLED_ROOM_ASSET;
@@ -54,7 +73,7 @@ public class FileUtil {
         };
     }
 
-    public static byte[] loadImageAsByteArray(InputStream inputStream) throws IOException {
+    private static byte[] loadImageAsByteArray(InputStream inputStream) throws IOException {
         try (ByteArrayOutputStream buffer = new ByteArrayOutputStream()) {
             int nRead;
             byte[] data = new byte[1024];

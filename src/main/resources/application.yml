@@ -94,9 +94,9 @@ messaging:
       treasure-gold-collected:
         callback: btn_treasure_gold_collected
         name: "%d ${messaging.constants.emoji.treasure}"
-      item-collected:
+      treasure-item-collected:
         callback: btn_treasure_item_collected_%s
-      collect-all:
+      treasure-collect-all:
         callback: btn_treasure_collect_all
         name: Collect all
       inventory:

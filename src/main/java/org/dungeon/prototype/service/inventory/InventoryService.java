@@ -2,34 +2,24 @@ package org.dungeon.prototype.service.inventory;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.dungeon.prototype.annotations.aspect.*;
-import org.dungeon.prototype.aspect.dto.InventoryItemResponseDto;
-import org.dungeon.prototype.model.inventory.ArmorSet;
 import org.dungeon.prototype.model.inventory.Inventory;
 import org.dungeon.prototype.model.inventory.Item;
-import org.dungeon.prototype.model.inventory.WeaponSet;
 import org.dungeon.prototype.model.inventory.attributes.wearable.WearableType;
 import org.dungeon.prototype.model.inventory.items.Weapon;
 import org.dungeon.prototype.model.inventory.items.Wearable;
 import org.dungeon.prototype.model.room.content.Merchant;
-import org.dungeon.prototype.model.room.content.Treasure;
 import org.dungeon.prototype.properties.CallbackType;
-import org.dungeon.prototype.repository.ArmorSetRepository;
 import org.dungeon.prototype.repository.InventoryRepository;
-import org.dungeon.prototype.repository.WeaponSetRepository;
-import org.dungeon.prototype.repository.converters.mapstruct.ArmorSetMapper;
 import org.dungeon.prototype.repository.converters.mapstruct.InventoryMapper;
-import org.dungeon.prototype.repository.converters.mapstruct.WeaponSetMapper;
 import org.dungeon.prototype.service.PlayerService;
 import org.dungeon.prototype.service.item.ItemService;
+import org.dungeon.prototype.service.message.MessageService;
 import org.dungeon.prototype.service.room.RoomService;
 import org.dungeon.prototype.util.MessageUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Objects;
 import java.util.Optional;
 
 import static java.util.Objects.isNull;
@@ -39,138 +29,98 @@ import static java.util.Objects.nonNull;
 @Service
 public class InventoryService {
     @Autowired
-    PlayerService playerService;
+    private PlayerService playerService;
     @Autowired
-    ItemService itemService;
+    private ItemService itemService;
     @Autowired
-    RoomService roomService;
+    private RoomService roomService;
     @Autowired
-    InventoryRepository inventoryRepository;
+    private MessageService messageService;
     @Autowired
-    ArmorSetRepository armorSetRepository;
-    @Autowired
-    WeaponSetRepository weaponSetRepository;
+    private InventoryRepository inventoryRepository;
 
+    /**
+     * Builds default inventory for start of the game
+     * @param chatId id of player's chat
+     * @return inventory, containing primary weapon and vest
+     */
     public Inventory getDefaultInventory(Long chatId) {
         Inventory inventory = new Inventory();
         inventory.setItems(new ArrayList<>());
-        inventory.setArmorSet(getDefaultArmorSet(chatId));
-        inventory.setWeaponSet(getDefaultWeaponSet(chatId));
+        inventory.setVest(getDefaultVest(chatId));
+        inventory.setPrimaryWeapon(getDefaultWeapon(chatId));
         inventory = saveOrUpdateInventory(inventory);
         return inventory;
     }
 
+    /**
+     * Saves or updates inventory to repository
+     * @param inventory inventory to save or update
+     * @return saved or updated inventory
+     */
     public Inventory saveOrUpdateInventory(Inventory inventory) {
-        inventory.setArmorSet(saveOrUpdateArmorSet(inventory.getArmorSet()));
-        inventory.setWeaponSet(saveOrUpdateWeaponSet(inventory.getWeaponSet()));
         val inventoryDocument = InventoryMapper.INSTANCE.mapToDocument(inventory);
         val savedInventoryDocument = inventoryRepository.save(inventoryDocument);
         return InventoryMapper.INSTANCE.mapToEntity(savedInventoryDocument);
     }
 
-    @SendTreasureMessage
-    public boolean collectAllTreasure(Long chatId) {
-        var player = playerService.getPlayer(chatId);
-        var currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
-        val treasure = (Treasure) currentRoom.getRoomContent();
-        log.debug("Treasure contents - gold: {}, items: {}", treasure.getGold(), treasure.getItems());
-        val items = treasure.getItems();
-        val gold = treasure.getGold();
-
-        player.addGold(gold);
-        treasure.setGold(0);
-        if (!items.isEmpty()) {
-            if (!player.getInventory().addItems(items)) {
-                log.info("No room in the inventory!");
-                playerService.updatePlayer(player);
-                roomService.saveOrUpdateRoom(currentRoom);
-                return true;
-            } else {
-                treasure.setItems(Collections.emptySet());
-            }
-        }
-        playerService.updatePlayer(player);
-        roomService.saveOrUpdateRoom(currentRoom);
-        saveOrUpdateInventory(player.getInventory());
-        return true;
-    }
-
-    @SendTreasureMessage
-    public boolean collectTreasureItem(Long chatId, String itemId) {
+    /**
+     * Passes data required for inventory menu message
+     * @param chatId id of chat where message sent
+     * @return true if message successfully sent
+     */
+    public boolean sendOrUpdateInventoryMessage(Long chatId) {
         val player = playerService.getPlayer(chatId);
-        val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
-        val treasure = (Treasure) currentRoom.getRoomContent();
-
-        val items = treasure.getItems();
-        val collectedItem = items.stream().filter(item -> item.getId().equals(itemId)).findFirst().orElseGet(() -> {
-            log.error("No item with id {} found for chat {}!", itemId, chatId);
-            return null;
-        });
-        if (Objects.isNull(collectedItem)) {
-            return false;
-        }
-        if (player.getInventory().addItem(collectedItem)) {
-            items.remove(collectedItem);
-            treasure.setItems(items);
-            roomService.saveOrUpdateRoom(currentRoom);
-            playerService.updatePlayer(player);
-            saveOrUpdateInventory(player.getInventory());
-        } else {
-            log.info("No room in inventory!");
-            return false;
-        }
+        messageService.sendInventoryMessage(chatId, player.getInventory());
         return true;
     }
 
-    @SendInventoryMessage
-    public InventoryItemResponseDto sendOrUpdateInventoryMessage(Long chatId) {
-        return InventoryItemResponseDto.builder()
-                .chatId(chatId)
-                .inventoryType(CallbackType.INVENTORY)
-                .build();
-    }
-
-    @SendInventoryMessage
-    public InventoryItemResponseDto equipItem(Long chatId, String itemId) {
+    /**
+     * Equips item from inventory
+     * @param chatId id of player's chat
+     * @param itemId id of equipped item
+     * @return true if item successfully equipped
+     */
+    public boolean equipItem(Long chatId, String itemId) {
         val player = playerService.getPlayer(chatId);
         val item = itemService.findItem(chatId, itemId);
         val inventory = player.getInventory();
-        val result = equipItem(inventory, item);
-        return InventoryItemResponseDto.builder()
-                .chatId(chatId)
-                .itemId(itemId)
-                .inventoryType(CallbackType.INVENTORY)
-                .isOk(result)
-                .build();
+        if (equipItem(inventory, item)) {
+            messageService.sendInventoryItemMessage(chatId, item, CallbackType.INVENTORY, Optional.empty());
+            return true;
+        }
+        return false;
     }
 
-    @SendInventoryMessage
-    public InventoryItemResponseDto unEquipItem(Long chatId, String itemId) {
+    /**
+     * Un-equips item to inventory
+     * @param chatId id of player's chat
+     * @param itemId id of un-equipped item
+     * @return true if item successfully un-equipped
+     */
+    public boolean unEquipItem(Long chatId, String itemId) {
         val player = playerService.getPlayer(chatId);
         val item= itemService.findItem(chatId, itemId);
         val inventory = player.getInventory();
-        if ((inventory.getMaxItems().equals(inventory.getItems().size()))) {
+        if ((inventory.isFull())) {
             //TODO implement prompt
-            return InventoryItemResponseDto.builder()
-                    .chatId(chatId)
-                    .itemId(itemId)
-                    .inventoryType(CallbackType.INVENTORY)
-                    .isOk(false)
-                    .build();
+            messageService.sendInventoryItemMessage(chatId, item, CallbackType.INVENTORY, Optional.empty());
+            return false;
         }
         val result = unEquipItem(item, inventory);
         if (result) {
             player.removeItemEffects(item.getEffects());
         }
-        return InventoryItemResponseDto.builder()
-                .chatId(chatId)
-                .itemId(itemId)
-                .inventoryType(CallbackType.INVENTORY)
-                .isOk(result)
-                .build();
+        messageService.sendInventoryMessage(chatId, inventory);
+        return true;
     }
 
-    @SendMerchantSellMenuMessage
+    /**
+     * Sells item from inventory to merchant
+     * @param chatId id of player's chat
+     * @param itemId id of sold item
+     * @return true if item successfully sold
+     */
     public boolean sellItem(Long chatId, String itemId) {
         val player = playerService.getPlayer(chatId);
         val item = itemService.findItem(chatId, itemId);
@@ -181,11 +131,18 @@ public class InventoryService {
             player.addGold(item.getSellingPrice());
             saveOrUpdateInventory(inventory);
             playerService.updatePlayer(player);
+            messageService.sendMerchantSellMenuMessage(chatId, player);
+            return true;
         }
-        return result;
+        return false;
     }
 
-    @SendMerchantBuyMenuMessage
+    /**
+     * Buys item from merchant and adds to player inventory
+     * @param chatId id of player's chat
+     * @param itemId id of bought item
+     * @return true if item successfully bought
+     */
     public boolean buyItem(Long chatId, String itemId) {
         val player = playerService.getPlayer(chatId);
         val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
@@ -204,46 +161,38 @@ public class InventoryService {
         playerService.updatePlayer(player);
         roomService.saveOrUpdateRoom(currentRoom);
         saveOrUpdateInventory(player.getInventory());
+        messageService.sendMerchantBuyMenuMessage(chatId, player.getGold(),
+                ((Merchant)currentRoom.getRoomContent()).getItems());
         return true;
     }
 
-    @SendInventoryItem
-    public InventoryItemResponseDto openInventoryItemInfo(Long chatId, String itemId, CallbackType inventoryType, Optional<CallbackType> callbackType) {
-        return InventoryItemResponseDto.builder()
-                .chatId(chatId)
-                .itemId(itemId)
-                .inventoryType(inventoryType)
-                .itemType(callbackType.map(MessageUtil::formatItemType).orElse(null))
-                .build();
+    /**
+     * Sends inventory info message
+     * @param chatId id of chat where message sent
+     * @param itemId id of item
+     * @param inventoryType from what menu message info requested,
+     *                      {@link CallbackType.INVENTORY} or {@link CallbackType.MERCHANT_SELL_MENU}
+     * @param callbackType optional value, present if item equipped, permitted values:
+     *                     {@link CallbackType.HEAD}, {@link CallbackType.VEST}, {@link CallbackType.GLOVES},
+     *                     {@link CallbackType.BOOTS}, {@link CallbackType.LEFT_HAND}, {@link CallbackType.RIGHT_HAND}
+     * @return
+     */
+    public boolean openInventoryItemInfo(Long chatId, String itemId, CallbackType inventoryType, Optional<CallbackType> callbackType) {
+        val item = itemService.findItem(chatId, itemId);
+        messageService.sendInventoryItemMessage(chatId, item, inventoryType,
+                        Optional.ofNullable(MessageUtil.formatItemType(callbackType.orElse(null))));
+        return true;
     }
 
-    private WeaponSet saveOrUpdateWeaponSet(WeaponSet weaponSet) {
-        val weaponSetDocument = WeaponSetMapper.INSTANCE.mapToDocument(weaponSet);
-        val savedWeaponSetDocument = weaponSetRepository.save(weaponSetDocument);
-        return WeaponSetMapper.INSTANCE.mapToEntity(savedWeaponSetDocument);
+    private Wearable getDefaultVest(Long chatId) {
+        return itemService.getMostLightweightWearable(chatId, WearableType.VEST);
     }
 
-    private ArmorSet saveOrUpdateArmorSet(ArmorSet armorSet) {
-        val armorSetDocument = ArmorSetMapper.INSTANCE.mapToDocument(armorSet);
-        val savedArmorSetDocument = armorSetRepository.save(armorSetDocument);
-        return ArmorSetMapper.INSTANCE.mapToEntity(savedArmorSetDocument);
+    private Weapon getDefaultWeapon(Long chatId) {
+        return itemService.getMostLightWeightMainWeapon(chatId);
     }
 
-    private ArmorSet getDefaultArmorSet(Long chatId) {
-        val vest = itemService.getMostLightweightWearable(chatId, WearableType.VEST);
-        val armorSet = new ArmorSet();
-        armorSet.setVest(vest);
-        return armorSet;
-    }
-
-    private WeaponSet getDefaultWeaponSet(Long chatId) {
-        WeaponSet weaponSet = new WeaponSet();
-        val weapon = itemService.getMostLightWeightMainWeapon(chatId);
-        weaponSet.addWeapon(weapon);
-        return weaponSet;
-    }
-
-    public boolean equipItem(Inventory inventory, Item item) {
+    private boolean equipItem(Inventory inventory, Item item) {
         if (isNull(item)) {
             return false;
         }
@@ -254,7 +203,7 @@ public class InventoryService {
         };
     }
 
-    public boolean unEquipItem(Item item, Inventory inventory) {
+    private boolean unEquipItem(Item item, Inventory inventory) {
         val unEquippedItem = inventory.unEquip(item);
         if (unEquippedItem.isPresent() && inventory.addItem(unEquippedItem.get())) {
             saveOrUpdateInventory(inventory);
@@ -270,58 +219,43 @@ public class InventoryService {
     }
 
     private boolean processWearableEquip(Inventory inventory, Wearable wearable) {
-        val armorSet = inventory.getArmorSet();
         switch (wearable.getAttributes().getWearableType()) {
-            case HELMET -> {
-                inventory.addItem(armorSet.getHelmet());
-                armorSet.setHelmet(wearable);
-            }
-            case VEST -> {
-                inventory.addItem(armorSet.getVest());
-                armorSet.setVest(wearable);
-            }
-            case GLOVES -> {
-                inventory.addItem(armorSet.getGloves());
-                armorSet.setGloves(wearable);
-            }
-            case BOOTS -> {
-                inventory.addItem(armorSet.getBoots());
-                armorSet.setBoots(wearable);
-            }
+            case HELMET -> inventory.setHelmet(wearable);
+            case VEST -> inventory.setVest(wearable);
+            case GLOVES -> inventory.setGloves(wearable);
+            case BOOTS -> inventory.setBoots(wearable);
         }
         inventory.getItems().remove(wearable);
-        saveOrUpdateArmorSet(armorSet);
         saveOrUpdateInventory(inventory);
         return true;
     }
 
+    //TODO: add size constraint and write more test cases
     private boolean processWeaponEquip(Inventory inventory, Weapon weapon) {
-        var weaponSet = inventory.getWeaponSet();
         switch (weapon.getAttributes().getHandling()) {
             case SINGLE_HANDED -> {
-                if (nonNull(weaponSet.getPrimaryWeapon())) {
-                    if (nonNull(weaponSet.getSecondaryWeapon())) {
-                        inventory.addItem(weaponSet.getSecondaryWeapon());
+                if (nonNull(inventory.getPrimaryWeapon())) {
+                    if (nonNull(inventory.getSecondaryWeapon())) {
+                        inventory.addItem(inventory.getSecondaryWeapon());
                     }
-                    weaponSet.setSecondaryWeapon(weapon);
+                    inventory.setSecondaryWeapon(weapon);
                 } else {
-                    weaponSet.setPrimaryWeapon(weapon);
+                    inventory.setPrimaryWeapon(weapon);
                 }
             }
             case TWO_HANDED -> {
-                if (nonNull(weaponSet.getPrimaryWeapon())) {
-                    inventory.addItem(weaponSet.getPrimaryWeapon());
-                    weaponSet.setPrimaryWeapon(null);
+                if (nonNull(inventory.getPrimaryWeapon())) {
+                    inventory.addItem(inventory.getPrimaryWeapon());
+                    inventory.setPrimaryWeapon(null);
                 }
-                if (nonNull(weaponSet.getSecondaryWeapon())) {
-                    inventory.addItem(weaponSet.getSecondaryWeapon());
-                    weaponSet.setSecondaryWeapon(null);
+                if (nonNull(inventory.getSecondaryWeapon())) {
+                    inventory.addItem(inventory.getSecondaryWeapon());
+                    inventory.setSecondaryWeapon(null);
                 }
-                weaponSet.setPrimaryWeapon(weapon);
+                inventory.setPrimaryWeapon(weapon);
             }
         }
         inventory.getItems().remove(weapon);
-        saveOrUpdateWeaponSet(weaponSet);
         saveOrUpdateInventory(inventory);
         return true;
     }

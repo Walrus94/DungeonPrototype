@@ -2,24 +2,18 @@ package org.dungeon.prototype.service.room;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.dungeon.prototype.annotations.aspect.SendMerchantBuyItem;
-import org.dungeon.prototype.annotations.aspect.SendMerchantBuyMenuMessage;
-import org.dungeon.prototype.annotations.aspect.SendMerchantSellMenuMessage;
-import org.dungeon.prototype.annotations.aspect.SendTreasureMessage;
+import org.dungeon.prototype.model.player.PlayerAttribute;
 import org.dungeon.prototype.model.room.Room;
-import org.dungeon.prototype.model.room.RoomType;
 import org.dungeon.prototype.model.room.content.Merchant;
 import org.dungeon.prototype.model.room.content.RoomContent;
-import org.dungeon.prototype.model.room.content.Treasure;
 import org.dungeon.prototype.repository.RoomContentRepository;
 import org.dungeon.prototype.repository.RoomRepository;
 import org.dungeon.prototype.repository.converters.mapstruct.RoomContentMapper;
 import org.dungeon.prototype.repository.converters.mapstruct.RoomMapper;
 import org.dungeon.prototype.service.PlayerService;
+import org.dungeon.prototype.service.message.MessageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import java.util.Optional;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -34,12 +28,38 @@ public class RoomService {
     RoomRepository roomRepository;
     @Autowired
     RoomContentRepository roomContentRepository;
+    @Autowired
+    MessageService messageService;
 
+    /**
+     * Collects required data and passes it to {@link MessageService}
+     * to build and send room message
+     * @param chatId id of chat where message sent
+     * @return true if message successfully sent
+     */
+    public boolean sendOrUpdateRoomMessage(Long chatId) {
+        val player = playerService.getPlayer(chatId);
+        val room = getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+        return messageService.sendRoomMessage(chatId, player, room);
+    }
+
+    /**
+     * Looks for room in repository by passed parameters
+     * @param chatId id of chat
+     * @param id of requested room
+     * @return
+     */
     public Room getRoomByIdAndChatId(Long chatId, String id) {
         val roomDocument = roomRepository.findByChatIdAndId(chatId, id);
         return RoomMapper.INSTANCE.mapToRoom(roomDocument);
     }
 
+    /**
+     * Saves room to.../Updates room in
+     * corresponding repository
+     * @param room room to save or update
+     * @return saved or updated room
+     */
     public Room saveOrUpdateRoom(Room room) {
         val roomDocument = RoomMapper.INSTANCE.mapToDocument(room);
         if (nonNull(roomDocument.getRoomContent()) && isNull(roomDocument.getRoomContent().getId())) {
@@ -49,71 +69,92 @@ public class RoomService {
         return RoomMapper.INSTANCE.mapToRoom(savedRoomDocument);
     }
 
+    /**
+     * Saves room content to.../Updates room content in
+     * corresponding repository
+     * @param roomContent room content to save or update
+     * @return saved or updated room content
+     */
     public RoomContent saveOrUpdateRoomContent(RoomContent roomContent) {
         val roomContentDocument = RoomContentMapper.INSTANCE.mapToRoomContentDocument(roomContent);
         val savedRoomContentDocument = roomContentRepository.save(roomContentDocument);
         return RoomContentMapper.INSTANCE.mapToRoomContent(savedRoomContentDocument);
     }
 
-    @SendTreasureMessage
-    public boolean openTreasure(Long chatId) {
-        val player = playerService.getPlayer(chatId);
-        val treasure = openTreasure(chatId, player.getCurrentRoomId());
-        return treasure.isPresent();
-    }
-
-    @SendTreasureMessage
-    public boolean collectTreasureGold(Long chatId) {
-        val player = playerService.getPlayer(chatId);
-        val currentRoom = getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
-        val treasure = (Treasure) currentRoom.getRoomContent();
-
-        player.addGold(treasure.getGold());
-        treasure.setGold(0);
-        saveOrUpdateRoom(currentRoom);
-        playerService.updatePlayer(player);
-        return true;
-    }
-
-    @SendMerchantBuyMenuMessage
+    /**
+     * Sends menu with list of merchant's items to buy
+     * @param chatId id of chat where message sent
+     * @return true if message successfully sent
+     */
     public boolean openMerchantBuyMenu(Long chatId) {
         val player = playerService.getPlayer(chatId);
         val currentRoom = getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
-        return currentRoom.getRoomContent() instanceof Merchant;
+        if (currentRoom.getRoomContent() instanceof Merchant merchant) {
+            messageService.sendMerchantBuyMenuMessage(chatId, player.getGold(), merchant.getItems());
+            return true;
+        }
+        return false;
     }
 
-    @SendMerchantSellMenuMessage
+    /**
+     * Sends menu with list of player's items to sell
+     * @param chatId id of chat where message sent
+     * @return true if message successfully sent
+     */
     public boolean openMerchantSellMenu(Long chatId) {
         val player = playerService.getPlayer(chatId);
         val currentRoom = getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
-        return currentRoom.getRoomContent() instanceof Merchant;
+        if (currentRoom.getRoomContent() instanceof Merchant) {
+            messageService.sendMerchantSellMenuMessage(chatId, player);
+            return true;
+        }
+        return false;
     }
 
-    @SendMerchantBuyItem
+    /**
+     * Opens description menu of one of the merchant's items
+     * @param chatId id of chat where message sent
+     * @param itemId id of merchant's item
+     * @return true if message successfully sent
+     */
     public boolean openMerchantBuyItem(Long chatId, String itemId) {
         val player = playerService.getPlayer(chatId);
         val currentRoom = getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
-        if (currentRoom.getRoomContent() instanceof Merchant merchant) {
-            return merchant.getItems().stream().anyMatch(item -> itemId.equals(item.getId()));
+        if (currentRoom.getRoomContent() instanceof Merchant merchant &&
+                merchant.getItems().stream().anyMatch(item -> itemId.equals(item.getId()))) {
+            messageService.sendMerchantBuyItemMessage(chatId,
+                    merchant.getItems().stream().filter(item -> itemId.equals(item.getId())).findFirst().get());
+            return true;
         } else {
             return false;
         }
     }
 
-    private Optional<Treasure> openTreasure(Long chatId, String roomId) {
-        val room = getRoomByIdAndChatId(chatId, roomId);
-        if (!RoomType.TREASURE.equals(room.getRoomContent().getRoomType())) {
-            log.error("No treasure to collect!");
-            return Optional.empty();
-        }
+    /**
+     * Restore player's armor
+     * @param chatId id of player's chat
+     * @return true if room message successfully sent after update
+     */
+    public boolean restoreArmor(Long chatId) {
+        val player = playerService.getPlayer(chatId);
+        player.restoreArmor();
+        playerService.updatePlayer(player);
+        val currentRoom = getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+        return messageService.sendRoomMessage(chatId, player, currentRoom);
+    }
 
-        val treasure = (Treasure) room.getRoomContent();
-        if (treasure.getGold() == 0 && treasure.getItems().isEmpty()) {
-            log.debug("Treasure looted!");
-            saveOrUpdateRoom(room);
-            return Optional.empty();
-        }
-        return Optional.of(treasure);
+    /**
+     * Adds 1 to given player's attribute
+     * @param chatId id of player's chat
+     * @param playerAttribute attribute to upgrade
+     * @return true if room message successfully sent after update
+     */
+    public boolean upgradePlayerAttribute(Long chatId, PlayerAttribute playerAttribute) {
+        val player = playerService.getPlayer(chatId);
+        player.getAttributes().put(playerAttribute, player.getAttributes().get(playerAttribute) + 1);
+        playerService.updatePlayer(player);
+        val currentRoom = getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+        return messageService.sendRoomMessage(chatId, player, currentRoom);
     }
 
 }

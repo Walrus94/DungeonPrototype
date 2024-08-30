@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 @Component
 public class ItemNamingService {
     @Value("${huggingface.api.url}")
-    private static String url;
+    private String url;
     private static final String DEFAULT_ITEM_NAME = "Mysterious unnamed item";
     @Autowired
     RestTemplate restTemplate;
@@ -101,8 +101,7 @@ public class ItemNamingService {
         HttpEntity<ItemNameRequestDto> entity = new HttpEntity<>(requestBody, headers);
         ResponseEntity<ItemNameResponseListWrapperDto> response;
         try {
-            //TODO: move url to application properties
-            response = restTemplate.exchange("http://localhost:5000/generate", HttpMethod.POST, entity, ItemNameResponseListWrapperDto.class);
+            response = restTemplate.exchange(url, HttpMethod.POST, entity, ItemNameResponseListWrapperDto.class);
         } catch (RestClientException e) {
             log.error("Exception occurred while generating name: {}", e.getMessage());
             return null;

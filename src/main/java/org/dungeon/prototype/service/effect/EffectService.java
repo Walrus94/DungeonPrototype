@@ -65,7 +65,6 @@ public class EffectService {
         return monster;
     }
 
-
     public Player updatePlayerEffects(Player player) {
         removeExpiredEffects(player);
         Map<PlayerEffectAttribute, PriorityQueue<PlayerEffect>> mappedEffects = player.getEffects().stream()
@@ -77,15 +76,16 @@ public class EffectService {
         mappedEffects.forEach((attribute, playerEffects) -> {
             switch (attribute) {
                 case ATTACK -> {
-                    var weaponSet = player.getInventory().getWeaponSet();
+                    val primaryWeapon = player.getInventory().getPrimaryWeapon();
                     Integer attack = player.getAttributes().get(PlayerAttribute.POWER);
                     Integer primaryAttack = attack;
-                    if (nonNull(weaponSet.getPrimaryWeapon())) {
-                        primaryAttack += weaponSet.getPrimaryWeapon().getAttack();
+                    if (nonNull(primaryWeapon)) {
+                        primaryAttack += primaryWeapon.getAttack();
                     }
                     player.setPrimaryAttack(summarizeEffects(playerEffects, primaryAttack));
-                    if (nonNull(weaponSet.getSecondaryWeapon())) {
-                        val secondaryAttack = attack + weaponSet.getSecondaryWeapon().getAttack();
+                    val secondaryWeapon = player.getInventory().getSecondaryWeapon();
+                    if (nonNull(secondaryWeapon)) {
+                        val secondaryAttack = attack + secondaryWeapon.getAttack();
                         player.setSecondaryAttack(summarizeEffects(playerEffects, secondaryAttack));
                     }
                 }
@@ -93,22 +93,22 @@ public class EffectService {
                     Integer value = summarizeEffects(playerEffects, player.getMaxDefense());
                     player.setMaxDefense(value);
                 }
-                case CRITICAL_HIT_CHANCE -> player.getInventory().getWeaponSet().getWeapons().forEach(weapon -> {
+                case CRITICAL_HIT_CHANCE -> player.getInventory().getWeapons().forEach(weapon -> {
                     Double value = summarizeEffects(playerEffects, weapon.getCriticalHitChance());
                     weapon.setCriticalHitChance(value);
                 });
-                case MISS_CHANCE -> player.getInventory().getWeaponSet().getWeapons().forEach(weapon -> {
+                case MISS_CHANCE -> player.getInventory().getWeapons().forEach(weapon -> {
                     Double value = summarizeEffects(playerEffects, weapon.getChanceToMiss());
                     weapon.setChanceToMiss(value);
                 });
-                case KNOCK_OUT_CHANCE -> player.getInventory().getWeaponSet().getWeapons().forEach(weapon -> {
+                case KNOCK_OUT_CHANCE -> player.getInventory().getWeapons().forEach(weapon -> {
                     Double value = summarizeEffects(playerEffects, weapon.getChanceToKnockOut());
                     weapon.setChanceToKnockOut(value);
                 });
                 case CHANCE_TO_DODGE -> {
-                    if (nonNull(player.getInventory().getArmorSet().getBoots())) {
-                        Double value = summarizeEffects(playerEffects, player.getInventory().getArmorSet().getBoots().getChanceToDodge());
-                        player.getInventory().getArmorSet().getBoots().setChanceToDodge(value);
+                    if (nonNull(player.getInventory().getBoots())) {
+                        Double value = summarizeEffects(playerEffects, player.getInventory().getBoots().getChanceToDodge());
+                        player.getInventory().getBoots().setChanceToDodge(value);
                     }
                 }
             }

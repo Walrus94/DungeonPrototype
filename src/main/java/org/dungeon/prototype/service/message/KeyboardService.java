@@ -1,4 +1,4 @@
-package org.dungeon.prototype.service;
+package org.dungeon.prototype.service.message;
 
 import lombok.RequiredArgsConstructor;
 import lombok.val;
@@ -15,7 +15,7 @@ import org.dungeon.prototype.properties.KeyboardButtonProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
 import java.util.ArrayList;
@@ -27,14 +27,14 @@ import java.util.stream.Stream;
 import static org.dungeon.prototype.properties.CallbackType.ATTACK;
 import static org.dungeon.prototype.properties.CallbackType.BACK;
 import static org.dungeon.prototype.properties.CallbackType.BOOTS;
-import static org.dungeon.prototype.properties.CallbackType.COLLECT_ALL;
+import static org.dungeon.prototype.properties.CallbackType.TREASURE_COLLECT_ALL;
 import static org.dungeon.prototype.properties.CallbackType.CONTINUE_GAME;
 import static org.dungeon.prototype.properties.CallbackType.DEFAULT;
 import static org.dungeon.prototype.properties.CallbackType.FORWARD;
 import static org.dungeon.prototype.properties.CallbackType.GLOVES;
 import static org.dungeon.prototype.properties.CallbackType.HEAD;
 import static org.dungeon.prototype.properties.CallbackType.INVENTORY;
-import static org.dungeon.prototype.properties.CallbackType.ITEM_COLLECTED;
+import static org.dungeon.prototype.properties.CallbackType.TREASURE_ITEM_COLLECTED;
 import static org.dungeon.prototype.properties.CallbackType.ITEM_INVENTORY_BACK;
 import static org.dungeon.prototype.properties.CallbackType.ITEM_INVENTORY_EQUIP;
 import static org.dungeon.prototype.properties.CallbackType.ITEM_INVENTORY_UN_EQUIP;
@@ -124,9 +124,8 @@ public class KeyboardService {
         switch (roomContent.getRoomType()) {
             case TREASURE -> row3.add(getButton(TREASURE_OPEN));
             case WEREWOLF, SWAMP_BEAST, VAMPIRE, DRAGON, ZOMBIE -> {
-                val weaponSet = player.getInventory().getWeaponSet();
                 row1.add(getButton(ATTACK, player.getPrimaryAttack()));
-                if (Objects.nonNull(weaponSet.getSecondaryWeapon())) {
+                if (Objects.nonNull(player.getInventory().getSecondaryWeapon())) {
                     row1.add(getButton(SECONDARY_ATTACK, player.getSecondaryAttack()));
                 }
             }
@@ -172,11 +171,11 @@ public class KeyboardService {
         }
         treasure.getItems().forEach(item -> {
             List<InlineKeyboardButton> row = new ArrayList<>();
-            row.add(getItemListButton(item));
+            row.add(getTreasureItemListButton(item));
             buttons.add(row);
         });
         List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(getButton(COLLECT_ALL));
+        row.add(getButton(TREASURE_COLLECT_ALL));
         row.add(getButton(MENU_BACK));
         buttons.add(row);
 
@@ -185,34 +184,32 @@ public class KeyboardService {
     }
 
     public InlineKeyboardMarkup getInventoryReplyMarkup(Inventory inventory, CallbackType unEquippedItem, CallbackType equippedItemAction, CallbackType unEquippedItemAction, List<CallbackType> additionalMenus) {
-        val armor = inventory.getArmorSet();
-        val weapons = inventory.getWeaponSet();
 
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
 
-        if (Objects.nonNull(armor.getHelmet())) {
-            List<InlineKeyboardButton> row = getInventoryItemsListButtonRow(armor.getHelmet(), HEAD, equippedItemAction);
+        if (Objects.nonNull(inventory.getHelmet())) {
+            List<InlineKeyboardButton> row = getInventoryItemsListButtonRow(inventory.getHelmet(), HEAD, equippedItemAction);
             buttons.add(row);
         }
-        if (Objects.nonNull(armor.getVest())) {
-            List<InlineKeyboardButton> row = getInventoryItemsListButtonRow(armor.getVest(), VEST, equippedItemAction);
+        if (Objects.nonNull(inventory.getVest())) {
+            List<InlineKeyboardButton> row = getInventoryItemsListButtonRow(inventory.getVest(), VEST, equippedItemAction);
             buttons.add(row);
         }
-        if (Objects.nonNull(armor.getGloves())) {
-            List<InlineKeyboardButton> row = getInventoryItemsListButtonRow(armor.getGloves(), GLOVES, equippedItemAction);
+        if (Objects.nonNull(inventory.getGloves())) {
+            List<InlineKeyboardButton> row = getInventoryItemsListButtonRow(inventory.getGloves(), GLOVES, equippedItemAction);
             buttons.add(row);
         }
-        if (Objects.nonNull(armor.getBoots())) {
-            List<InlineKeyboardButton> row = getInventoryItemsListButtonRow(armor.getBoots(), BOOTS, equippedItemAction);
+        if (Objects.nonNull(inventory.getBoots())) {
+            List<InlineKeyboardButton> row = getInventoryItemsListButtonRow(inventory.getBoots(), BOOTS, equippedItemAction);
             buttons.add(row);
         }
-        if (Objects.nonNull(weapons.getPrimaryWeapon())) {
-            List<InlineKeyboardButton> row = getInventoryItemsListButtonRow(weapons.getPrimaryWeapon(), RIGHT_HAND, equippedItemAction);
+        if (Objects.nonNull(inventory.getPrimaryWeapon())) {
+            List<InlineKeyboardButton> row = getInventoryItemsListButtonRow(inventory.getPrimaryWeapon(), RIGHT_HAND, equippedItemAction);
             buttons.add(row);
         }
-        if (Objects.nonNull(weapons.getSecondaryWeapon())) {
-            List<InlineKeyboardButton> row = getInventoryItemsListButtonRow(weapons.getSecondaryWeapon(), LEFT_HAND, equippedItemAction);
+        if (Objects.nonNull(inventory.getSecondaryWeapon())) {
+            List<InlineKeyboardButton> row = getInventoryItemsListButtonRow(inventory.getSecondaryWeapon(), LEFT_HAND, equippedItemAction);
             buttons.add(row);
         }
         if (!inventory.getItems().isEmpty()) {
@@ -275,10 +272,10 @@ public class KeyboardService {
                 .build();
     }
 
-    private InlineKeyboardButton getItemListButton(Item item) {
+    private InlineKeyboardButton getTreasureItemListButton(Item item) {
         return InlineKeyboardButton.builder()
                 .text(item.getName())
-                .callbackData(keyboardButtonProperties.getButtons().get(ITEM_COLLECTED).getCallback().formatted(item.getId()))
+                .callbackData(keyboardButtonProperties.getButtons().get(TREASURE_ITEM_COLLECTED).getCallback().formatted(item.getId()))
                 .build();
     }
 
@@ -331,7 +328,7 @@ public class KeyboardService {
                 .build();
     }
 
-    public ReplyKeyboard getEquippedItemInfoReplyMarkup(CallbackType inventoryType, Integer sellPrice) {
+    public InlineKeyboardMarkup getEquippedItemInfoReplyMarkup(CallbackType inventoryType, Integer sellPrice) {
         val backButtonType = switch (inventoryType) {
             case INVENTORY -> ITEM_INVENTORY_BACK;
             case MERCHANT_SELL_MENU ->  MERCHANT_SELL_MENU_BACK;
@@ -436,6 +433,12 @@ public class KeyboardService {
         return InlineKeyboardButton.builder()
                 .text(buttonProperties.getName().formatted(item.getBuyingPrice()))
                 .callbackData(buttonProperties.getCallback().formatted(item.getId()))
+                .build();
+    }
+
+    public ReplyKeyboardMarkup getPromptReplyKeyboardMarkup(String suggestedPrompt) {
+        return ReplyKeyboardMarkup.builder()
+                .inputFieldPlaceholder(suggestedPrompt)
                 .build();
     }
 }

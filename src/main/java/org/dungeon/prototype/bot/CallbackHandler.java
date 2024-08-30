@@ -10,6 +10,7 @@ import org.dungeon.prototype.service.PlayerService;
 import org.dungeon.prototype.service.inventory.InventoryService;
 import org.dungeon.prototype.service.level.LevelService;
 import org.dungeon.prototype.service.room.RoomService;
+import org.dungeon.prototype.service.room.TreasureService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
@@ -27,7 +28,7 @@ import static org.dungeon.prototype.properties.CallbackType.RIGHT_HAND;
 import static org.dungeon.prototype.properties.CallbackType.VEST;
 
 @Component
-public class CallbackRouter {
+public class CallbackHandler {
     @Autowired
     PlayerService playerService;
     @Autowired
@@ -39,8 +40,17 @@ public class CallbackRouter {
     @Autowired
     BattleService battleService;
     @Autowired
+    TreasureService treasureService;
+    @Autowired
     KeyboardButtonProperties keyboardButtonProperties;
 
+    /**
+     * Handles callbacks from incoming updates
+     * and executes corresponding services methods
+     * @param chatId id of updated chat
+     * @param callbackQuery query with callback data
+     * @return true if callback handled successfully
+     */
     @AnswerCallback
     public boolean handleCallbackQuery(Long chatId, CallbackQuery callbackQuery) {
         val callData = callbackQuery.getData();
@@ -59,9 +69,9 @@ public class CallbackRouter {
             case ATTACK, SECONDARY_ATTACK ->
                     battleService.attack(chatId, callBackData);
             case TREASURE_OPEN ->
-                    roomService.openTreasure(chatId);
+                    treasureService.openTreasure(chatId);
             case TREASURE_GOLD_COLLECTED ->
-                    roomService.collectTreasureGold(chatId);
+                    treasureService.collectTreasureGold(chatId);
             case SHRINE ->
                     levelService.shrineRefill(chatId);
             case MERCHANT_BUY_MENU, MERCHANT_BUY_MENU_BACK ->
@@ -69,68 +79,68 @@ public class CallbackRouter {
             case MERCHANT_SELL_MENU, MERCHANT_SELL_MENU_BACK ->
                     roomService.openMerchantSellMenu(chatId);
             case MAP ->
-                    !levelService.sendOrUpdateMapMessage(chatId).isEmpty();
+                    levelService.sendOrUpdateMapMessage(chatId);
             case INVENTORY ->
-                    inventoryService.sendOrUpdateInventoryMessage(chatId).isOk();
+                    inventoryService.sendOrUpdateInventoryMessage(chatId);
             case PLAYER_STATS ->
-                playerService.sendPlayerStatsMessage(chatId);
+                    playerService.sendPlayerStatsMessage(chatId);
             case MENU_BACK ->
-                    levelService.sendOrUpdateRoomMessage(chatId);
-            case COLLECT_ALL ->
-                    inventoryService.collectAllTreasure(chatId);
-            case RESTORE_ARMOR -> playerService.restoreArmor(chatId);
+                    roomService.sendOrUpdateRoomMessage(chatId);
+            case TREASURE_COLLECT_ALL ->
+                    treasureService.collectAllTreasure(chatId);
+            case RESTORE_ARMOR -> roomService.restoreArmor(chatId);
             case SHARPEN_WEAPON -> true;
             default -> {
                 if (callData.startsWith("btn_treasure_item_collected_")) {
                     val itemId = callData.replaceFirst("^" + "btn_treasure_item_collected_", "");
-                    yield inventoryService.collectTreasureItem(chatId, itemId);
+                    yield treasureService.collectTreasureItem(chatId, itemId);
                 }
                 if (callData.startsWith("btn_inventory_display_")) {
                     if (callData.startsWith("btn_inventory_display_item_")) {
                         val itemId = callData.replaceFirst("^" + "btn_inventory_display_item_", "");
-                        yield inventoryService.openInventoryItemInfo(chatId, itemId, INVENTORY, Optional.empty()).isOk();
+                        yield inventoryService.openInventoryItemInfo(chatId, itemId, INVENTORY, Optional.empty());
                     }
 
                     if (callData.startsWith("btn_inventory_display_head_")) {
                         val itemId = callData.replaceFirst("^" + "btn_inventory_display_head_", "");
-                        yield inventoryService.openInventoryItemInfo(chatId, itemId, INVENTORY, Optional.of(HEAD)).isOk();
+                        yield inventoryService.openInventoryItemInfo(chatId, itemId, INVENTORY, Optional.of(HEAD));
                     }
                     if (callData.startsWith("btn_inventory_display_vest_")) {
                         val itemId = callData.replaceFirst("^" + "btn_inventory_display_vest_", "");
-                        yield inventoryService.openInventoryItemInfo(chatId, itemId, INVENTORY, Optional.of(VEST)).isOk();
+                        yield inventoryService.openInventoryItemInfo(chatId, itemId, INVENTORY, Optional.of(VEST));
                     }
                     if (callData.startsWith("btn_inventory_display_gloves_")) {
                         val itemId = callData.replaceFirst("^" + "btn_inventory_display_gloves_", "");
-                        yield inventoryService.openInventoryItemInfo(chatId, itemId, INVENTORY, Optional.of(GLOVES)).isOk();
+                        yield inventoryService.openInventoryItemInfo(chatId, itemId, INVENTORY, Optional.of(GLOVES));
                     }
                     if (callData.startsWith("btn_inventory_display_boots_")) {
                         val itemId = callData.replaceFirst("^" + "btn_inventory_display_boots_", "");
-                        yield inventoryService.openInventoryItemInfo(chatId, itemId, INVENTORY, Optional.of(BOOTS)).isOk();
+                        yield inventoryService.openInventoryItemInfo(chatId, itemId, INVENTORY, Optional.of(BOOTS));
                     }
                     if (callData.startsWith("btn_inventory_display_primary_weapon_")) {
                         val itemId = callData.replaceFirst("^" + "btn_inventory_display_primary_weapon_", "");
-                        yield inventoryService.openInventoryItemInfo(chatId, itemId, INVENTORY, Optional.of(RIGHT_HAND)).isOk();
+                        yield inventoryService.openInventoryItemInfo(chatId, itemId, INVENTORY, Optional.of(RIGHT_HAND));
                     }
                     if (callData.startsWith("btn_inventory_display_secondary_weapon_")) {
                         val itemId = callData.replaceFirst("^" + "btn_inventory_display_secondary_weapon_", "");
-                        yield inventoryService.openInventoryItemInfo(chatId, itemId, INVENTORY, Optional.of(LEFT_HAND)).isOk();
+                        yield inventoryService.openInventoryItemInfo(chatId, itemId, INVENTORY, Optional.of(LEFT_HAND));
                     }
                 }
                 if (callData.startsWith("btn_inventory_item_")) {
                     if (callData.startsWith("btn_inventory_item_equip_")) {
                         val itemId = callData.replaceFirst("^" + "btn_inventory_item_equip_", "");
-                        yield inventoryService.equipItem(chatId, itemId).isOk();
+                        yield inventoryService.equipItem(chatId, itemId);
                     }
                     if (callData.startsWith("btn_inventory_item_un_equip_")) {
                         val itemId = callData.replaceFirst("^" + "btn_inventory_item_un_equip_", "");
-                        yield inventoryService.unEquipItem(chatId, itemId).isOk();
+                        yield inventoryService.unEquipItem(chatId, itemId);
                     }
                 }
                 if (callData.startsWith("btn_merchant_")) {
 
                     if (callData.startsWith("btn_merchant_list_item_sell_")) {
                         val itemId = callData.replaceFirst("^" + "btn_merchant_list_item_sell_", "");
-                        yield inventoryService.openInventoryItemInfo(chatId, itemId, MERCHANT_SELL_MENU, Optional.empty()).isOk();
+                        yield inventoryService.openInventoryItemInfo(chatId, itemId, MERCHANT_SELL_MENU, Optional.empty());
                     }
 
                     if (callData.startsWith("btn_merchant_list_item_buy_")) {
@@ -149,44 +159,44 @@ public class CallbackRouter {
                     if (callData.startsWith("btn_merchant_display_")) {
                         if (callData.startsWith("btn_merchant_display_item_")) {
                             val itemId = callData.replaceFirst("^" + "btn_merchant_display_item_", "");
-                            yield inventoryService.openInventoryItemInfo(chatId, itemId, MERCHANT_SELL_MENU, Optional.empty()).isOk();
+                            yield inventoryService.openInventoryItemInfo(chatId, itemId, MERCHANT_SELL_MENU, Optional.empty());
                         }
                         if (callData.startsWith("btn_merchant_display_head_")) {
                             val itemId = callData.replaceFirst("^" + "btn_merchant_display_head_", "");
-                            yield inventoryService.openInventoryItemInfo(chatId, itemId, MERCHANT_SELL_MENU, Optional.of(HEAD)).isOk();
+                            yield inventoryService.openInventoryItemInfo(chatId, itemId, MERCHANT_SELL_MENU, Optional.of(HEAD));
                         }
                         if (callData.startsWith("btn_merchant_display_vest_")) {
                             val itemId = callData.replaceFirst("^" + "btn_merchant_display_vest_", "");
-                            yield inventoryService.openInventoryItemInfo(chatId, itemId, MERCHANT_SELL_MENU, Optional.of(VEST)).isOk();
+                            yield inventoryService.openInventoryItemInfo(chatId, itemId, MERCHANT_SELL_MENU, Optional.of(VEST));
                         }
                         if (callData.startsWith("btn_merchant_display_gloves_")) {
                             val itemId = callData.replaceFirst("^" + "btn_merchant_display_gloves_", "");
-                            yield inventoryService.openInventoryItemInfo(chatId, itemId, MERCHANT_SELL_MENU, Optional.of(GLOVES)).isOk();
+                            yield inventoryService.openInventoryItemInfo(chatId, itemId, MERCHANT_SELL_MENU, Optional.of(GLOVES));
                         }
                         if (callData.startsWith("btn_merchant_display_boots_")) {
                             val itemId = callData.replaceFirst("^" + "btn_merchant_display_boots_", "");
-                            yield inventoryService.openInventoryItemInfo(chatId, itemId, MERCHANT_SELL_MENU, Optional.of(BOOTS)).isOk();
+                            yield inventoryService.openInventoryItemInfo(chatId, itemId, MERCHANT_SELL_MENU, Optional.of(BOOTS));
                         }
                         if (callData.startsWith("btn_merchant_display_primary_weapon_")) {
                             val itemId = callData.replaceFirst("^" + "btn_merchant_display_primary_weapon_", "");
-                            yield inventoryService.openInventoryItemInfo(chatId, itemId, MERCHANT_SELL_MENU, Optional.of(RIGHT_HAND)).isOk();
+                            yield inventoryService.openInventoryItemInfo(chatId, itemId, MERCHANT_SELL_MENU, Optional.of(RIGHT_HAND));
                         }
                         if (callData.startsWith("btn_merchant_display_secondary_weapon_")) {
                             val itemId = callData.replaceFirst("^" + "btn_merchant_display_secondary_weapon_", "");
-                            yield inventoryService.openInventoryItemInfo(chatId, itemId, MERCHANT_SELL_MENU, Optional.of(LEFT_HAND)).isOk();
+                            yield inventoryService.openInventoryItemInfo(chatId, itemId, MERCHANT_SELL_MENU, Optional.of(LEFT_HAND));
                         }
                     }
                 }
                 if (callData.startsWith("btn_player_attribute_upgrade_")) {
                     val playerAttribute = PlayerAttribute.fromValue(callData.replaceFirst("^" + "btn_player_attribute_upgrade_", ""));
-                    yield playerService.upgradePlayerAttribute(chatId, playerAttribute);
+                    yield roomService.upgradePlayerAttribute(chatId, playerAttribute);
                 }
                 yield false;
             }
         };
     }
 
-    public Optional<CallbackType> getCallbackType(String callData) {
+    private Optional<CallbackType> getCallbackType(String callData) {
         return keyboardButtonProperties.getButtons().entrySet().stream()
                 .filter(entry -> callData.equals(entry.getValue().getCallback()))
                 .map(Map.Entry::getKey)

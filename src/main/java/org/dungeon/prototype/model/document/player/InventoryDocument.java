@@ -16,7 +16,15 @@ public class InventoryDocument {
     @DBRef
     private List<ItemDocument> items;
     @DBRef
-    private ArmorSetDocument armorSet;
+    private ItemDocument helmet;
     @DBRef
-    private WeaponSetDocument weaponSet;
+    private ItemDocument vest;
+    @DBRef
+    private ItemDocument gloves;
+    @DBRef
+    private ItemDocument boots;
+    @DBRef
+    private ItemDocument primaryWeapon;
+    @DBRef
+    private ItemDocument secondaryWeapon;
 }
