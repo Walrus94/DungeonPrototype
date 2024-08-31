@@ -43,6 +43,15 @@ public class LevelUtil {
             default -> throw new IllegalStateException("Unexpected value: " + roomType);
         };
     }
+
+    /**
+     * Filters out valid directions (in which it is possible to continue building corridor)
+     * and selects random one
+     * @param walkerBuilderIterator current iterator
+     * @param level being generated
+     * @return present, if random direction successfully selected,
+     * empty if there are no valid directions
+     */
     public static Optional<Direction> getRandomValidDirection(WalkerBuilderIterator walkerBuilderIterator, Level level) {
         val grid = level.getGrid();
         val visitedRooms = level.getRoomsMap().keySet();
@@ -55,53 +64,6 @@ public class LevelUtil {
                 .filter(direction -> calculateMaxLengthInDirection(grid, currentPoint, direction) >= level.getMinLength())
                 .collect(Collectors.toList());
         return getRandomDirection(validDirections, currentPoint.getPoint(), gridSections, gridSize);
-    }
-
-    public static Optional<Direction> getRandomDirection(List<Direction> directions, Point currentPoint, Set<GridSection> visitedRooms, int gridSize) {
-        double s, n, w, e;
-        log.debug("Randomizing direction...");
-        var nCount = toIntExact(visitedRooms.stream()
-                .map(GridSection::getPoint)
-                .filter(point -> point.getY() > currentPoint.getY())
-                .count());
-        var sCount = toIntExact(visitedRooms.stream()
-                .map(GridSection::getPoint)
-                .filter(point -> point.getY() < currentPoint.getY())
-                .count());
-        var wCount = toIntExact(visitedRooms.stream()
-                .map(GridSection::getPoint)
-                .filter(point -> point.getX() > currentPoint.getX())
-                .count());
-        var eCount = toIntExact(visitedRooms.stream()
-                .map(GridSection::getPoint)
-                .filter(point -> point.getX() < currentPoint.getX())
-                .count());
-        if (directions.contains(S)) {
-            s = nCount == 0 && sCount == 0 ?
-                    currentPoint.getY().doubleValue() / gridSize :
-                    (double) nCount / visitedRooms.size();
-        } else {
-            s = 0.0;
-        }
-        n = directions.contains(N) ? 1.0 - s : 0.0;
-
-        if (directions.contains(W)) {
-            w = eCount == 0 && wCount == 0 ?
-                    currentPoint.getX().doubleValue() / gridSize :
-                    (double) eCount / visitedRooms.size();
-        } else {
-            w = 0.0;
-        }
-        e = directions.contains(E) ? 1.0 - w : 0.0;
-        if (s + n + w + e > 0.0) {
-            return Optional.of(RandomUtil.getRandomDirection(List.of(
-                    Pair.create(S, s),
-                    Pair.create(N, n),
-                    Pair.create(W, w),
-                    Pair.create(E, e))));
-        } else {
-            return Optional.empty();
-        }
     }
 
     public static Direction getOppositeDirection(Direction direction) {
@@ -153,7 +115,6 @@ public class LevelUtil {
                 default -> "Wrong callBack data!";
             };
     }
-
     public static Point getNextPointInDirection(Point point, Direction direction) {
         return switch (direction) {
             case N -> new Point(point.getX(), point.getY() + 1);
@@ -163,10 +124,14 @@ public class LevelUtil {
         };
     }
 
-    private static Set<GridSection> getGridSections(GridSection[][] grid, Set<Point> points) {
-        return points.stream().map(point -> grid[point.getX()][point.getY()]).collect(Collectors.toSet());
-    }
-
+    /**
+     * Determines if possible to split path with crossroad in current walker position
+     * and randomly if it will
+     * @param walkerBuilderIterator current walker
+     * @param level being generated
+     * @param waitingWalkerBuilders count of idle walkers
+     * @return true if current point will be crossroad
+     */
     public static boolean isCrossroad(WalkerBuilderIterator walkerBuilderIterator, Level level, int waitingWalkerBuilders) {
         val currentPoint = walkerBuilderIterator.getCurrentPoint();
         val oldDirection = walkerBuilderIterator.getDirection();
@@ -181,8 +146,74 @@ public class LevelUtil {
                 .count() > 1;
     }
 
+    /**
+     * Selects random direction with probability depending on
+     * already filled sections or, if none present, by length from grid border
+     * @param directions available directions
+     * @param currentPoint room from where direction selected
+     * @param visitedRooms grid section already filled with rooms
+     * @param gridSize size of level grid
+     * @return present if random direction available
+     */
+    private static Optional<Direction> getRandomDirection(List<Direction> directions, Point currentPoint, Set<GridSection> visitedRooms, int gridSize) {
+        double s, n, w, e;
+        log.debug("Randomizing direction...");
+        var nCount = toIntExact(visitedRooms.stream()
+                .map(GridSection::getPoint)
+                .filter(point -> point.getY() > currentPoint.getY())
+                .count());
+        var sCount = toIntExact(visitedRooms.stream()
+                .map(GridSection::getPoint)
+                .filter(point -> point.getY() < currentPoint.getY())
+                .count());
+        var wCount = toIntExact(visitedRooms.stream()
+                .map(GridSection::getPoint)
+                .filter(point -> point.getX() > currentPoint.getX())
+                .count());
+        var eCount = toIntExact(visitedRooms.stream()
+                .map(GridSection::getPoint)
+                .filter(point -> point.getX() < currentPoint.getX())
+                .count());
+        if (directions.contains(S)) {
+            s = nCount == 0 && sCount == 0 ?
+                    currentPoint.getY().doubleValue() / gridSize :
+                    (double) nCount / visitedRooms.size();
+        } else {
+            s = 0.0;
+        }
+        n = directions.contains(N) ? 1.0 - s : 0.0;
 
+        if (directions.contains(W)) {
+            w = eCount == 0 && wCount == 0 ?
+                    currentPoint.getX().doubleValue() / gridSize :
+                    (double) eCount / visitedRooms.size();
+        } else {
+            w = 0.0;
+        }
+        e = directions.contains(E) ? 1.0 - w : 0.0;
+        if (s + n + w + e > 0.0) {
+            return Optional.of(RandomUtil.getRandomDirection(List.of(
+                    Pair.create(S, s),
+                    Pair.create(N, n),
+                    Pair.create(W, w),
+                    Pair.create(E, e))));
+        } else {
+            return Optional.empty();
+        }
+    }
 
+    private static Set<GridSection> getGridSections(GridSection[][] grid, Set<Point> points) {
+        return points.stream().map(point -> grid[point.getX()][point.getY()]).collect(Collectors.toSet());
+    }
+
+    /**
+     * Calculates maximum length in selected direction, incrementing steps
+     * until grid border or section, already visited by walker, reached
+     * @param grid level grid
+     * @param startSection start point
+     * @param direction selected direction
+     * @return maximum permitted length
+     */
     public static Integer calculateMaxLengthInDirection(GridSection[][] grid, GridSection startSection, Direction direction) {
         log.debug("Calculating max length in {} direction...", direction);
         GridSection currentSection = null;

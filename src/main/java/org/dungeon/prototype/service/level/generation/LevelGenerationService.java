@@ -45,14 +45,22 @@ import static org.dungeon.prototype.util.RandomUtil.getRandomInt;
 public class LevelGenerationService {
     private final Map<Long,Queue<WalkerBuilderIterator>> waitingBuildWalkers = new HashMap<>();
     @Autowired
-    RoomService roomService;
+    private RoomService roomService;
     @Autowired
     private RandomRoomTypeGenerator randomRoomTypeGenerator;
     @Autowired
     private GenerationProperties generationProperties;
 
+    /**
+     * Generates level and fills with content
+     * @param chatId id of player's chat
+     * @param player player starting level
+     * @param levelNumber number of level
+     * @return generated level
+     */
     public Level generateLevel(Long chatId, Player player, Integer levelNumber) {
         log.debug("Generating level {}", levelNumber);
+        //initializing level and calculating basic attributes
         val gridSize = calculateGridSize(levelNumber);
         var level = new Level();
         level.setChatId(chatId);
@@ -64,16 +72,20 @@ public class LevelGenerationService {
         level.setMaxLength(maxLength);
         level.setMinLength(minLength);
 
+        //empty level grid will be filled with rooms during generation
         level.setGrid(generateEmptyMapGrid(gridSize));
 
+        //randomly picking start of the level
         val startPoint = new Point(getRandomInt(minLength, gridSize - minLength - 1),
                 getRandomInt(minLength, gridSize - minLength - 1));
         var start = buildStartRoom(startPoint, chatId);
         start = roomService.saveOrUpdateRoom(start);
         level.setStart(start);
+        //initializing level's room map
         Map<Point, Room> roomsMap = new HashMap<>();
         roomsMap.put(startPoint, start);
         level.setRoomsMap(roomsMap);
+        //Initializing first walker builder iterator, that will start paving the way from start room
         var currentSection = setStartSection(level.getGrid(), startPoint);
         log.debug("Successfully built start room, x:{} y:{}", startPoint.getX(), startPoint.getY());
         log.debug("Current map state\n{}", printMap(level.getGrid()));
@@ -84,6 +96,7 @@ public class LevelGenerationService {
         if (waitingBuildWalkers.containsKey(chatId)) {
             waitingBuildWalkers.get(chatId).offer(walkerIterator);
         } else {
+            //Initializing walkers queue ordered by path from start
             var queue = new PriorityQueue<>(Comparator.comparing(WalkerBuilderIterator::getPathFromStart));
             queue.offer(walkerIterator);
             waitingBuildWalkers.put(chatId, queue);
@@ -112,6 +125,7 @@ public class LevelGenerationService {
                 level.getDeadEndToSegmentMap().size());
         log.debug("Dead ends: {}", level.getDeadEnds().stream().map(GridSection::getPoint).toList());
         log.debug("Segments: {}", new ArrayList<>(level.getDeadEndToSegmentMap().values()));
+        //now fill generated level rooms with content (monsters, treasures etc.)
         distributeRoomTypes(level, player);
         log.debug("Current map state\n{}", printMap(level.getGrid()));
         val levelMap = new LevelMap(level.getGrid()[start.getPoint().getX()][start.getPoint().getY()]);
@@ -119,11 +133,17 @@ public class LevelGenerationService {
         return level;
     }
 
+    /**
+     * Attempts to continue path of current walker
+     * @param level being generated
+     * @param walkerBuilderIterator current walker
+     * @return updated walker after processing step
+     */
     private WalkerBuilderIterator processNextStep(Level level, WalkerBuilderIterator walkerBuilderIterator) {
         log.debug("Processing next step...");
         log.debug("Attempting to continue path...");
         var walkerIteratorOptional = getNextSectionAndBuildPath(level, walkerBuilderIterator);
-        if (walkerIteratorOptional.isPresent()) {
+        if (walkerIteratorOptional.isPresent()) {//Optional is empty if walker is unable to continue path from current point
             walkerBuilderIterator = walkerIteratorOptional.get();
             log.debug("WalkerIterator successfully retrieved for point {}, direction: {}, previous room point: {}",
                     walkerBuilderIterator.getCurrentPoint(),
@@ -135,26 +155,37 @@ public class LevelGenerationService {
                 log.debug("Current map state\n{}", printMap(level.getGrid()));
                 log.debug("Generating new walker...");
                 walkerBuilderIterator.getCurrentPoint().setCrossroad(true);
+                //initializing new walker in the same point
                 var secondWalkerIterator = WalkerBuilderIterator.builder()
                         .currentPoint(walkerBuilderIterator.getCurrentPoint())
                         .direction(walkerBuilderIterator.getDirection())
                         .roomsSegment(new RoomsSegment(walkerBuilderIterator.getCurrentPoint()))
                         .previousRoom(walkerBuilderIterator.getPreviousRoom())
                         .build();
+                //puts both in corresponding queue
                 waitingBuildWalkers.get(level.getChatId()).offer(walkerBuilderIterator);
                 waitingBuildWalkers.get(level.getChatId()).offer(secondWalkerIterator);
                 log.debug("Active walkers: {}", waitingBuildWalkers);
                 log.debug("Processing next step for walker...");
+                //recursive call for next step with walker from queue
                 return processNextStep(level, waitingBuildWalkers.get(level.getChatId()).poll());
             } else {
                 log.debug("No crossroads, proceed with single walker");
+                //recursive call for same walker
                 return processNextStep(level, walkerBuilderIterator);
             }
         } else {
+            //building dead end if unable to continue path
             return buildDeadEnd(level, walkerBuilderIterator);
         }
     }
 
+    /**
+     * Builds dead end in active walker current point
+     * @param level being generated
+     * @param walkerBuilderIterator active walker
+     * @return updated walker
+     */
     private WalkerBuilderIterator buildDeadEnd(Level level, WalkerBuilderIterator walkerBuilderIterator) {
         log.debug("Walker Iterator: {}", walkerBuilderIterator);
         val deadEndSection = walkerBuilderIterator.getCurrentPoint();
@@ -187,6 +218,8 @@ public class LevelGenerationService {
                 level.getGrid()[endRoom.getPoint().getX()][endRoom.getPoint().getY()].setEmoji(getIcon(Optional.of(RoomType.END)));
             }
         } else {
+            //corner case when second walker iterator failed to build path from crossroad
+            //and attempts to build dead end in the same point
             deadEndSection.setDeadEnd(false);
             deadEndSection.setCrossroad(false);
             level.getDeadEnds().remove(deadEndSection);
@@ -194,6 +227,13 @@ public class LevelGenerationService {
         return walkerBuilderIterator;
     }
 
+    /**
+     * Attempts to build next section of corridor
+     * @param level being generated
+     * @param walkerBuilderIterator active walker
+     * @return optional of updated walker after successful path building
+     * empty if unable to build path
+     */
     private Optional<WalkerBuilderIterator> getNextSectionAndBuildPath(Level level, WalkerBuilderIterator walkerBuilderIterator) {
         log.debug("Building next section from x:{}, y:{}, current walker: {}", walkerBuilderIterator.getCurrentPoint().getPoint().getX(), walkerBuilderIterator.getCurrentPoint().getPoint().getY(), walkerBuilderIterator);
         int pathLength;
@@ -202,12 +242,14 @@ public class LevelGenerationService {
         val startSection = walkerBuilderIterator.getCurrentPoint();
         val directionOptional = getRandomValidDirection(walkerBuilderIterator, level);
         if (directionOptional.isEmpty()) {
+            //if continuing path in any direction is not possible
             return Optional.empty();
         }
         val direction = directionOptional.get();
         log.debug("Calculating length in direction: {}", direction);
         val maxLengthInDirection = calculateMaxLengthInDirection(level.getGrid(), startSection, direction);
         if (maxLengthInDirection < level.getMinLength()) {
+            //double-check: returns empty if can't build corridor of permitted length in selected direction
             return Optional.empty();
         }
         log.debug("Max length in {} direction is {}", direction, maxLengthInDirection);
@@ -216,11 +258,19 @@ public class LevelGenerationService {
         if (pathLength >= level.getMinLength() && pathLength <= level.getMaxLength()) {
             log.debug("Random path length to walk: {}", pathLength);
             walkerBuilderIterator.setDirection(direction);
+            //Building path in chosen direction and path length
             return Optional.of(buildPathInDirection(level, walkerBuilderIterator, pathLength));
         }
         return Optional.empty();
     }
 
+    /**
+     * Fills every grid with normal empty room with active walker
+     * @param level being generated
+     * @param walkerBuilderIterator active walker
+     * @param pathLength length of corridor to build
+     * @return updated walker
+     */
     private WalkerBuilderIterator buildPathInDirection(Level level, WalkerBuilderIterator walkerBuilderIterator, int pathLength) {
         GridSection nextStep;
         Room nextRoom;
@@ -261,16 +311,25 @@ public class LevelGenerationService {
         return nextStep;
     }
 
+    /**
+     * Generates clusters of generated room content
+     * and distributes it to generated level rooms
+     * @param level generated level
+     * @param player current player
+     */
     private void distributeRoomTypes(Level level, Player player) {
         log.debug("Distributing rooms content...");
         WalkerDistributeIterator walkerIterator;
+        //generating clusters with room content
         var clusters = randomRoomTypeGenerator.generateClusters(level, player);
         randomRoomTypeGenerator.updateDeadEndsForDistribution(level, clusters);
         log.debug("Clusters generated for levelId:{}: {}", level.getChatId(), clusters);
         while (clusters.hasClusters() && clusters.hasDeadEnds()) {
             log.debug("Getting next segment...");
+            //distributing content from end to start of cluster segment
             var currentSection = clusters.getNextDeadEnd();
             var currentSegment = clusters.getSegmentByDeadEnd(currentSection.getPoint());
+            //initializing walker for distributing content
             walkerIterator = WalkerDistributeIterator.builder()
                     .currentRoom(level.getRoomByCoordinates(currentSection.getPoint()))
                     .segment(currentSegment)
@@ -281,6 +340,8 @@ public class LevelGenerationService {
             distributeRoomTypesCluster(level, walkerIterator, cluster);
         }
         if (clusters.hasClusters()) {
+            //processing last cluster containing path
+            //from start to end of level separately
             log.debug("Processing last cluster...");
             var currentRoom = level.getEnd();
             var currentSegment = clusters.getMainSegment();
@@ -295,12 +356,20 @@ public class LevelGenerationService {
         }
     }
 
+    /**
+     * Distributes room content cluster to corresponding segment,
+     * from dead end (end) to crossroad (start)
+     * @param level generated level
+     * @param walkerIterator active walker
+     * @param cluster distributed cluster
+     */
     private void distributeRoomTypesCluster(Level level, WalkerDistributeIterator walkerIterator,
                                             RoomTypesCluster cluster) {
         while (cluster.hasNextRoomToDistribute()) {
             val previousRoom = walkerIterator.getPreviousRoom();
             if (nonNull(walkerIterator.getCurrentRoom().getRoomContent()) &&
                     RoomType.END.equals(walkerIterator.getCurrentRoom().getRoomContent().getRoomType())) {
+                //separately processing start of cluster with start to end of the level segment
                 log.debug("Processing end room...");
                 var currentRoom = walkerIterator.getCurrentRoom();
                 walkerIterator.setCurrentRoom(currentRoom.getAdjacentRooms().entrySet().stream()
@@ -312,11 +381,17 @@ public class LevelGenerationService {
                 walkerIterator.setPreviousRoom(level.getEnd());
             } else {
                 val currentRoom = walkerIterator.getCurrentRoom();
-                val roomsCount = toIntExact(currentRoom.getAdjacentRooms().entrySet().stream()
+                val adjacentRoomsCount = toIntExact(currentRoom.getAdjacentRooms().entrySet().stream()
                         .filter(Map.Entry::getValue)
                         .count());
-                switch (roomsCount) {
+                //since start point of cluster is either crossroad or start room we can determine each by
+                // amount of adjacent rooms
+                switch (adjacentRoomsCount) {
                     case 1 -> {
+                        //if room has one entrance it either dead end (start of cluster) or
+                        //start of the level (end of corresponding cluster)
+                        //
+                        //in first case, adding content from cluster to room
                         if (isNull(walkerIterator.getCurrentRoom().getRoomContent()) || !RoomType.START.equals(walkerIterator.getCurrentRoom().getRoomContent().getRoomType())) {
                             log.debug("Processing dead end room...");
                             setRoomContent(level.getGrid(), walkerIterator.getCurrentRoom(), cluster.getNextRoom());
@@ -328,13 +403,12 @@ public class LevelGenerationService {
                                     .findFirst().get();
                             walkerIterator.setPreviousRoom(walkerIterator.getCurrentRoom());
                             walkerIterator.setCurrentRoom(nextRoom);
-                        } else {
-                            if (!level.getDistributeIterators().isEmpty()) {
-                                walkerIterator = level.getDistributeIterators().poll();
-                            }
                         }
+                        //no need to do anything with start room
                     }
                     case 2 -> {
+                        //if room has two entrances simply go on through different door walker entered
+                        //leaving content from cluster behind
                         log.debug("Processing room...");
                         setRoomContent(level.getGrid(), walkerIterator.getCurrentRoom(), cluster.getNextRoom());
                         val nextRoom = walkerIterator.getCurrentRoom().getAdjacentRooms().entrySet().stream()
@@ -349,6 +423,10 @@ public class LevelGenerationService {
                     }
                     case 3 -> {
                         log.debug("Processing crossroad...");
+                        //if room has three entrances than it's a crossroad
+                        //if it's start of current cluster segment, leave it alone (to another walker)
+                        //else, fill room with content and go to room with descending path from level start
+                        //(here goes that 'another' walker)
                         if (!walkerIterator.getSegment().getEnd().getPoint().equals(walkerIterator.getCurrentRoom().getPoint())) {
                             setRoomContent(level.getGrid(), walkerIterator.getCurrentRoom(), cluster.getNextRoom());
                             val nextRoom = walkerIterator.getCurrentRoom().getAdjacentRooms().entrySet().stream()
@@ -398,7 +476,7 @@ public class LevelGenerationService {
         return (int) (gridSize * generationProperties.getLevel().getMaxLengthRatio());
     }
 
-    public Integer calculateMinLength(Integer gridSize) {
+    private Integer calculateMinLength(Integer gridSize) {
         val properties = generationProperties.getLevel();
         return (int) (gridSize * properties.getMinLengthRatio()) < properties.getMinLength() ? properties.getMinLength() :
                 (int) (gridSize * properties.getMinLengthRatio());

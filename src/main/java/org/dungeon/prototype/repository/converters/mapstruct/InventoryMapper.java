@@ -25,7 +25,9 @@ public interface InventoryMapper {
 
     @Mappings({
             @Mapping(source = "items", target = "items", qualifiedByName = "mapItems"),
-            @Mapping(target = "maxItems", ignore = true)
+            @Mapping(target = "maxItems", ignore = true),
+            @Mapping(target = "armorItems", ignore = true),
+            @Mapping(target = "weapons", ignore = true)
     })
     Inventory mapToEntity(InventoryDocument document);
 

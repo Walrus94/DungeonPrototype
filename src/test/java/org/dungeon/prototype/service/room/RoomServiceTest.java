@@ -39,7 +39,6 @@ class RoomServiceTest extends BaseServiceUnitTest {
 
     @InjectMocks
     RoomService roomService;
-
     @Mock
     PlayerService playerService;
     @Mock
@@ -73,9 +72,16 @@ class RoomServiceTest extends BaseServiceUnitTest {
     @Test
     @DisplayName("Successfully loads room from repository")
     void getRoomByIdAndChatId() {
-        roomService.getRoomByIdAndChatId(CHAT_ID, CURRENT_ROOM_ID);
+        val roomDocument = new RoomDocument();
+        roomDocument.setId(CURRENT_ROOM_ID);
+        roomDocument.setChatId(CHAT_ID);
+        when(roomRepository.findByChatIdAndId(CHAT_ID, CURRENT_ROOM_ID)).thenReturn(roomDocument);
 
-        verify(roomRepository).findByChatIdAndId(CHAT_ID, CURRENT_ROOM_ID);
+        val actualRoom = roomService.getRoomByIdAndChatId(CHAT_ID, CURRENT_ROOM_ID);
+
+        assertEquals(roomDocument.getChatId(), actualRoom.getChatId());
+        assertEquals(roomDocument.getId(), actualRoom.getId());
+
     }
 
     @Test
@@ -141,6 +147,7 @@ class RoomServiceTest extends BaseServiceUnitTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     @DisplayName("Successfully opens menu with list of merchant items to buy")
     void openMerchantBuyMenu() {
         val player = getPlayer(CHAT_ID, CURRENT_ROOM_ID);

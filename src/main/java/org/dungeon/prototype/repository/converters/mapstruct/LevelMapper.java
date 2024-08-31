@@ -22,7 +22,6 @@ public interface LevelMapper {
             @Mapping(target = "maxLength", ignore = true),
             @Mapping(target = "minLength", ignore = true),
             @Mapping(target = "deadEndToSegmentMap", ignore = true),
-            @Mapping(target = "distributeIterators", ignore = true),
     })
     Level mapToLevel(LevelDocument document);
 }
