@@ -249,7 +249,7 @@ public class ItemGenerator {
         val weapon = new Weapon();
         weapon.setAttributes(weaponAttributes);
         weapon.setChatId(chatId);
-        weapon.setEffects(effectService.saveItemEffects(itemEffectsGenerator.generateEffects()));
+        weapon.setEffects(itemEffectsGenerator.generateWeaponEffects(weaponAttributes));
         return calculateParameters(weapon);
     }
 
@@ -260,6 +260,7 @@ public class ItemGenerator {
         val defaultAttributes = defaultAttributesMap.get(weapon.getAttributes().getWeaponType());
         weapon.setAttack(defaultAttributes.getAttack());
         weapon.setCriticalHitChance(defaultAttributes.getCriticalHitChance());
+        weapon.setCriticalHitMultiplier(defaultAttributes.getCriticalHitMultiplier());
         weapon.setChanceToMiss(defaultAttributes.getChanceToMiss());
         weapon.setChanceToKnockOut(defaultAttributes.getChanceToKnockOut());
         if (STAFF.equals(weapon.getAttributes().getWeaponType())) {
@@ -271,11 +272,13 @@ public class ItemGenerator {
         weapon.setAttack((int) (weapon.getAttack() * handlingAdjustmentAttributes.getAttackRatio()));
         weapon.setChanceToMiss(weapon.getChanceToMiss() * handlingAdjustmentAttributes.getChanceToMissRatio());
         weapon.setCriticalHitChance(weapon.getCriticalHitChance() * handlingAdjustmentAttributes.getCriticalChanceRatio());
+        weapon.setCriticalHitMultiplier(weapon.getCriticalHitMultiplier() * handlingAdjustmentAttributes.getCriticalMultiplierRatio());
 
         val weaponMaterialAdjustmentAttributes = properties.getWeaponMaterialAdjustmentAttributes().get(weapon.getAttributes().getWeaponMaterial());
         weapon.setAttack((int) (weapon.getAttack() * weaponMaterialAdjustmentAttributes.getAttackRatio()));
         weapon.setChanceToMiss(weapon.getChanceToMiss() * weaponMaterialAdjustmentAttributes.getChanceToMissRatio());
         weapon.setCriticalHitChance(weapon.getCriticalHitChance() * weaponMaterialAdjustmentAttributes.getCriticalChanceRatio());
+        weapon.setCriticalHitMultiplier(weapon.getCriticalHitMultiplier() * weaponMaterialAdjustmentAttributes.getCriticalMultiplierRatio());
         weapon.setChanceToKnockOut(weapon.getChanceToKnockOut() * weaponMaterialAdjustmentAttributes.getKnockOutChanceRatio());
         if (ENCHANTED_WOOD.equals(weapon.getAttributes().getWeaponMaterial()) && (isNull(weapon.getHasMagic()) || !weapon.getHasMagic())) {
             weapon.setHasMagic(true);
@@ -296,12 +299,14 @@ public class ItemGenerator {
             weapon.setAttack((int) (weapon.getAttack() * completeMaterialAdjustment.getAttackRatio()));
             weapon.setChanceToMiss(weapon.getChanceToMiss() * completeMaterialAdjustment.getChanceToMissRatio());
             weapon.setCriticalHitChance(weapon.getCriticalHitChance() * completeMaterialAdjustment.getCriticalChanceRatio());
+            weapon.setCriticalHitMultiplier(weapon.getCriticalHitMultiplier() * completeMaterialAdjustment.getCriticalMultiplierRatio());
             weapon.setChanceToKnockOut(weapon.getChanceToKnockOut() * completeMaterialAdjustment.getKnockOutChanceRatio());
         } else {
             val weaponHandlerAdjustment = properties.getWeaponHandlerMaterialAdjustmentAttributes().get(weapon.getAttributes().getWeaponHandlerMaterial());
             weapon.setAttack((int) (weapon.getAttack() * weaponHandlerAdjustment.getAttackRatio()));
             weapon.setChanceToMiss(weapon.getChanceToMiss() * weaponHandlerAdjustment.getChanceToMissRatio());
             weapon.setCriticalHitChance(weapon.getCriticalHitChance() * weaponHandlerAdjustment.getCriticalChanceRatio());
+            weapon.setCriticalHitMultiplier(weapon.getCriticalHitMultiplier() * weaponHandlerAdjustment.getCriticalMultiplierRatio());
             weapon.setChanceToKnockOut(weapon.getChanceToKnockOut() * weaponHandlerAdjustment.getKnockOutChanceRatio());
         }
         val sizeAdjustment = properties.getSizeAdjustmentAttributes().get(weapon.getAttributes().getSize());
@@ -311,6 +316,7 @@ public class ItemGenerator {
         val attackTypeAdjustment = properties.getAttackTypeAdjustmentAttributes().get(weapon.getAttributes().getWeaponAttackType());
         weapon.setAttack((int) (weapon.getAttack() * attackTypeAdjustment.getAttackRatio()));
         weapon.setCriticalHitChance(weapon.getCriticalHitChance() * attackTypeAdjustment.getCriticalChanceRatio());
+        weapon.setCriticalHitMultiplier(weapon.getCriticalHitMultiplier() * attackTypeAdjustment.getCriticalMultiplierRatio());
         weapon.setChanceToKnockOut(weapon.getChanceToKnockOut() * attackTypeAdjustment.getKnockOutChanceRatio());
         if (STRIKE.equals(weapon.getAttributes().getWeaponAttackType())) {
             if (isNull(weapon.getHasMagic()) || !weapon.getHasMagic()) {
@@ -350,7 +356,7 @@ public class ItemGenerator {
         val wearable = new Wearable();
         wearable.setAttributes(wearableAttributes);
         wearable.setChatId(chatId);
-        wearable.setEffects(effectService.saveItemEffects(itemEffectsGenerator.generateEffects()));
+        wearable.setEffects(itemEffectsGenerator.generateWearableEffects(wearableAttributes));
         return calculateParameters(wearable);
     }
 

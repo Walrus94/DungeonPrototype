@@ -2,7 +2,7 @@ package org.dungeon.prototype.util;
 
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
-import org.dungeon.prototype.model.effect.Action;
+import org.dungeon.prototype.model.effect.attributes.Action;
 import org.dungeon.prototype.model.inventory.items.Weapon;
 
 import java.util.BitSet;
@@ -30,6 +30,7 @@ public class GenerationUtil {
         weapon.setAttack((int) (weapon.getAttack() * multiplier));
         weapon.setChanceToKnockOut(weapon.getChanceToKnockOut() * multiplier);
         weapon.setCriticalHitChance(weapon.getCriticalHitChance() * multiplier);
+        weapon.setCriticalHitMultiplier(weapon.getCriticalHitMultiplier() * multiplier);
         weapon.setChanceToMiss(weapon.getChanceToMiss() / multiplier);
     }
 

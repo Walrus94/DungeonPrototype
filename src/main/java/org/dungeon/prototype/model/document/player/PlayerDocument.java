@@ -34,11 +34,13 @@ public class PlayerDocument {
     private Integer maxMana;
     private Integer defense;
     private Integer maxDefense;
-    private Integer primaryAttack;
-    private Integer secondaryAttack;
+    private Double chanceToDodge;
+    private PlayerAttackDocument primaryAttack;
+    private PlayerAttackDocument secondaryAttack;
+    private Double xpBonus;
+    private Double goldBonus;
     @DBRef
     private InventoryDocument inventory;
-    @DBRef
     private List<EffectDocument> effects;
     private EnumMap<PlayerAttribute, Integer> attributes;
 }

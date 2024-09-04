@@ -4,20 +4,18 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.annotations.aspect.ChatStateUpdate;
 import org.dungeon.prototype.model.inventory.Inventory;
-import org.dungeon.prototype.model.inventory.items.Wearable;
 import org.dungeon.prototype.model.player.Player;
+import org.dungeon.prototype.model.player.PlayerAttack;
 import org.dungeon.prototype.model.player.PlayerAttribute;
 import org.dungeon.prototype.properties.PlayerProperties;
 import org.dungeon.prototype.repository.PlayerRepository;
 import org.dungeon.prototype.repository.converters.mapstruct.PlayerMapper;
 import org.dungeon.prototype.repository.projections.NicknameProjection;
-import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.message.MessageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -25,12 +23,12 @@ import java.util.stream.Stream;
 import static java.util.Objects.nonNull;
 import static org.dungeon.prototype.bot.ChatState.ACTIVE;
 import static org.dungeon.prototype.bot.ChatState.AWAITING_NICKNAME;
+import static org.dungeon.prototype.util.PlayerUtil.getPrimaryAttack;
+import static org.dungeon.prototype.util.PlayerUtil.getSecondaryAttack;
 
 @Slf4j
 @Component
 public class PlayerService {
-    @Autowired
-    EffectService effectService;
     @Autowired
     PlayerRepository playerRepository;
     @Autowired
@@ -56,7 +54,7 @@ public class PlayerService {
         player.setMaxMana(getDefaultMaxMana(player));
         player.setMana(player.getMaxMana());
         addDefaultInventory(player, defaultInventory);
-        return updatePlayer(effectService.updatePlayerEffects(player));
+        return updatePlayer(player);
     }
 
     @ChatStateUpdate(from = AWAITING_NICKNAME, to = ACTIVE)
@@ -65,13 +63,13 @@ public class PlayerService {
         messageService.sendStartMessage(chatId, nickname);
     }
 
-    //TODO: extract magic numbers to properties (consider different formula)
-    public static int getDefaultMaxMana(Player player) {
-        return 6 + player.getAttributes().get(PlayerAttribute.MAGIC);
+    public int getDefaultMaxMana(Player player) {
+        return playerProperties.getBaseMana() +
+                player.getAttributes().get(PlayerAttribute.MAGIC) * playerProperties.getAttributeManaFactor();
     }
 
-    public static int getDefaultMaxHp(Player player) {
-        return 90 + player.getAttributes().get(PlayerAttribute.STAMINA);
+    public int getDefaultMaxHp(Player player) {
+        return 100 + player.getAttributes().get(PlayerAttribute.STAMINA);
     }
 
     public Player updatePlayer(Player player) {
@@ -116,17 +114,15 @@ public class PlayerService {
         player.addEffects(Stream.concat(inventory.getWeapons().stream(), inventory.getArmorItems().stream())
                 .flatMap(item -> item.getEffects().stream())
                 .collect(Collectors.toCollection(ArrayList::new)));
-        //TODO: consider moving to effect calculation
-        player.setMaxDefense(calculateMaxDefense(player.getInventory()));
-        player.setDefense(player.getMaxDefense());
-        player.setPrimaryAttack(player.getAttributes().get(PlayerAttribute.POWER) + (nonNull(inventory.getPrimaryWeapon()) ? inventory.getPrimaryWeapon().getAttack() : 0));
-        player.setSecondaryAttack(nonNull(inventory.getSecondaryWeapon()) ? player.getAttributes().get(PlayerAttribute.POWER) + inventory.getSecondaryWeapon().getAttack() : 0);
+        player.setPrimaryAttack(getPrimaryAttack(player, inventory.getPrimaryWeapon()));
+        player.setSecondaryAttack(getSecondaryAttack(player, inventory.getSecondaryWeapon()));
+        if (nonNull(inventory.getBoots())) {
+            player.setChanceToDodge(inventory.getBoots().getChanceToDodge());
+        } else {
+            player.setChanceToDodge(0.0);
+        }
         log.debug("Player default inventory initialized: {}", player);
         val playerDocument = PlayerMapper.INSTANCE.mapToDocument(player);
         playerRepository.save(playerDocument);
-    }
-
-    private Integer calculateMaxDefense(Inventory inventory) {
-        return inventory.getArmorItems().stream().filter(Objects::nonNull).mapToInt(Wearable::getArmor).sum();
     }
 }

@@ -6,7 +6,7 @@ import org.dungeon.prototype.model.inventory.Item;
 import java.util.Set;
 
 @Data
-public abstract class BonusRoom implements RoomContent {
+public abstract class ItemsRoom implements RoomContent {
     protected String id;
     protected Set<Item> items;
 }

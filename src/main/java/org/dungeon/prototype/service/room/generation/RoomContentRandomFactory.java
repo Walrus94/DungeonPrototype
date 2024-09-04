@@ -2,9 +2,8 @@ package org.dungeon.prototype.service.room.generation;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.dungeon.prototype.model.effect.Action;
-import org.dungeon.prototype.model.effect.DirectPlayerEffect;
-import org.dungeon.prototype.model.effect.attributes.PlayerEffectAttribute;
+import org.dungeon.prototype.model.effect.ExpirableEffect;
+import org.dungeon.prototype.model.effect.attributes.Action;
 import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.monster.Monster;
 import org.dungeon.prototype.model.monster.MonsterAttack;
@@ -28,6 +27,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Set;
 
+import static org.dungeon.prototype.model.effect.attributes.EffectAttribute.HEALTH;
+import static org.dungeon.prototype.model.effect.attributes.EffectAttribute.MANA;
 import static org.dungeon.prototype.util.RandomUtil.getNormalDistributionRandomDouble;
 import static org.dungeon.prototype.util.RandomUtil.getRandomInt;
 import static org.dungeon.prototype.util.RoomGenerationUtils.convertToMonsterClass;
@@ -66,30 +67,28 @@ public class RoomContentRandomFactory {
 
     private ManaShrine getManaShrine(Integer expectedWeightAbs) {
         val manaShrine = new ManaShrine();
-        DirectPlayerEffect manaRegeneration = new DirectPlayerEffect();
+        ExpirableEffect manaRegeneration = new ExpirableEffect();
         //TODO: configure according to weight
-        manaRegeneration.setAttribute(PlayerEffectAttribute.MANA);
+        manaRegeneration.setAttribute(MANA);
         manaRegeneration.setTurnsLasts(3);
         manaRegeneration.setAction(Action.ADD);
         manaRegeneration.setAmount(15);
         manaRegeneration.setIsAccumulated(true);
         manaRegeneration.setWeight(15 * 3);
-        manaRegeneration = (DirectPlayerEffect) effectService.savePlayerEffect(manaRegeneration);
         manaShrine.setEffect(manaRegeneration);
         return manaShrine;
     }
 
     private HealthShrine getHealthShrine(Integer expectedWeightAbs) {
         val healthShrine = new HealthShrine();
-        DirectPlayerEffect regeneration = new DirectPlayerEffect();
-        regeneration.setAttribute(PlayerEffectAttribute.HEALTH);
+        ExpirableEffect regeneration = new ExpirableEffect();
+        regeneration.setAttribute(HEALTH);
         //TODO: configure according to weight
         regeneration.setTurnsLasts(5);
         regeneration.setAction(Action.ADD);
         regeneration.setAmount(20);
         regeneration.setIsAccumulated(true);
         regeneration.setWeight(20 * 5);
-        regeneration = (DirectPlayerEffect) effectService.savePlayerEffect(regeneration);
         healthShrine.setEffect(regeneration);
         return healthShrine;
     }

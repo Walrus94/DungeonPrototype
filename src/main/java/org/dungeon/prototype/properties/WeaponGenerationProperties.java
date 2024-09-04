@@ -20,7 +20,7 @@ public class WeaponGenerationProperties {
     private Map<Handling, AdjustmentAttributes> handlingAdjustmentAttributes;
     private Map<WeaponMaterial, AdjustmentAttributes> weaponMaterialAdjustmentAttributes;
     private Map<WeaponHandlerMaterial, AdjustmentAttributes> weaponHandlerMaterialAdjustmentAttributes;
-    private Map<WeaponHandlerMaterial, CompleteMaterialAdjustmentAttributes> completeMaterialAdjustmentAttributes;
+    private Map<WeaponHandlerMaterial, AdjustmentAttributes> completeMaterialAdjustmentAttributes;
     private Map<Size, SizeAdjustmentAttributes> sizeAdjustmentAttributes;
     private Map<WeaponAttackType, AttackTypeAdjustmentAttributes> attackTypeAdjustmentAttributes;
     private Map<Quality, Double> qualityAdjustmentRatio;
@@ -28,6 +28,7 @@ public class WeaponGenerationProperties {
     public static class WeaponDefaultAttributes {
         private Integer attack;
         private Double criticalHitChance;
+        private Double criticalHitMultiplier;
         private Double chanceToMiss;
         private Double chanceToKnockOut;
     }
@@ -37,14 +38,7 @@ public class WeaponGenerationProperties {
         private Double attackRatio;
         private Double chanceToMissRatio;
         private Double criticalChanceRatio;
-        private Double knockOutChanceRatio;
-    }
-
-    @Data
-    public static class CompleteMaterialAdjustmentAttributes {
-        private Double attackRatio;
-        private Double chanceToMissRatio;
-        private Double criticalChanceRatio;
+        private Double criticalMultiplierRatio;
         private Double knockOutChanceRatio;
     }
 
@@ -58,6 +52,7 @@ public class WeaponGenerationProperties {
     public static class AttackTypeAdjustmentAttributes {
         private Double attackRatio;
         private Double criticalChanceRatio;
+        private Double criticalMultiplierRatio;
         private Double knockOutChanceRatio;
     }
 }

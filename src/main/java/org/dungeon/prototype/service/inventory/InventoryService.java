@@ -2,8 +2,8 @@ package org.dungeon.prototype.service.inventory;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.dungeon.prototype.model.effect.Effect;
 import org.dungeon.prototype.model.inventory.Inventory;
-import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.inventory.attributes.wearable.WearableType;
 import org.dungeon.prototype.model.inventory.items.Weapon;
 import org.dungeon.prototype.model.inventory.items.Wearable;
@@ -12,6 +12,7 @@ import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.repository.InventoryRepository;
 import org.dungeon.prototype.repository.converters.mapstruct.InventoryMapper;
 import org.dungeon.prototype.service.PlayerService;
+import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.item.ItemService;
 import org.dungeon.prototype.service.message.MessageService;
 import org.dungeon.prototype.service.room.RoomService;
@@ -21,9 +22,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
-import static java.util.Objects.isNull;
-import static java.util.Objects.nonNull;
 
 @Slf4j
 @Service
@@ -34,6 +34,8 @@ public class InventoryService {
     private ItemService itemService;
     @Autowired
     private RoomService roomService;
+    @Autowired
+    private EffectService effectService;
     @Autowired
     private MessageService messageService;
     @Autowired
@@ -82,11 +84,17 @@ public class InventoryService {
      * @return true if item successfully equipped
      */
     public boolean equipItem(Long chatId, String itemId) {
-        val player = playerService.getPlayer(chatId);
+        var player = playerService.getPlayer(chatId);
         val item = itemService.findItem(chatId, itemId);
         val inventory = player.getInventory();
-        if (equipItem(inventory, item)) {
-            messageService.sendInventoryItemMessage(chatId, item, CallbackType.INVENTORY, Optional.empty());
+        if (inventory.equipItem(item)) {
+            player.addEffects(item.getEffects().stream()
+                    .map(permanentEffect -> (Effect) permanentEffect)
+                    .collect(Collectors.toCollection(ArrayList::new)));
+            player = effectService.updateArmorEffect(player);
+            playerService.updatePlayer(player);
+            saveOrUpdateInventory(inventory);
+            messageService.sendInventoryMessage(chatId, inventory);
             return true;
         }
         return false;
@@ -107,12 +115,13 @@ public class InventoryService {
             messageService.sendInventoryItemMessage(chatId, item, CallbackType.INVENTORY, Optional.empty());
             return false;
         }
-        val result = unEquipItem(item, inventory);
-        if (result) {
-            player.removeItemEffects(item.getEffects());
+        if (inventory.unEquip(item) && (item.getEffects().isEmpty() || player.removeEffects(item.getEffects()))) {
+            effectService.updateArmorEffect(player);
+            saveOrUpdateInventory(inventory);
+            messageService.sendInventoryMessage(chatId, inventory);
+            return true;
         }
-        messageService.sendInventoryMessage(chatId, inventory);
-        return true;
+        return false;
     }
 
     /**
@@ -122,14 +131,17 @@ public class InventoryService {
      * @return true if item successfully sold
      */
     public boolean sellItem(Long chatId, String itemId) {
-        val player = playerService.getPlayer(chatId);
+        var player = playerService.getPlayer(chatId);
         val item = itemService.findItem(chatId, itemId);
         val inventory = player.getInventory();
-        val result = inventory.removeItem(item);
-        if (result) {
-            player.removeItemEffects(item.getEffects());
+        val isEquipped = inventory.isEquipped(item);
+        if (inventory.removeItem(item)) {
             player.addGold(item.getSellingPrice());
             saveOrUpdateInventory(inventory);
+            if (isEquipped && !item.getEffects().isEmpty()) {
+                 player.removeEffects(item.getEffects());
+                 player = effectService.updateArmorEffect(player);
+            }
             playerService.updatePlayer(player);
             messageService.sendMerchantSellMenuMessage(chatId, player);
             return true;
@@ -190,73 +202,5 @@ public class InventoryService {
 
     private Weapon getDefaultWeapon(Long chatId) {
         return itemService.getMostLightWeightMainWeapon(chatId);
-    }
-
-    private boolean equipItem(Inventory inventory, Item item) {
-        if (isNull(item)) {
-            return false;
-        }
-        return switch (item.getItemType()) {
-            case WEAPON -> processWeaponEquip(inventory, (Weapon) item);
-            case WEARABLE -> processWearableEquip(inventory, (Wearable) item);
-            case USABLE -> processUsable(inventory);
-        };
-    }
-
-    private boolean unEquipItem(Item item, Inventory inventory) {
-        val unEquippedItem = inventory.unEquip(item);
-        if (unEquippedItem.isPresent() && inventory.addItem(unEquippedItem.get())) {
-            saveOrUpdateInventory(inventory);
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    private boolean processUsable(Inventory inventory) {
-        //TODO: consider mocking (since considering using Usables directly from inventory list
-        return true;
-    }
-
-    private boolean processWearableEquip(Inventory inventory, Wearable wearable) {
-        switch (wearable.getAttributes().getWearableType()) {
-            case HELMET -> inventory.setHelmet(wearable);
-            case VEST -> inventory.setVest(wearable);
-            case GLOVES -> inventory.setGloves(wearable);
-            case BOOTS -> inventory.setBoots(wearable);
-        }
-        inventory.getItems().remove(wearable);
-        saveOrUpdateInventory(inventory);
-        return true;
-    }
-
-    //TODO: add size constraint and write more test cases
-    private boolean processWeaponEquip(Inventory inventory, Weapon weapon) {
-        switch (weapon.getAttributes().getHandling()) {
-            case SINGLE_HANDED -> {
-                if (nonNull(inventory.getPrimaryWeapon())) {
-                    if (nonNull(inventory.getSecondaryWeapon())) {
-                        inventory.addItem(inventory.getSecondaryWeapon());
-                    }
-                    inventory.setSecondaryWeapon(weapon);
-                } else {
-                    inventory.setPrimaryWeapon(weapon);
-                }
-            }
-            case TWO_HANDED -> {
-                if (nonNull(inventory.getPrimaryWeapon())) {
-                    inventory.addItem(inventory.getPrimaryWeapon());
-                    inventory.setPrimaryWeapon(null);
-                }
-                if (nonNull(inventory.getSecondaryWeapon())) {
-                    inventory.addItem(inventory.getSecondaryWeapon());
-                    inventory.setSecondaryWeapon(null);
-                }
-                inventory.setPrimaryWeapon(weapon);
-            }
-        }
-        inventory.getItems().remove(weapon);
-        saveOrUpdateInventory(inventory);
-        return true;
     }
 }

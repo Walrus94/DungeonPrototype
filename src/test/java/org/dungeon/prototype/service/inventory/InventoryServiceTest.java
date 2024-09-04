@@ -3,8 +3,6 @@ package org.dungeon.prototype.service.inventory;
 import lombok.val;
 import org.dungeon.prototype.model.document.item.ItemDocument;
 import org.dungeon.prototype.model.document.item.ItemType;
-import org.dungeon.prototype.model.document.item.specs.WeaponSpecs;
-import org.dungeon.prototype.model.document.item.specs.WearableSpecs;
 import org.dungeon.prototype.model.document.player.InventoryDocument;
 import org.dungeon.prototype.model.inventory.Inventory;
 import org.dungeon.prototype.model.inventory.Item;
@@ -22,6 +20,7 @@ import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.repository.InventoryRepository;
 import org.dungeon.prototype.service.BaseServiceUnitTest;
 import org.dungeon.prototype.service.PlayerService;
+import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.item.ItemService;
 import org.dungeon.prototype.service.message.MessageService;
 import org.dungeon.prototype.service.room.RoomService;
@@ -37,10 +36,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.dungeon.prototype.TestData.getPlayer;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -59,6 +55,8 @@ class InventoryServiceTest extends BaseServiceUnitTest {
     private ItemService itemService;
     @Mock
     private RoomService roomService;
+    @Mock
+    private EffectService effectService;
     @Mock
     private MessageService messageService;
     @Mock
@@ -91,13 +89,11 @@ class InventoryServiceTest extends BaseServiceUnitTest {
         //TODO: replace with argument catcher
         val inventoryDocument = new InventoryDocument();
         val vestDocument = new ItemDocument();
-        vestDocument.setSpecs(new WearableSpecs());
         vestDocument.setEffects(new ArrayList<>());
         vestDocument.setItemType(ItemType.WEARABLE);
         vestDocument.setAttributes(wearableAttribute);
         inventoryDocument.setVest(vestDocument);
         val weaponDocument = new ItemDocument();
-        weaponDocument.setSpecs(new WeaponSpecs());
         weaponDocument.setEffects(new ArrayList<>());
         weaponDocument.setItemType(ItemType.WEAPON);
         weaponDocument.setAttributes(weaponAttributes);
@@ -152,27 +148,27 @@ class InventoryServiceTest extends BaseServiceUnitTest {
         wearableAttributes.setQuality(Quality.COMMON);
         wearableAttributes.setWearableMaterial(WearableMaterial.CLOTH);
         item.setAttributes(wearableAttributes);
+        item.setEffects(new ArrayList<>());
         player.getInventory().addItem(item);
 
         val inventoryDocument = new InventoryDocument();
 
         when(playerService.getPlayer(CHAT_ID)).thenReturn(player);
         when(itemService.findItem(CHAT_ID, ITEM_ID)).thenReturn(item);
-        ArgumentCaptor<InventoryDocument> inventoryArgumentCaptor = ArgumentCaptor.forClass(InventoryDocument.class);
-        when(inventoryRepository.save(inventoryArgumentCaptor.capture())).thenReturn(inventoryDocument);
+        when(effectService.updateArmorEffect(player)).thenReturn(player);
+        when(inventoryRepository.save(any())).thenReturn(inventoryDocument);
 
         val actualResult = inventoryService.equipItem(CHAT_ID, ITEM_ID);
 
-        ArgumentCaptor<Item> itemArgumentCaptor = ArgumentCaptor.forClass(Item.class);
-        verify(messageService).sendInventoryItemMessage(eq(CHAT_ID), itemArgumentCaptor.capture(), eq(CallbackType.INVENTORY), eq(Optional.empty()));
+        ArgumentCaptor<Inventory> inventoryArgumentCaptor = ArgumentCaptor.forClass(Inventory.class);
+        verify(playerService).updatePlayer(player);
+        verify(messageService).sendInventoryMessage(eq(CHAT_ID), inventoryArgumentCaptor.capture());
 
-        val actualItem = itemArgumentCaptor.getValue();
 
         assertTrue(actualResult);
 
         val actualInventory = inventoryArgumentCaptor.getValue();
         assertEquals(item, player.getInventory().getVest());
-        assertEquals(item, actualItem);
         assertTrue(actualInventory.getItems().isEmpty());
         assertEquals(ITEM_ID, actualInventory.getVest().getId());
     }
@@ -192,6 +188,7 @@ class InventoryServiceTest extends BaseServiceUnitTest {
 
         assertTrue(actualResult);
 
+        verify(effectService).updateArmorEffect(player);
         verify(messageService).sendInventoryMessage(eq(CHAT_ID), any(Inventory.class));
         val actualInventory = inventoryDocumentArgumentCaptor.getValue();
         assertEquals(1L, actualInventory.getItems().stream().filter(itemDocument -> ITEM_ID.equals(itemDocument.getId())).count());

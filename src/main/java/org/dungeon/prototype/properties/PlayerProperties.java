@@ -12,4 +12,8 @@ import java.util.EnumMap;
 @ConfigurationProperties("player")
 public class PlayerProperties {
     EnumMap<PlayerAttribute, Integer> attributes;
+    Integer baseHp;
+    Integer attributeHpFactor;
+    Integer baseMana;
+    Integer attributeManaFactor;
 }

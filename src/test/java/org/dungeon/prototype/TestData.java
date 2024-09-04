@@ -4,6 +4,10 @@ import lombok.experimental.UtilityClass;
 import lombok.val;
 import org.dungeon.prototype.model.Level;
 import org.dungeon.prototype.model.Point;
+import org.dungeon.prototype.model.effect.ExpirableEffect;
+import org.dungeon.prototype.model.effect.attributes.Action;
+import org.dungeon.prototype.model.effect.attributes.EffectApplicant;
+import org.dungeon.prototype.model.effect.attributes.EffectAttribute;
 import org.dungeon.prototype.model.inventory.Inventory;
 import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.inventory.attributes.weapon.Handling;
@@ -19,15 +23,12 @@ import org.dungeon.prototype.model.monster.MonsterAttack;
 import org.dungeon.prototype.model.monster.MonsterAttackType;
 import org.dungeon.prototype.model.monster.MonsterClass;
 import org.dungeon.prototype.model.player.Player;
+import org.dungeon.prototype.model.player.PlayerAttack;
 import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.content.Merchant;
 import org.dungeon.prototype.model.ui.level.LevelMap;
 
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static org.dungeon.prototype.model.Direction.E;
 import static org.dungeon.prototype.model.Direction.N;
@@ -95,6 +96,14 @@ public class TestData {
                 LUCK, 2
         )));
         player.setInventory(getInventory());
+        PlayerAttack playerAttack = new PlayerAttack();
+        playerAttack.setAttack(5);
+        playerAttack.setAttackType(SLASH);
+        playerAttack.setCriticalHitChance(0.0);
+        playerAttack.setCriticalHitMultiplier(1.0);
+        playerAttack.setChanceToMiss(0.0);
+        playerAttack.setChanceToKnockOut(0.0);
+        player.setPrimaryAttack(playerAttack);
         player.setDefense(0);
         player.setMaxDefense(10);
         player.setXp(100L);
@@ -154,5 +163,24 @@ public class TestData {
         items.add(item3);
 
         return items;
+    }
+
+    public static List<ExpirableEffect> getMonsterEffects() {
+        List<ExpirableEffect> effects = new ArrayList<>();
+        ExpirableEffect knockOut = new ExpirableEffect();
+        knockOut.setAttribute(EffectAttribute.MOVING);
+        knockOut.setApplicableTo(EffectApplicant.MONSTER);
+        knockOut.setTurnsLasts(3);
+        knockOut.setIsAccumulated(false);
+        effects.add(knockOut);
+
+        ExpirableEffect regeneration = new ExpirableEffect();
+        regeneration.setAttribute(EffectAttribute.HEALTH);
+        regeneration.setApplicableTo(EffectApplicant.MONSTER);
+        regeneration.setTurnsLasts(2);
+        regeneration.setIsAccumulated(true);
+        regeneration.setAmount(5);
+        regeneration.setAction(Action.ADD);
+        return effects;
     }
 }

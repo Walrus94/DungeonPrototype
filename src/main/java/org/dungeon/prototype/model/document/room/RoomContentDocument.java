@@ -42,7 +42,6 @@ public class RoomContentDocument {
     @DBRef
     private List<ItemDocument> items;
 
-    @DBRef
     private EffectDocument effect;
 
     private Double chanceToBreakWeapon;

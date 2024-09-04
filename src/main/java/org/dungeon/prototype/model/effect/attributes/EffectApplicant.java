@@ -1,4 +1,4 @@
-package org.dungeon.prototype.model.effect;
+package org.dungeon.prototype.model.effect.attributes;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 import org.dungeon.prototype.model.inventory.attributes.EnumAttribute;

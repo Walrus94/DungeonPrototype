@@ -3,14 +3,15 @@ package org.dungeon.prototype.model.monster;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.apache.commons.math3.util.FastMath;
-import org.dungeon.prototype.model.effect.MonsterEffect;
+import org.dungeon.prototype.model.effect.ExpirableEffect;
 import org.dungeon.prototype.util.GenerationUtil;
 
 import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static org.dungeon.prototype.model.effect.attributes.MonsterEffectAttribute.MOVING;
+import static org.dungeon.prototype.model.effect.attributes.EffectAttribute.*;
+
 
 @Data
 @NoArgsConstructor
@@ -26,7 +27,7 @@ public class Monster {
     private MonsterAttack primaryAttack;
     private MonsterAttack secondaryAttack;
 
-    private List<MonsterEffect> effects;
+    private List<ExpirableEffect> effects;
     private LinkedList<MonsterAttack> attackPattern;
 
     private MonsterAttack currentAttack;
@@ -48,9 +49,9 @@ public class Monster {
         hp = FastMath.max(hp - amount, 0);
     }
 
-    public void addEffect(MonsterEffect monsterEffect) {
+    public void addEffect(ExpirableEffect monsterEffect) {
         switch (monsterEffect.getAttribute()) {
-            case MONSTER_ATTACK, MONSTER_HEALTH -> effects.add(monsterEffect);
+            case ATTACK, HEALTH -> effects.add(monsterEffect);
             case MOVING -> {
                 if (effects.stream().anyMatch(effect -> MOVING.equals(effect.getAttribute()))) {
                     effects.stream().filter(effect -> MOVING.equals(effect.getAttribute()))

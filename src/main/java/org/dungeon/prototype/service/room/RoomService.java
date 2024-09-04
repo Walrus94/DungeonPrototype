@@ -11,6 +11,7 @@ import org.dungeon.prototype.repository.RoomRepository;
 import org.dungeon.prototype.repository.converters.mapstruct.RoomContentMapper;
 import org.dungeon.prototype.repository.converters.mapstruct.RoomMapper;
 import org.dungeon.prototype.service.PlayerService;
+import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.message.MessageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -28,6 +29,8 @@ public class RoomService {
     RoomRepository roomRepository;
     @Autowired
     RoomContentRepository roomContentRepository;
+    @Autowired
+    EffectService effectService;
     @Autowired
     MessageService messageService;
 
@@ -136,7 +139,8 @@ public class RoomService {
      * @return true if room message successfully sent after update
      */
     public boolean restoreArmor(Long chatId) {
-        val player = playerService.getPlayer(chatId);
+        var player = playerService.getPlayer(chatId);
+        player = effectService.updateArmorEffect(player);
         player.restoreArmor();
         playerService.updatePlayer(player);
         val currentRoom = getRoomByIdAndChatId(chatId, player.getCurrentRoomId());

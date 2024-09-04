@@ -2,9 +2,6 @@ package org.dungeon.prototype.service.room;
 
 import lombok.val;
 import org.dungeon.prototype.model.document.item.ItemDocument;
-import org.dungeon.prototype.model.document.item.specs.UsableSpecs;
-import org.dungeon.prototype.model.document.item.specs.WeaponSpecs;
-import org.dungeon.prototype.model.document.item.specs.WearableSpecs;
 import org.dungeon.prototype.model.document.room.RoomContentDocument;
 import org.dungeon.prototype.model.document.room.RoomDocument;
 import org.dungeon.prototype.model.inventory.Item;
@@ -17,6 +14,7 @@ import org.dungeon.prototype.repository.RoomContentRepository;
 import org.dungeon.prototype.repository.RoomRepository;
 import org.dungeon.prototype.service.BaseServiceUnitTest;
 import org.dungeon.prototype.service.PlayerService;
+import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.message.MessageService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -45,6 +43,8 @@ class RoomServiceTest extends BaseServiceUnitTest {
     RoomRepository roomRepository;
     @Mock
     RoomContentRepository roomContentRepository;
+    @Mock
+    EffectService effectService;
     @Mock
     MessageService messageService;
 
@@ -159,11 +159,6 @@ class RoomServiceTest extends BaseServiceUnitTest {
             val result = new ItemDocument();
             result.setItemType(item.getItemType());
             result.setId(item.getId());
-            result.setSpecs(switch (item.getItemType()) {
-                case WEARABLE -> new WearableSpecs();
-                case WEAPON -> new WeaponSpecs();
-                case USABLE -> new UsableSpecs();
-            });
             return result;
         }).collect(Collectors.toList()));
         room.setRoomContent(roomContentDocument);
@@ -190,11 +185,6 @@ class RoomServiceTest extends BaseServiceUnitTest {
             val result = new ItemDocument();
             result.setItemType(item.getItemType());
             result.setId(item.getId());
-            result.setSpecs(switch (item.getItemType()) {
-                case WEARABLE -> new WearableSpecs();
-                case WEAPON -> new WeaponSpecs();
-                case USABLE -> new UsableSpecs();
-            });
             return result;
         }).collect(Collectors.toList()));
         room.setRoomContent(roomContent);
@@ -221,11 +211,6 @@ class RoomServiceTest extends BaseServiceUnitTest {
             val result = new ItemDocument();
             result.setItemType(item.getItemType());
             result.setId(item.getId());
-            result.setSpecs(switch (item.getItemType()) {
-                case WEARABLE -> new WearableSpecs();
-                case WEAPON -> new WeaponSpecs();
-                case USABLE -> new UsableSpecs();
-            });
             return result;
         }).collect(Collectors.toList()));
         room.setRoomContent(roomContent);
@@ -249,8 +234,8 @@ class RoomServiceTest extends BaseServiceUnitTest {
         val player = getPlayer(CHAT_ID, CURRENT_ROOM_ID);
         val room = new RoomDocument();
         room.setId(CURRENT_ROOM_ID);
-
         when(playerService.getPlayer(CHAT_ID)).thenReturn(player);
+        when(effectService.updateArmorEffect(player)).thenReturn(player);
         when(playerService.updatePlayer(player)).thenReturn(player);
         when(roomRepository.findByChatIdAndId(CHAT_ID, CURRENT_ROOM_ID)).thenReturn(room);
 

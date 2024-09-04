@@ -124,9 +124,9 @@ public class KeyboardService {
         switch (roomContent.getRoomType()) {
             case TREASURE -> row3.add(getButton(TREASURE_OPEN));
             case WEREWOLF, SWAMP_BEAST, VAMPIRE, DRAGON, ZOMBIE -> {
-                row1.add(getButton(ATTACK, player.getPrimaryAttack()));
+                row1.add(getButton(ATTACK, player.getPrimaryAttack().getAttack()));
                 if (Objects.nonNull(player.getInventory().getSecondaryWeapon())) {
-                    row1.add(getButton(SECONDARY_ATTACK, player.getSecondaryAttack()));
+                    row1.add(getButton(SECONDARY_ATTACK, player.getSecondaryAttack().getAttack()));
                 }
             }
             case HEALTH_SHRINE, MANA_SHRINE -> row3.add(getButton(SHRINE));

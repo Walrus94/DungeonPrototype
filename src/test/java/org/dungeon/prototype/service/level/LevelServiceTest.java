@@ -7,9 +7,9 @@ import org.dungeon.prototype.model.Point;
 import org.dungeon.prototype.model.document.level.LevelDocument;
 import org.dungeon.prototype.model.document.room.RoomContentDocument;
 import org.dungeon.prototype.model.document.room.RoomDocument;
-import org.dungeon.prototype.model.effect.Action;
-import org.dungeon.prototype.model.effect.DirectPlayerEffect;
-import org.dungeon.prototype.model.effect.attributes.PlayerEffectAttribute;
+import org.dungeon.prototype.model.effect.ExpirableEffect;
+import org.dungeon.prototype.model.effect.attributes.Action;
+import org.dungeon.prototype.model.effect.attributes.EffectAttribute;
 import org.dungeon.prototype.model.inventory.Inventory;
 import org.dungeon.prototype.model.monster.Monster;
 import org.dungeon.prototype.model.monster.MonsterClass;
@@ -24,6 +24,7 @@ import org.dungeon.prototype.repository.LevelRepository;
 import org.dungeon.prototype.repository.projections.LevelNumberProjection;
 import org.dungeon.prototype.service.BaseServiceUnitTest;
 import org.dungeon.prototype.service.PlayerService;
+import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.inventory.InventoryService;
 import org.dungeon.prototype.service.item.ItemService;
 import org.dungeon.prototype.service.level.generation.LevelGenerationService;
@@ -75,6 +76,8 @@ class LevelServiceTest extends BaseServiceUnitTest {
     @Mock
     private PlayerService playerService;
     @Mock
+    private EffectService effectService;
+    @Mock
     private LevelRepository levelRepository;
     @Mock
     private MessageService messageService;
@@ -88,6 +91,8 @@ class LevelServiceTest extends BaseServiceUnitTest {
         val player = getPlayer(CHAT_ID);
         val level = TestData.getLevel();
         when(playerService.getPlayerPreparedForNewGame(CHAT_ID, inventory)).thenReturn(player);
+        when(effectService.updatePlayerEffects(player)).thenReturn(player);
+        when(effectService.updateArmorEffect(player)).thenReturn(player);
         when(levelGenerationService.generateLevel(CHAT_ID, player, 1)).thenReturn(level);
 
         val document = new LevelDocument();
@@ -134,6 +139,7 @@ class LevelServiceTest extends BaseServiceUnitTest {
                 W, false)));
         document.setStart(start);
         when(levelRepository.save(any(LevelDocument.class))).thenReturn(document);
+        when(effectService.updateArmorEffect(player)).thenReturn(player);
         when(messageService.sendRoomMessage(CHAT_ID, player, level.getStart())).thenReturn(true);
 
         val actualResult = levelService.nextLevel(CHAT_ID);
@@ -316,8 +322,8 @@ class LevelServiceTest extends BaseServiceUnitTest {
         level.setGrid(grid);
         val room = new Room();
         val roomContent = new HealthShrine();
-        DirectPlayerEffect effect = new DirectPlayerEffect();
-        effect.setAttribute(PlayerEffectAttribute.HEALTH);
+        ExpirableEffect effect = new ExpirableEffect();
+        effect.setAttribute(EffectAttribute.HEALTH);
         effect.setIsAccumulated(true);
         effect.setTurnsLasts(3);
         effect.setAmount(10);

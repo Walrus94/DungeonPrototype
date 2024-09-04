@@ -4,9 +4,8 @@ import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.annotations.aspect.ChatStateUpdate;
-import org.dungeon.prototype.model.effect.Expirable;
-import org.dungeon.prototype.model.effect.ItemEffect;
-import org.dungeon.prototype.model.effect.PlayerEffect;
+import org.dungeon.prototype.model.effect.Effect;
+import org.dungeon.prototype.model.effect.ExpirableEffect;
 import org.dungeon.prototype.model.inventory.Inventory;
 import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.inventory.items.Weapon;
@@ -67,6 +66,8 @@ public class MessageService {
     private Integer barBlocks;
     @Value("${messaging.xp-bar-blocks}")
     private Integer xpBarBlocks;
+    @Value("${messaging.stat-bar-blocks}")
+    private Integer statBarBlocks;
     @Autowired
     private MessageSender messageSender;
     @Autowired
@@ -188,11 +189,11 @@ public class MessageService {
 
     private String getRoomMessageCaption(Player player, Monster monster) {
         val emoji = messagingConstants.getEmoji();
-        return emoji.get(HEART) + " : " + generateBar(player.getHp(), player.getMaxHp(), emoji.get(RED_SQUARE)) + "\n" +
-                " -> " + emoji.get(BLACK_HEART) + " : " + generateBar(monster.getHp(), monster.getMaxHp(), emoji.get(RED_SQUARE)) + "\n" +
-                emoji.get(DIAMOND) + ": " + generateBar(player.getMana(), player.getMaxMana(), emoji.get(BLUE_SQUARE)) + "\n" +
-                " -> " + emoji.get(AXE) + monster.getPrimaryAttack().getAttack() + "\n" +
-                " -> " + emoji.get(AXE) + monster.getSecondaryAttack().getAttack() + "\n" +
+        return emoji.get(HEART) + generateBar(player.getHp(), player.getMaxHp(), emoji.get(RED_SQUARE), barBlocks) +
+                " -> " + emoji.get(BLACK_HEART) + " " + generateBar(monster.getHp(), monster.getMaxHp(), emoji.get(RED_SQUARE), barBlocks) + "\n" +
+                emoji.get(DIAMOND) + ": " + generateBar(player.getMana(), player.getMaxMana(), emoji.get(BLUE_SQUARE), barBlocks) +
+                //TODO: consider moving to attack buttons
+                " -> " + emoji.get(AXE) + monster.getPrimaryAttack().getAttack() + "\n" + //TODO: use current attack after callback handling improvement
                 emoji.get(SHIELD) + ": " + player.getDefense() + "\n" +
                 "Gold: " + player.getGold() + " " + emoji.get(TREASURE) + "\n" +
                 emoji.get(STONKS) + ": " + generateXpBar(player.getXp(), player.getPlayerLevel(), player.getNextLevelXp());
@@ -200,9 +201,9 @@ public class MessageService {
 
     private String getRoomMessageCaption(Player player) {
         val emoji = messagingConstants.getEmoji();
-        return emoji.get(HEART) + ": " + generateBar(player.getHp(), player.getMaxHp(), emoji.get(RED_SQUARE)) + "\n" +
-                emoji.get(DIAMOND) + ": " + generateBar(player.getMana(), player.getMaxMana(), emoji.get(BLUE_SQUARE)) + "\n" +
-                emoji.get(SHIELD) + ": " + player.getDefense() + "\n" +
+        return emoji.get(HEART) + " " + generateBar(player.getHp(), player.getMaxHp(), emoji.get(RED_SQUARE), barBlocks) + "\n" +
+                emoji.get(DIAMOND) + " " + generateBar(player.getMana(), player.getMaxMana(), emoji.get(BLUE_SQUARE), barBlocks) + "\n" +
+                emoji.get(SHIELD) + " " + player.getDefense() + "\n" +
                 "Gold: " + player.getGold() + " " + emoji.get(TREASURE) + "\n" +
                 emoji.get(STONKS) + ": " + generateXpBar(player.getXp(), player.getPlayerLevel(), player.getNextLevelXp());
     }
@@ -225,8 +226,8 @@ public class MessageService {
         return itemDescription + effectsDescription;
     }
 
-    private static String getEffectsDescription(List<ItemEffect> effects) {
-        return "Effects: \n" + effects.stream().map(ItemEffect::toString).collect(Collectors.joining("\n"));
+    private static <T extends Effect> String getEffectsDescription(List<T> effects) {
+        return "Effects: \n" + effects.stream().map(Effect::toString).collect(Collectors.joining("\n"));
     }
 
     @NotNull
@@ -272,33 +273,33 @@ public class MessageService {
 
     private String getPlayerStatsMessageCaption(Player player) {
         val emoji = messagingConstants.getEmoji();
-        val itemEffects = player.getEffects().stream()
-                .filter(effect -> effect instanceof ItemEffect).toList();
+        val permanentEffects = player.getEffects().stream()
+                .filter(Effect::isPermanent).toList();
         val expirableEffects = player.getEffects().stream()
                 .filter(effect -> !effect.isPermanent()).toList();
         return "*Player's stats:* \n" +
-                emoji.get(HEART) + ": " + generateBar(player.getHp(), player.getMaxHp(), emoji.get(RED_SQUARE)) + "\n" +
-                emoji.get(DIAMOND) + ": " + generateBar(player.getMana(), player.getMaxMana(), emoji.get(BLUE_SQUARE)) + "\n" +
+                emoji.get(HEART) + " " + generateBar(player.getHp(), player.getMaxHp(), emoji.get(RED_SQUARE), statBarBlocks) + "\n" +
+                emoji.get(DIAMOND) + " " + generateBar(player.getMana(), player.getMaxMana(), emoji.get(BLUE_SQUARE), statBarBlocks) + "\n" +
                 "_Basic Attributes:_ " +
                 player.getAttributes().entrySet().stream()
                         .map(entry -> "- " + entry.getKey().toString() + ": " + entry.getValue())
                         .collect(Collectors.joining("\n", "\n", "\n")) +
                 emoji.get(SHIELD) + ": " + player.getDefense() + " / " + player.getMaxDefense() + "\n" +
-                emoji.get(SWORD) + ": " + player.getPrimaryAttack() + "\n" +
-                (nonNull(player.getSecondaryAttack()) && player.getSecondaryAttack() > 0 ? emoji.get(DAGGER) + player.getSecondaryAttack() + "\n" : "")  +
-                (!itemEffects.isEmpty() ? "_Item effects:_ " +
-                        itemEffects.stream()
-                                .map(PlayerEffect::toString)
+                emoji.get(SWORD) + ": " + player.getPrimaryAttack().getAttack() + "\n" +
+                (nonNull(player.getSecondaryAttack()) && player.getSecondaryAttack().getAttack() > 0 ? emoji.get(DAGGER) + player.getSecondaryAttack().getAttack() + "\n" : "")  +
+                (!permanentEffects.isEmpty() ? "_Item effects:_ " +
+                        permanentEffects.stream()
+                                .map(Effect::toString)
                                 .collect(Collectors.joining("\n", "\n", "\n")) : "") +
                 (!expirableEffects.isEmpty() ? "_Expirable effects:_ " +
                         player.getEffects().stream()
                                 .filter(effect -> !effect.isPermanent())
-                                .map(effect -> effect + ", expires in " + ((Expirable) effect).getTurnsLasts() + " turns")
+                                .map(effect -> effect + ", expires in " + ((ExpirableEffect) effect).getTurnsLasts() + " turns")
                                 .collect(Collectors.joining("\n", "\n", "\n")) : "") +
                 emoji.get(STONKS) + ": " + player.getXp() + " xp " + generateXpBar(player.getXp(), player.getPlayerLevel(), player.getNextLevelXp());
     }
 
-    private String generateBar(Integer current, Integer max, String emoji) {
+    private String generateBar(Integer current, Integer max, String emoji, Integer barBlocks) {
         val emojis = messagingConstants.getEmoji();
         int filledBlocks = (int) ((double) current / max * barBlocks);
         int emptyBlocks = barBlocks - filledBlocks;

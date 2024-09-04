@@ -1,14 +1,14 @@
-package org.dungeon.prototype.model.document.item.specs;
+package org.dungeon.prototype.model.player;
 
 import lombok.Data;
-import org.dungeon.prototype.model.document.item.ItemSpecs;
+import org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttackType;
 
 @Data
-public class WeaponSpecs implements ItemSpecs {
+public class PlayerAttack {
     private Integer attack;
+    private WeaponAttackType attackType;
     private Double criticalHitChance;
     private Double criticalHitMultiplier;
     private Double chanceToMiss;
     private Double chanceToKnockOut;
-    private Boolean isCompleteDragonBone;
 }

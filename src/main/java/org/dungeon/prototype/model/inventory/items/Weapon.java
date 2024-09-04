@@ -3,7 +3,7 @@ package org.dungeon.prototype.model.inventory.items;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.dungeon.prototype.model.document.item.ItemType;
-import org.dungeon.prototype.model.effect.ItemEffect;
+import org.dungeon.prototype.model.effect.PermanentEffect;
 import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttributes;
 
@@ -21,7 +21,7 @@ public class Weapon extends Item {
     private Double chanceToKnockOut;
     private Boolean isCompleteDragonBone;
 
-    private List<ItemEffect> effects;
+    private List<PermanentEffect> effects;
 
     @Override
     public ItemType getItemType() {

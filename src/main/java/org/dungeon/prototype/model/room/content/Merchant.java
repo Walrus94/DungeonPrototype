@@ -9,7 +9,7 @@ import org.dungeon.prototype.model.room.RoomType;
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = false)
-public class Merchant extends BonusRoom {
+public class Merchant extends ItemsRoom {
     @Override
     public Integer getRoomContentWeight() {
         return items.stream().mapToInt(Item::getWeight).sum();

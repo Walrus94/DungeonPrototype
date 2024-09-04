@@ -15,6 +15,7 @@ import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.repository.LevelRepository;
 import org.dungeon.prototype.repository.converters.mapstruct.LevelMapper;
 import org.dungeon.prototype.service.PlayerService;
+import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.inventory.InventoryService;
 import org.dungeon.prototype.service.item.ItemService;
 import org.dungeon.prototype.service.level.generation.LevelGenerationService;
@@ -48,6 +49,8 @@ public class LevelService {
     @Autowired
     private MessageService messageService;
     @Autowired
+    private EffectService effectService;
+    @Autowired
     private ItemService itemService;
     @Autowired
     private InventoryService inventoryService;
@@ -61,10 +64,12 @@ public class LevelService {
         itemService.generateItems(chatId);
         val defaultInventory = inventoryService.getDefaultInventory(chatId);
         var player = playerService.getPlayerPreparedForNewGame(chatId, defaultInventory);
+        player = effectService.updatePlayerEffects(player);
+        player = effectService.updateArmorEffect(player);
         log.debug("Player loaded: {}", player);
         val level = startNewLevel(chatId, player, 1);
         if (nonNull(level)) {
-            log.debug("Player started level 1, current point: {}", level.getStart().getPoint());
+            log.debug("Player started level 1, current point: {}\nPlayer: {}", level.getStart().getPoint(), player);
             return messageService.sendRoomMessage(chatId, player, level.getStart());
         } else {
             return false;
@@ -77,9 +82,10 @@ public class LevelService {
      * @return true if playe successfully progressed to next level
      */
     public boolean nextLevel(Long chatId) {
-        val player = playerService.getPlayer(chatId);
+        var player = playerService.getPlayer(chatId);
         val number = getLevelNumber(chatId) + 1;
         val level = startNewLevel(chatId, player, number);
+        player = effectService.updateArmorEffect(player);
         player.restoreArmor();
         playerService.updatePlayer(player);
         log.debug("Player started level {}, current point, {}", number, level.getStart().getPoint());

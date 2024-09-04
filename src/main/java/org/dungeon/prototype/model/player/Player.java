@@ -3,13 +3,9 @@ package org.dungeon.prototype.model.player;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import lombok.val;
 import org.dungeon.prototype.model.Direction;
 import org.dungeon.prototype.model.Point;
-import org.dungeon.prototype.model.effect.DirectPlayerEffect;
-import org.dungeon.prototype.model.effect.ItemEffect;
-import org.dungeon.prototype.model.effect.PlayerEffect;
-import org.dungeon.prototype.model.effect.attributes.PlayerEffectAttribute;
+import org.dungeon.prototype.model.effect.Effect;
 import org.dungeon.prototype.model.inventory.Inventory;
 
 import java.util.EnumMap;
@@ -17,8 +13,6 @@ import java.util.List;
 
 import static java.util.Objects.isNull;
 import static org.apache.commons.math3.util.FastMath.max;
-import static org.dungeon.prototype.model.effect.Action.ADD;
-import static org.dungeon.prototype.model.effect.Action.MULTIPLY;
 
 @Data
 @Slf4j
@@ -40,13 +34,15 @@ public class Player {
     private Integer maxMana;
     private Integer defense;
     private Integer maxDefense;
-    private Integer primaryAttack;
-    private Integer secondaryAttack;
+    private PlayerAttack primaryAttack;
+    private PlayerAttack secondaryAttack;
+    private Double chanceToDodge;
+    private Double xpBonus = 1.0;
+    private Double goldBonus = 1.0;
     private Inventory inventory;
-    private List<PlayerEffect> effects;
+    private List<Effect> effects;
     private EnumMap<PlayerAttribute, Integer> attributes;
 
-    //TODO: move to service and use queries through repository
     public void addXp(Integer xpReward) {
         xp += xpReward;
         log.debug("Rewarded xp: {}, total: {}", xpReward, xp);
@@ -80,7 +76,7 @@ public class Player {
         defense = maxDefense;
     }
 
-    public void addEffects(List<PlayerEffect> effects) {
+    public void addEffects(List<Effect> effects) {
         if (isNull(this.effects)) {
             this.effects = effects;
         } else {
@@ -88,34 +84,7 @@ public class Player {
         }
     }
 
-    public void removeItemEffects(List<ItemEffect> effects) {
-        effects.forEach(effect -> {
-            if (this.effects.remove(effect)) {
-                switch (effect.getAction()) {
-                    case ADD -> addCounterEffect(effect.getAttribute(), effect.getAmount());
-                    case MULTIPLY -> addCounterEffect(effect.getAttribute(), effect.getMultiplier());
-                }
-            }
-        });
-    }
-
-    private boolean addCounterEffect(PlayerEffectAttribute attribute, Double multiplier) {
-        val counterEffect = new DirectPlayerEffect();
-        counterEffect.setAction(MULTIPLY);
-        counterEffect.setAttribute(attribute);
-        counterEffect.setMultiplier(1 / multiplier);
-        counterEffect.setTurnsLasts(1);
-        counterEffect.setIsAccumulated(true);
-        return this.effects.add(counterEffect);
-    }
-
-    private boolean addCounterEffect(PlayerEffectAttribute attribute, Integer amount) {
-        val counterEffect = new DirectPlayerEffect();
-        counterEffect.setAction(ADD);
-        counterEffect.setAttribute(attribute);
-        counterEffect.setAmount(-amount);
-        counterEffect.setTurnsLasts(1);
-        counterEffect.setIsAccumulated(true);
-        return this.effects.add(counterEffect);
+    public <T extends Effect> boolean removeEffects(List<T> effects) {
+        return this.effects.removeAll(effects);
     }
 }

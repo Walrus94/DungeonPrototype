@@ -3,7 +3,7 @@ package org.dungeon.prototype.service;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.annotations.aspect.TurnUpdate;
-import org.dungeon.prototype.model.effect.MonsterEffect;
+import org.dungeon.prototype.model.effect.ExpirableEffect;
 import org.dungeon.prototype.model.monster.Monster;
 import org.dungeon.prototype.model.player.Player;
 import org.dungeon.prototype.model.room.content.MonsterRoom;
@@ -19,8 +19,8 @@ import org.springframework.stereotype.Service;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
-import static org.dungeon.prototype.model.effect.attributes.MonsterEffectAttribute.MOVING;
-import static org.dungeon.prototype.model.player.PlayerAttribute.POWER;
+import static org.dungeon.prototype.model.effect.attributes.EffectApplicant.MONSTER;
+import static org.dungeon.prototype.model.effect.attributes.EffectAttribute.MOVING;
 import static org.dungeon.prototype.properties.CallbackType.ATTACK;
 import static org.dungeon.prototype.util.RoomGenerationUtils.getMonsterRoomTypes;
 
@@ -44,7 +44,8 @@ public class BattleService {
     /**
      * Processes "attack" action, which performs attacking monster with selected weapon,
      * and his death or attack in response, which also may end up with death (of a player)
-     * @param chatId id of current chat
+     *
+     * @param chatId     id of current chat
      * @param attackType player's attack type, {@link CallbackType#ATTACK} or {@link CallbackType#SECONDARY_ATTACK}
      * @return true if processed with no exceptions
      */
@@ -83,7 +84,7 @@ public class BattleService {
 
         val monsterAttack = monster.getCurrentAttack();
         val inventory = player.getInventory();
-        val chanceToDodge = isNull(inventory.getBoots()) ? 0.0 : inventory.getBoots().getChanceToDodge();
+        val chanceToDodge = player.getChanceToDodge();
         log.debug("Chance to dodge: {}", chanceToDodge);
         if (RandomUtil.flipAdjustedCoin(chanceToDodge)) {
             log.debug("Monster attack dodged!");
@@ -99,7 +100,7 @@ public class BattleService {
         };
 
         if (player.getDefense() > 0) {
-            player.decreaseDefence(1);
+            player.decreaseDefence(diff);
             log.debug("Player's armor decreased by: {}", 1);
         } else {
             player.decreaseHp(diff);
@@ -108,43 +109,35 @@ public class BattleService {
     }
 
     private void playerAttacks(Monster monster, Player player, CallbackType attackType) {
-        val inventory = player.getInventory();
-        val weapon = ATTACK.equals(attackType) ? inventory.getPrimaryWeapon() :
-                inventory.getSecondaryWeapon();
-        Integer playerAttack;
-        if (isNull(weapon)) {
-            playerAttack = player.getAttributes().get(POWER);
-            log.debug("Player attacks with bare hands!");
-            monster.decreaseHp(playerAttack);
-            log.debug("Monster health decreased by {}", playerAttack);
-        } else {
-            playerAttack = player.getAttributes().get(POWER) + weapon.getAttack();
-            val chanceToMiss = weapon.getChanceToMiss();
-            log.debug("Chance to miss: {}", chanceToMiss);
-            if (RandomUtil.flipAdjustedCoin(chanceToMiss)) {
-                log.debug("Player missed!");
-                return;
-            }
-            val criticalHitChance = weapon.getCriticalHitChance();
-            log.debug("Critical hit chance: {}", criticalHitChance);
-
-            if (RandomUtil.flipAdjustedCoin(criticalHitChance)) {
-                log.debug("Critical hit by player");
-                playerAttack *= 2;//TODO: configure critical hit
-            }
-            val knockOutChance = weapon.getChanceToKnockOut();
-            log.debug("Knock out chance: {}", knockOutChance);
-            if (RandomUtil.flipAdjustedCoin(knockOutChance)) {
-                val knockOut = new MonsterEffect();
-                knockOut.setAttribute(MOVING);
-                knockOut.setTurnsLasts(3);//TODO: configure
-                monster.addEffect(knockOut);
-            }
-            log.debug("Player attacks with {}, attack type: {}", weapon.getName(), weapon.getAttributes().getWeaponAttackType());
-            val monsterDefenseRatioMap = battleProperties.getMonsterDefenseRatioMatrix().get(weapon.getAttributes().getWeaponAttackType()).getMonsterDefenseRatioMap();
-            val decreaseAmount = (int) (playerAttack * monsterDefenseRatioMap.get(monster.getMonsterClass()));
-            monster.decreaseHp(decreaseAmount);
-            log.debug("Monster health decreased by {}", decreaseAmount);
+        val attack = ATTACK.equals(attackType) ? player.getPrimaryAttack() :
+                player.getSecondaryAttack();
+        val chanceToMiss = attack.getChanceToMiss();
+        log.debug("Chance to miss: {}", chanceToMiss);
+        if (RandomUtil.flipAdjustedCoin(chanceToMiss)) {
+            log.debug("Player missed!");
+            return;
         }
+        var attackPower = attack.getAttack();
+        val criticalHitChance = attack.getCriticalHitChance();
+        log.debug("Critical hit chance: {}", criticalHitChance);
+
+        if (RandomUtil.flipAdjustedCoin(criticalHitChance)) {
+            log.debug("Critical hit by player");
+            attackPower = (int) (attackPower * attack.getCriticalHitMultiplier());
+        }
+        val knockOutChance = attack.getChanceToKnockOut();
+        log.debug("Knock out chance: {}", knockOutChance);
+        if (RandomUtil.flipAdjustedCoin(knockOutChance)) {
+            val knockOut = new ExpirableEffect();
+            knockOut.setApplicableTo(MONSTER);
+            knockOut.setAttribute(MOVING);
+            knockOut.setTurnsLasts(3);//TODO: configure
+            monster.addEffect(knockOut);
+        }
+        log.debug("Player attacks with attack type: {}", attack.getAttackType());
+        val monsterDefenseRatioMap = battleProperties.getMonsterDefenseRatioMatrix().get(attack.getAttackType()).getMonsterDefenseRatioMap();
+        val decreaseAmount = (int) (attackPower * monsterDefenseRatioMap.get(monster.getMonsterClass()));
+        monster.decreaseHp(decreaseAmount);
+        log.debug("Monster health decreased by {}", decreaseAmount);
     }
 }

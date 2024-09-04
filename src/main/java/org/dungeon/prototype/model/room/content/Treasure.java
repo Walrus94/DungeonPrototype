@@ -11,7 +11,7 @@ import org.dungeon.prototype.model.room.RoomType;
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = false)
-public class Treasure extends BonusRoom {
+public class Treasure extends ItemsRoom {
     @NotNull
     @Positive
     private Integer gold;

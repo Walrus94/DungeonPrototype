@@ -6,5 +6,4 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 public class BaseUnitTest {
-    protected static final Long CHAT_ID = 123456789L;
 }

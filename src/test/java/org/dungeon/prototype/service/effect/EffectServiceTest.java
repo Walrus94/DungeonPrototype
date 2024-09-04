@@ -1,19 +1,26 @@
 package org.dungeon.prototype.service.effect;
 
-import org.dungeon.prototype.repository.EffectRepository;
+import lombok.val;
+import org.dungeon.prototype.model.monster.Monster;
 import org.dungeon.prototype.service.BaseServiceUnitTest;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 
+import static org.dungeon.prototype.TestData.getMonsterEffects;
+import static org.junit.jupiter.api.Assertions.*;
+
 class EffectServiceTest extends BaseServiceUnitTest {
 
     @InjectMocks
     private EffectService effectService;
-    @Mock
-    private EffectRepository effectRepository;
+
     @Test
     void updateMonsterEffects() {
+        Monster monster = new Monster();
+        monster.setEffects(getMonsterEffects());
+
+        val updatedMonster = effectService.updateMonsterEffects(monster);
 
     }
 
@@ -22,15 +29,6 @@ class EffectServiceTest extends BaseServiceUnitTest {
     }
 
     @Test
-    void savePlayerEffects() {
-    }
-
-    @Test
-    void savePlayerEffect() {
-
-    }
-
-    @Test
-    void saveItemEffects() {
+    void updateArmorEffect() {
     }
 }

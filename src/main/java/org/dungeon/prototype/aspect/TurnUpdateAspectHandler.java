@@ -7,13 +7,13 @@ import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.dungeon.prototype.model.room.content.MonsterRoom;
-import org.dungeon.prototype.service.room.MonsterService;
 import org.dungeon.prototype.service.PlayerLevelService;
 import org.dungeon.prototype.service.PlayerService;
 import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.item.ItemService;
 import org.dungeon.prototype.service.level.LevelService;
 import org.dungeon.prototype.service.message.MessageService;
+import org.dungeon.prototype.service.room.MonsterService;
 import org.dungeon.prototype.service.room.RoomService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -55,6 +55,20 @@ public class TurnUpdateAspectHandler {
         if (args.length > 0 && args[0] instanceof Long chatId) {
             val player = playerService.getPlayer(chatId);
             playerService.updatePlayer(effectService.updatePlayerEffects(player));
+//            if (args.length > 1 && args[0] instanceof CallbackType callbackType) {
+//                if (Set.of(FORWARD, LEFT, RIGHT, BACK).contains(callbackType)) {
+//                    val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+//                    if (currentRoom.getRoomContent() instanceof  MonsterRoom monsterRoom) {
+//                        val monster = monsterRoom.getMonster();
+//                        if (isNull(monster.getAttackPattern()) || monster.getAttackPattern().isEmpty()) {
+//                            monster.setAttackPattern(monster.getDefaultAttackPattern());
+//                            monster.setCurrentAttack(monster.getAttackPattern().poll());
+//                            monsterService.saveOrUpdateMonster(monster);
+//                        }
+//                        roomService.saveOrUpdateRoomContent(monsterRoom);
+//                    }
+//                }
+//            }
         }
     }
 
@@ -64,6 +78,7 @@ public class TurnUpdateAspectHandler {
             val player = playerService.getPlayer(chatId);
             if (player.getHp() < 1) {
                 levelService.remove(chatId);
+                player.getInventory().clear();
                 itemService.dropCollection(chatId);
                 player.getEffects().clear();
                 playerService.updatePlayer(player);

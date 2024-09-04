@@ -2,8 +2,8 @@ package org.dungeon.prototype.model.document.item;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.dungeon.prototype.model.effect.Action;
-import org.dungeon.prototype.model.effect.EffectApplicant;
+import org.dungeon.prototype.model.effect.attributes.Action;
+import org.dungeon.prototype.model.effect.attributes.EffectApplicant;
 import org.dungeon.prototype.model.effect.attributes.EffectAttribute;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -16,11 +16,12 @@ public class EffectDocument {
     private String id;
     private EffectApplicant applicableTo;
     private EffectAttribute attribute;
+    private Boolean isPermanent;
     private Boolean isAccumulated;
-    private Boolean hasFirstTurnPassed;
     private Action action;
     private Integer turnsLasts;
     private Integer amount;
+    private Integer baseAmount;
     private Double multiplier;
     private Integer weight;
 }

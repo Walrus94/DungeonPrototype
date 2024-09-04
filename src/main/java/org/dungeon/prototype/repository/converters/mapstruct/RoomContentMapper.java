@@ -4,17 +4,8 @@ import jakarta.validation.constraints.NotNull;
 import lombok.val;
 import org.dungeon.prototype.model.document.room.RoomContentDocument;
 import org.dungeon.prototype.model.inventory.Item;
-import org.dungeon.prototype.model.room.content.Anvil;
-import org.dungeon.prototype.model.room.content.BonusRoom;
-import org.dungeon.prototype.model.room.content.EmptyRoom;
-import org.dungeon.prototype.model.room.content.HealthShrine;
-import org.dungeon.prototype.model.room.content.ManaShrine;
-import org.dungeon.prototype.model.room.content.Merchant;
-import org.dungeon.prototype.model.room.content.MonsterRoom;
-import org.dungeon.prototype.model.room.content.NoContentRoom;
-import org.dungeon.prototype.model.room.content.RoomContent;
-import org.dungeon.prototype.model.room.content.Shrine;
-import org.dungeon.prototype.model.room.content.Treasure;
+import org.dungeon.prototype.model.room.content.*;
+import org.dungeon.prototype.model.room.content.ItemsRoom;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Mappings;
@@ -49,7 +40,7 @@ public interface RoomContentMapper {
             @Mapping(target = "effect", ignore = true),
             @Mapping(target = "gold", source = "roomContent", qualifiedByName = "mapGoldToDocument")
     })
-    RoomContentDocument mapToDocument(BonusRoom roomContent);
+    RoomContentDocument mapToDocument(ItemsRoom roomContent);
 
     @Mappings({
             @Mapping(target = "gold", ignore = true),
@@ -108,19 +99,19 @@ public interface RoomContentMapper {
 
             case MANA_SHRINE -> {
                 val room = new ManaShrine();
-                room.setEffect(EffectMapper.INSTANCE.mapToItemEffect(document.getEffect()));
+                room.setEffect(EffectMapper.INSTANCE.mapToExpirableEffect(document.getEffect()));
                 yield room;
             }
             case HEALTH_SHRINE -> {
                 val room = new HealthShrine();
-                room.setEffect(EffectMapper.INSTANCE.mapToItemEffect(document.getEffect()));
+                room.setEffect(EffectMapper.INSTANCE.mapToExpirableEffect(document.getEffect()));
                 yield room;
             }
         };
     }
 
     @Named("mapGoldToDocument")
-    default Integer mapGoldToDocument(BonusRoom roomContent) {
+    default Integer mapGoldToDocument(ItemsRoom roomContent) {
         if (roomContent instanceof Treasure) {
             return ((Treasure) roomContent).getGold();
         } else {
@@ -138,7 +129,7 @@ public interface RoomContentMapper {
             case START, END, NORMAL,
                     DRAGON_KILLED, WEREWOLF_KILLED, SWAMP_BEAST_KILLED, ZOMBIE_KILLED, VAMPIRE_KILLED,
                     SHRINE_DRAINED, TREASURE_LOOTED -> RoomContentMapper.INSTANCE.mapToDocument((NoContentRoom) roomContent);
-            case MERCHANT, TREASURE -> RoomContentMapper.INSTANCE.mapToDocument((BonusRoom) roomContent);
+            case MERCHANT, TREASURE -> RoomContentMapper.INSTANCE.mapToDocument((ItemsRoom) roomContent);
             case HEALTH_SHRINE -> RoomContentMapper.INSTANCE.mapToDocument((HealthShrine) roomContent);
             case MANA_SHRINE -> RoomContentMapper.INSTANCE.mapToDocument((ManaShrine) roomContent);
         };

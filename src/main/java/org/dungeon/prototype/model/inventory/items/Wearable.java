@@ -4,7 +4,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.dungeon.prototype.model.document.item.ItemType;
-import org.dungeon.prototype.model.effect.ItemEffect;
+import org.dungeon.prototype.model.effect.PermanentEffect;
 import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.inventory.attributes.wearable.WearableAttributes;
 
@@ -18,7 +18,7 @@ public class Wearable extends Item {
 
     private Integer armor;
     private Double chanceToDodge;
-    private List<ItemEffect> effects;
+    private List<PermanentEffect> effects;
 
     @Override
     public ItemType getItemType() {

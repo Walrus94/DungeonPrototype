@@ -3,7 +3,7 @@ package org.dungeon.prototype.model.inventory;
 import lombok.Data;
 import org.dungeon.prototype.model.document.item.ItemAttributes;
 import org.dungeon.prototype.model.document.item.ItemType;
-import org.dungeon.prototype.model.effect.ItemEffect;
+import org.dungeon.prototype.model.effect.PermanentEffect;
 import org.dungeon.prototype.model.inventory.attributes.MagicType;
 
 import java.util.List;
@@ -16,7 +16,7 @@ public abstract class Item {
     protected Integer weight;
     protected Integer buyingPrice;
     protected Integer sellingPrice;
-    protected List<ItemEffect> effects;
+    protected List<PermanentEffect> effects;
     protected Boolean hasMagic;
     protected MagicType magicType;
     public abstract ItemAttributes getAttributes();

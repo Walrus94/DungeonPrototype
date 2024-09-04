@@ -2,28 +2,15 @@ package org.dungeon.prototype.model.effect;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-
-import static java.util.Objects.isNull;
-import static org.dungeon.prototype.model.effect.EffectApplicant.PLAYER;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
 @EqualsAndHashCode(callSuper = false)
-public class DirectPlayerEffect extends PlayerEffect implements Expirable {
-    private Integer turnsLasts;
-    private Boolean isAccumulated;
-    @Override
-    public EffectApplicant getApplicableTo() {
-        return PLAYER;
-    }
-
+public class PermanentEffect extends Effect {
     @Override
     public Boolean isPermanent() {
-        return isNull(turnsLasts) || !(turnsLasts > 0);
-    }
-
-    @Override
-    public Integer decreaseTurnsLasts() {
-        return turnsLasts--;
+        return true;
     }
 
     @Override
