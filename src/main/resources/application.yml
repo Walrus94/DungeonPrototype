@@ -165,64 +165,24 @@ generation:
     zombie:
       primary-attack-type: slash
       secondary-attack-type: slash
-      primary-attack-ratio: 2
-      primary-attack-bonus: 3
-      secondary-attack-ratio: 2
-      secondary-attack-bonus: 3
-      health-ratio: 5
-      health-bonus: 3
-      weight-primary-attack-multiplier: 5
-      weight-secondary-attack-multiplier: 0
     werewolf:
       primary-attack-type: growl
       secondary-attack-type: slash
-      primary-attack-ratio: 4
-      primary-attack-bonus: 2
-      secondary-attack-ratio: 3
-      secondary-attack-bonus: 2
-      health-ratio: 7
-      health-bonus: 4
-      weight-primary-attack-multiplier: 3
-      weight-secondary-attack-multiplier: 2
     swamp-beast:
       primary-attack-type: poison_spit
       secondary-attack-type: bite
-      primary-attack-ratio: 2
-      primary-attack-bonus: 3
-      secondary-attack-ratio: 1
-      secondary-attack-bonus: 2
-      health-ratio: 6
-      health-bonus: 2
-      weight-primary-attack-multiplier: 7
-      weight-secondary-attack-multiplier: 5
     vampire:
       primary-attack-type: vampire_bite
       secondary-attack-type: slash
-      primary-attack-ratio: 4
-      primary-attack-bonus: 2
-      secondary-attack-ratio: 2
-      secondary-attack-bonus: 3
-      health-ratio: 5
-      health-bonus: 3
-      weight-primary-attack-multiplier: 10
-      weight-secondary-attack-multiplier: 8
     dragon:
       primary-attack-type: fire_spit
       secondary-attack-type: growl
-      primary-attack-ratio: 7
-      primary-attack-bonus: 4
-      secondary-attack-ratio: 6
-      secondary-attack-bonus: 3
-      health-ratio: 7
-      health-bonus: 4
-      weight-primary-attack-multiplier: 5
-      weight-secondary-attack-multiplier: 3
   items:
     selling-price-ratio: 0.9
     buying-price-ratio: 1.2
     weapon:
       weapon-attributes-pool-size: 1000
-      weapon-per-game: 100
+      weapon-per-game: 200
       default-attributes:
         sword:
           attack: 6
@@ -393,33 +353,46 @@ generation:
       size-adjustment-attributes:
         small:
           attack-ratio: 0.9
+          critical-chance-ratio: 1.0
+          critical-multiplier-ratio: 1.0
           chance-to-miss-ratio: 0.8
+          knock-out-chance-ratio: 1.0
         medium:
           attack-ratio: 1.0
+          critical-chance-ratio: 1.0
+          critical-multiplier-ratio: 1.0
           chance-to-miss-ratio: 0.9
+          knock-out-chance-ratio: 1.0
         large:
           attack-ratio: 1.2
+          critical-chance-ratio: 1.0
+          critical-multiplier-ratio: 1.0
           chance-to-miss-ratio: 1.15
+          knock-out-chance-ratio: 1.0
       attack-type-adjustment-attributes:
         stab:
           attack-ratio: 1.0
           critical-chance-ratio: 1.3
           critical-multiplier-ratio: 1.0
+          chance-to-miss-ratio: 1.0
           knock-out-chance-ratio: 1.0
         slash:
           attack-ratio: 1.2
           critical-chance-ratio: 1.0
           critical-multiplier-ratio: 1.2
+          chance-to-miss-ratio: 1.0
           knock-out-chance-ratio: 0.0
         blunt:
           attack-ratio: 1.0
           critical-chance-ratio: 1.0
           critical-multiplier-ratio: 1.0
+          chance-to-miss-ratio: 1.0
           knock-out-chance-ratio: 1.4
         strike:
           attack-ratio: 1.0
           knock-out-chance-ratio: 1.0
           critical-multiplier-ratio: 1.0
+          chance-to-miss-ratio: 1.0
           critical-chance-ratio: 1.0
 
       quality-adjustment-ratio:
@@ -430,9 +403,8 @@ generation:
         mythic: 1.6
 
     wearables:
+      wearable-attribute-pool-size: 150
       wearables-per-game: 100
-      wearable-min-effects-play: 1
-      wearable-max-effects-play: 2
 
       default-armor: 5
       chance-to-dodge-ratio:
@@ -477,30 +449,6 @@ generation:
         epic: 3
         legendary: 3
         mythic: 4
-      random-effect-addition-map:
-        -7: 0.1
-        -5: 0.2
-        -3: 0.3
-        -2: 0.5
-        -1: 0.7
-        1: 0.7
-        2: 0.5
-        3: 0.3
-        5: 0.2
-        7: 0.1
-      random-effect-multiplier-map:
-        0.3: 0.1
-        0.5: 0.2
-        0.7: 0.3
-        0.8: 0.4
-        0.9: 0.5
-        1.1: 0.5
-        1.2: 0.4
-        1.3: 0.3
-        1.5: 0.2
-        1.7: 0.1
-      weight-addition-ratio: 5
-      weight-multiplier-ratio: 10
 
 battle:
   player-defense-ratio-matrix:
@@ -612,15 +560,21 @@ logging:
             PlayerLevelService: DEBUG
             BattleService: DEBUG
             room:
+              TreasureService: DEBUG
               generation:
                 RandomRoomTypeGenerator: DEBUG
-                RoomContentRandomFactory: DEBUG
+                room.content:
+                  RoomContentGenerationService: DEBUG
             level:
               LevelService: DEBUG
+              generation:
+                LevelGenerationService: DEBUG
             item:
-              ItemGenerator: DEBUG
               ItemService: DEBUG
-              ItemNamingService: DEBUG
+              generation:
+                ItemGenerator: DEBUG
+                ItemNamingService: DEBUG
+
           util:
             RoomGenerationUtils: DEBUG
             LevelUtil: DEBUG

@@ -1,13 +1,16 @@
 package org.dungeon.prototype.service.inventory;
 
 import lombok.val;
-import org.dungeon.prototype.model.document.item.ItemDocument;
-import org.dungeon.prototype.model.document.item.ItemType;
 import org.dungeon.prototype.model.document.player.InventoryDocument;
 import org.dungeon.prototype.model.inventory.Inventory;
 import org.dungeon.prototype.model.inventory.Item;
+import org.dungeon.prototype.model.inventory.attributes.MagicType;
 import org.dungeon.prototype.model.inventory.attributes.Quality;
-import org.dungeon.prototype.model.inventory.attributes.weapon.*;
+import org.dungeon.prototype.model.inventory.attributes.weapon.Handling;
+import org.dungeon.prototype.model.inventory.attributes.weapon.Size;
+import org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttackType;
+import org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttributes;
+import org.dungeon.prototype.model.inventory.attributes.weapon.WeaponType;
 import org.dungeon.prototype.model.inventory.attributes.wearable.WearableAttributes;
 import org.dungeon.prototype.model.inventory.attributes.wearable.WearableMaterial;
 import org.dungeon.prototype.model.inventory.attributes.wearable.WearableType;
@@ -16,6 +19,7 @@ import org.dungeon.prototype.model.inventory.items.Wearable;
 import org.dungeon.prototype.model.player.Player;
 import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.content.Merchant;
+import org.dungeon.prototype.model.weight.Weight;
 import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.repository.InventoryRepository;
 import org.dungeon.prototype.service.BaseServiceUnitTest;
@@ -24,11 +28,13 @@ import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.item.ItemService;
 import org.dungeon.prototype.service.message.MessageService;
 import org.dungeon.prototype.service.room.RoomService;
+import org.dungeon.prototype.util.GenerationUtil;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -36,9 +42,15 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.dungeon.prototype.TestData.getPlayer;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.anyDouble;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -50,7 +62,7 @@ class InventoryServiceTest extends BaseServiceUnitTest {
     private InventoryService inventoryService;
 
     @Mock
-    PlayerService playerService;
+    private PlayerService playerService;
     @Mock
     private ItemService itemService;
     @Mock
@@ -73,6 +85,9 @@ class InventoryServiceTest extends BaseServiceUnitTest {
         wearableAttribute.setWearableMaterial(WearableMaterial.CLOTH);
         vest.setAttributes(wearableAttribute);
         vest.setEffects(new ArrayList<>());
+        vest.setArmor(5);
+        vest.setMagicType(MagicType.of(0.0,0.0));
+        vest.setId("vest_id");
         expectedInventory.setVest(vest);
         val weapon = new Weapon();
         val weaponAttributes = new WeaponAttributes();
@@ -82,31 +97,33 @@ class InventoryServiceTest extends BaseServiceUnitTest {
         weaponAttributes.setWeaponAttackType(WeaponAttackType.SLASH);
         weaponAttributes.setHandling(Handling.SINGLE_HANDED);
         weapon.setAttributes(weaponAttributes);
+        weapon.setId("weapon_id");
+        weapon.setAttack(5);
+        weapon.setChanceToMiss(0.0);
+        weapon.setChanceToKnockOut(0.0);
+        weapon.setCriticalHitChance(0.0);
+        weapon.setMagicType(MagicType.of(0.0,0.0));
+        weapon.setCriticalHitMultiplier(1.0);
         weapon.setEffects(new ArrayList<>());
         expectedInventory.setPrimaryWeapon(weapon);
         expectedInventory.setItems(new ArrayList<>());
 
-        //TODO: replace with argument catcher
-        val inventoryDocument = new InventoryDocument();
-        val vestDocument = new ItemDocument();
-        vestDocument.setEffects(new ArrayList<>());
-        vestDocument.setItemType(ItemType.WEARABLE);
-        vestDocument.setAttributes(wearableAttribute);
-        inventoryDocument.setVest(vestDocument);
-        val weaponDocument = new ItemDocument();
-        weaponDocument.setEffects(new ArrayList<>());
-        weaponDocument.setItemType(ItemType.WEAPON);
-        weaponDocument.setAttributes(weaponAttributes);
-        inventoryDocument.setPrimaryWeapon(weaponDocument);
-        inventoryDocument.setItems(new ArrayList<>());
-
         when(itemService.getMostLightweightWearable(CHAT_ID, WearableType.VEST)).thenReturn(vest);
         when(itemService.getMostLightWeightMainWeapon(CHAT_ID)).thenReturn(weapon);
-        when(inventoryRepository.save(inventoryDocument)).thenReturn(inventoryDocument);
+        ArgumentCaptor<InventoryDocument> inventoryDocumentArgumentCaptor = ArgumentCaptor.forClass(InventoryDocument.class);
+        when(inventoryRepository.save(inventoryDocumentArgumentCaptor.capture())).thenReturn(new InventoryDocument());
 
-        val actualInventory = inventoryService.getDefaultInventory(CHAT_ID);
+        inventoryService.getDefaultInventory(CHAT_ID);
 
-        assertEquals(expectedInventory, actualInventory);
+        val actualInventory = inventoryDocumentArgumentCaptor.getValue();
+
+        assertEquals(expectedInventory.getPrimaryWeapon().getId(), actualInventory.getPrimaryWeapon().getId());
+        assertEquals(expectedInventory.getPrimaryWeapon().getAttack(), actualInventory.getPrimaryWeapon().getAttack());
+        assertEquals(expectedInventory.getPrimaryWeapon().getAttributes(), actualInventory.getPrimaryWeapon().getAttributes());
+
+        assertEquals(expectedInventory.getVest().getId(), actualInventory.getVest().getId());
+        assertEquals(expectedInventory.getVest().getArmor(), actualInventory.getVest().getArmor());
+        assertEquals(expectedInventory.getVest().getAttributes(), actualInventory.getVest().getAttributes());
     }
 
     @Test
@@ -130,9 +147,7 @@ class InventoryServiceTest extends BaseServiceUnitTest {
     void sendOrUpdateInventoryMessage() {
         val player = getPlayer(CHAT_ID);
 
-        when(playerService.getPlayer(CHAT_ID)).thenReturn(player);
-
-        inventoryService.sendOrUpdateInventoryMessage(CHAT_ID);
+        inventoryService.sendOrUpdateInventoryMessage(CHAT_ID, player);
 
         verify(messageService).sendInventoryMessage(CHAT_ID, player.getInventory());
     }
@@ -144,11 +159,13 @@ class InventoryServiceTest extends BaseServiceUnitTest {
         val item = new Wearable();
         item.setId(ITEM_ID);
         WearableAttributes wearableAttributes = new WearableAttributes();
-        wearableAttributes.setWearableType(WearableType.VEST);
+        wearableAttributes.setWearableType(WearableType.GLOVES);
         wearableAttributes.setQuality(Quality.COMMON);
         wearableAttributes.setWearableMaterial(WearableMaterial.CLOTH);
         item.setAttributes(wearableAttributes);
         item.setEffects(new ArrayList<>());
+        item.setArmor(0);
+        item.setMagicType(MagicType.of(0.0,0.0));
         player.getInventory().addItem(item);
 
         val inventoryDocument = new InventoryDocument();
@@ -168,9 +185,9 @@ class InventoryServiceTest extends BaseServiceUnitTest {
         assertTrue(actualResult);
 
         val actualInventory = inventoryArgumentCaptor.getValue();
-        assertEquals(item, player.getInventory().getVest());
+        assertEquals(item, player.getInventory().getGloves());
         assertTrue(actualInventory.getItems().isEmpty());
-        assertEquals(ITEM_ID, actualInventory.getVest().getId());
+        assertEquals(ITEM_ID, actualInventory.getGloves().getId());
     }
 
     @Test
@@ -179,19 +196,19 @@ class InventoryServiceTest extends BaseServiceUnitTest {
         val player = getPlayer(CHAT_ID);
         val item = player.getInventory().getPrimaryWeapon();
         when(playerService.getPlayer(CHAT_ID)).thenReturn(player);
-        when(itemService.findItem(CHAT_ID, ITEM_ID)).thenReturn(item);
+        when(itemService.findItem(CHAT_ID, "weapon_id")).thenReturn(item);
 
         ArgumentCaptor<InventoryDocument> inventoryDocumentArgumentCaptor = ArgumentCaptor.forClass(InventoryDocument.class);
         when(inventoryRepository.save(inventoryDocumentArgumentCaptor.capture())).thenReturn(new InventoryDocument());
 
-        val actualResult = inventoryService.unEquipItem(CHAT_ID, ITEM_ID);
+        val actualResult = inventoryService.unEquipItem(CHAT_ID, "weapon_id");
 
         assertTrue(actualResult);
 
         verify(effectService).updateArmorEffect(player);
         verify(messageService).sendInventoryMessage(eq(CHAT_ID), any(Inventory.class));
         val actualInventory = inventoryDocumentArgumentCaptor.getValue();
-        assertEquals(1L, actualInventory.getItems().stream().filter(itemDocument -> ITEM_ID.equals(itemDocument.getId())).count());
+        assertEquals(1L, actualInventory.getItems().stream().filter(itemDocument -> "weapon_id".equals(itemDocument.getId())).count());
         assertNull(actualInventory.getPrimaryWeapon());
 
     }
@@ -207,27 +224,43 @@ class InventoryServiceTest extends BaseServiceUnitTest {
         wearableAttributes.setQuality(Quality.COMMON);
         wearableAttributes.setWearableMaterial(WearableMaterial.CLOTH);
         item.setAttributes(wearableAttributes);
-        item.setSellingPrice(10);
+        item.setArmor(5);
+        item.setMagicType(MagicType.of(0.0, 0.0));
         item.setEffects(new ArrayList<>());
         player.getInventory().addItem(item);
 
-        when(playerService.getPlayer(CHAT_ID)).thenReturn(player);
-        when(itemService.findItem(CHAT_ID, ITEM_ID)).thenReturn(item);
+        try(MockedStatic<GenerationUtil> generationUtilMockedStatic = mockStatic(GenerationUtil.class)) {
+            when(GenerationUtil.calculateWearableWeight(anyInt(), anyDouble(), any(MagicType.class))).thenReturn(
+                    Weight.builder()
+                            .armorToMaxArmor(5.0)
+                            .build());
+            when(GenerationUtil.calculateWeaponWeight(anyInt(), anyDouble(), anyDouble(), anyDouble(), anyDouble(), any(MagicType.class))).thenReturn(
+                    Weight.builder()
+                            .attack(5.0)
+                            .build()
+            );
 
-        ArgumentCaptor<InventoryDocument> inventoryDocumentArgumentCaptor = ArgumentCaptor.forClass(InventoryDocument.class);
-        when(inventoryRepository.save(inventoryDocumentArgumentCaptor.capture())).thenReturn(new InventoryDocument());
+            when(GenerationUtil.getBuyingPriceRatio()).thenReturn(1.2);
+            when(GenerationUtil.getSellingPriceRatio()).thenReturn(0.9);
+            
+            when(playerService.getPlayer(CHAT_ID)).thenReturn(player);
+            when(itemService.findItem(CHAT_ID, ITEM_ID)).thenReturn(item);
 
-        ArgumentCaptor<Player> playerArgumentCaptor = ArgumentCaptor.forClass(Player.class);
-        when(playerService.updatePlayer(playerArgumentCaptor.capture())).thenReturn(player);
+            ArgumentCaptor<InventoryDocument> inventoryDocumentArgumentCaptor = ArgumentCaptor.forClass(InventoryDocument.class);
+            when(inventoryRepository.save(inventoryDocumentArgumentCaptor.capture())).thenReturn(new InventoryDocument());
 
-        val actualResult = inventoryService.sellItem(CHAT_ID, ITEM_ID);
+            ArgumentCaptor<Player> playerArgumentCaptor = ArgumentCaptor.forClass(Player.class);
+            when(playerService.updatePlayer(playerArgumentCaptor.capture())).thenReturn(player);
 
-        assertTrue(actualResult);
-        val actualInventory = inventoryDocumentArgumentCaptor.getValue();
-        val actualPlayer = playerArgumentCaptor.getValue();
-        assertEquals(110, actualPlayer.getGold());
-        assertTrue(actualInventory.getItems().isEmpty());
-        verify(messageService).sendMerchantSellMenuMessage(CHAT_ID, player);
+            val actualResult = inventoryService.sellItem(CHAT_ID, ITEM_ID);
+
+            assertTrue(actualResult);
+            val actualInventory = inventoryDocumentArgumentCaptor.getValue();
+            val actualPlayer = playerArgumentCaptor.getValue();
+            assertEquals(104, actualPlayer.getGold());
+            assertTrue(actualInventory.getItems().isEmpty());
+            verify(messageService).sendMerchantSellMenuMessage(CHAT_ID, player);
+        }
     }
 
     @Test
@@ -238,45 +271,66 @@ class InventoryServiceTest extends BaseServiceUnitTest {
         room.setId(CURRENT_ROOM_ID);
         val merchant = new Merchant();
         val item = new Wearable();
+//        val weight = mock(Weight.class);
+//        val vector = mock(ArrayRealVector.class);
+//        when(weight.toVector()).thenReturn(vector);
+//        when(vector.getNorm()).thenReturn(4.0);
         item.setId(ITEM_ID);
+//        when(item.getWeight()).thenReturn(weight);
+//        when(item.getBuyingPrice()).thenReturn(5);
         WearableAttributes wearableAttributes = new WearableAttributes();
         wearableAttributes.setWearableType(WearableType.VEST);
         wearableAttributes.setQuality(Quality.COMMON);
         wearableAttributes.setWearableMaterial(WearableMaterial.CLOTH);
         item.setAttributes(wearableAttributes);
-        item.setBuyingPrice(10);
-        item.setSellingPrice(5);
+        item.setArmor(5);
+        item.setMagicType(MagicType.of(0.0,0.0));
         item.setEffects(new ArrayList<>());
         Set<Item> items = new HashSet<>();
         items.add(item);
         merchant.setItems(items);
         room.setRoomContent(merchant);
 
-        when(playerService.getPlayer(CHAT_ID)).thenReturn(player);
-        when(roomService.getRoomByIdAndChatId(CHAT_ID, CURRENT_ROOM_ID)).thenReturn(room);
-        when(itemService.findItem(CHAT_ID, ITEM_ID)).thenReturn(item);
+        try(MockedStatic<GenerationUtil> generationUtilMockedStatic = mockStatic(GenerationUtil.class)) {
+            when(GenerationUtil.calculateWearableWeight(anyInt(), anyDouble(), any(MagicType.class))).thenReturn(
+                    Weight.builder()
+                            .armorToMaxArmor(5.0)
+                            .build());
+            when(GenerationUtil.calculateWeaponWeight(anyInt(), anyDouble(), anyDouble(), anyDouble(), anyDouble(), any(MagicType.class))).thenReturn(
+                    Weight.builder()
+                            .attack(5.0)
+                            .build()
+            );
 
-        val actualResult = inventoryService.buyItem(CHAT_ID, ITEM_ID);
+            when(GenerationUtil.getBuyingPriceRatio()).thenReturn(1.2);
+            when(GenerationUtil.getSellingPriceRatio()).thenReturn(0.9);
 
-        assertTrue(actualResult);
-        ArgumentCaptor<Player> playerArgumentCaptor = ArgumentCaptor.forClass(Player.class);
-        verify(playerService).updatePlayer(playerArgumentCaptor.capture());
-        val actualPlayer = playerArgumentCaptor.getValue();
-        ArgumentCaptor<Room> roomArgumentCaptor = ArgumentCaptor.forClass(Room.class);
-        verify(roomService).saveOrUpdateRoom(roomArgumentCaptor.capture());
-        val actualRoom = roomArgumentCaptor.getValue();
-        ArgumentCaptor<InventoryDocument> inventoryDocumentArgumentCaptor =
-                ArgumentCaptor.forClass(InventoryDocument.class);
-        verify(inventoryRepository).save(inventoryDocumentArgumentCaptor.capture());
-        val actualInventory = inventoryDocumentArgumentCaptor.getValue();
-        assertEquals(95, actualPlayer.getGold());
-        assertEquals(1, actualInventory.getItems().stream()
-                .filter(itemDocument -> ITEM_ID.equals(itemDocument.getId())).count());
-        assertTrue(actualRoom.getRoomContent() instanceof Merchant);
-        assertFalse(((Merchant) actualRoom.getRoomContent()).getItems().contains(item));
+            when(playerService.getPlayer(CHAT_ID)).thenReturn(player);
+            when(roomService.getRoomByIdAndChatId(CHAT_ID, CURRENT_ROOM_ID)).thenReturn(room);
+            when(itemService.findItem(CHAT_ID, ITEM_ID)).thenReturn(item);
 
-        verify(messageService).sendMerchantBuyMenuMessage(CHAT_ID, actualPlayer.getGold(),
-                ((Merchant) actualRoom.getRoomContent()).getItems());
+            val actualResult = inventoryService.buyItem(CHAT_ID, ITEM_ID);
+
+            assertTrue(actualResult);
+            ArgumentCaptor<Player> playerArgumentCaptor = ArgumentCaptor.forClass(Player.class);
+            verify(playerService).updatePlayer(playerArgumentCaptor.capture());
+            val actualPlayer = playerArgumentCaptor.getValue();
+            ArgumentCaptor<Room> roomArgumentCaptor = ArgumentCaptor.forClass(Room.class);
+            verify(roomService).saveOrUpdateRoom(roomArgumentCaptor.capture());
+            val actualRoom = roomArgumentCaptor.getValue();
+            ArgumentCaptor<InventoryDocument> inventoryDocumentArgumentCaptor =
+                    ArgumentCaptor.forClass(InventoryDocument.class);
+            verify(inventoryRepository).save(inventoryDocumentArgumentCaptor.capture());
+            val actualInventory = inventoryDocumentArgumentCaptor.getValue();
+            assertEquals(96, actualPlayer.getGold());
+            assertEquals(1, actualInventory.getItems().stream()
+                    .filter(itemDocument -> ITEM_ID.equals(itemDocument.getId())).count());
+            assertTrue(actualRoom.getRoomContent() instanceof Merchant);
+            assertFalse(((Merchant) actualRoom.getRoomContent()).getItems().contains(item));
+
+            verify(messageService).sendMerchantBuyMenuMessage(CHAT_ID, actualPlayer.getGold(),
+                    ((Merchant) actualRoom.getRoomContent()).getItems());
+        }
     }
 
     @Test

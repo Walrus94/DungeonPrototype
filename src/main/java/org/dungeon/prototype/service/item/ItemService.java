@@ -4,68 +4,51 @@ import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.model.document.item.ItemDocument;
-import org.dungeon.prototype.model.document.item.ItemType;
 import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.inventory.attributes.wearable.WearableType;
 import org.dungeon.prototype.model.inventory.items.Weapon;
 import org.dungeon.prototype.model.inventory.items.Wearable;
+import org.dungeon.prototype.model.weight.Weight;
 import org.dungeon.prototype.repository.ItemRepository;
 import org.dungeon.prototype.repository.converters.mapstruct.ItemMapper;
 import org.dungeon.prototype.repository.projections.ItemWeightProjection;
+import org.dungeon.prototype.service.item.generation.ItemNamingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import static org.apache.commons.math3.util.FastMath.max;
-import static org.apache.commons.math3.util.FastMath.min;
+import static org.apache.commons.math3.util.FastMath.abs;
 
 @Slf4j
 @Component
 public class ItemService {
-    private static final Double WEIGHT_PLAY_RANGE = 0.2;
     private final ItemMapper itemMapper = ItemMapper.INSTANCE;
-    @Autowired
-    private ItemGenerator itemGenerator;
     @Autowired
     private ItemNamingService itemNamingService;
     @Autowired
     private ItemRepository itemRepository;
 
-    /**
-     * Generates items for game: runs two async generators
-     * for {@link Wearable} and {@link Weapon} items
-     * for game and stores results to repository.
-     * Items should be removed when game is over
-     * @param chatId id of chat where game runs
-     */
+
     @Transactional
-    public void generateItems(Long chatId) {
-        CompletableFuture<Set<Weapon>> weaponsFuture = CompletableFuture.supplyAsync(() -> itemGenerator.generateWeapons(chatId));
-        CompletableFuture<Set<Wearable>> wearablesFuture = CompletableFuture.supplyAsync(() -> itemGenerator.generateWearables(chatId));
-
-        CompletableFuture<Void> combinedFuture = CompletableFuture.allOf(weaponsFuture, wearablesFuture);
-
-        try {
-            combinedFuture.get();
-
-            int count = itemRepository.saveAll(Stream.concat(weaponsFuture.get().stream(), wearablesFuture.get().stream())
-                    .map(itemMapper::mapToDocument).collect(Collectors.toList())).size();
-            log.debug("Generated {} items", count);
-        } catch (InterruptedException | ExecutionException e) {
-            log.error("Error on generating items: {}", e.getMessage());
-        }
+    public Item saveItem(Item item) {
+        val itemDocument = ItemMapper.INSTANCE.mapToDocument(item);
+        val savedItemDocument = itemRepository.save(itemDocument);
+        return switch (savedItemDocument.getItemType()) {
+            case WEAPON -> ItemMapper.INSTANCE.mapToWeapon(savedItemDocument);
+            case WEARABLE -> ItemMapper.INSTANCE.mapToWearable(savedItemDocument);
+            case USABLE -> ItemMapper.INSTANCE.mapToUsable(savedItemDocument);
+        };
     }
 
     @Transactional
@@ -99,28 +82,38 @@ public class ItemService {
         return itemMapper.mapToWeapon(document);
     }
 
-    public Set<Item> getExpectedWeightItems(Long chatId, Integer expectedWeight, Integer maxItems, Set<String> usedItemIds) {
+    public Set<Item> getExpectedWeightItems(Long chatId, Weight expectedWeight, Integer maxItems, Set<String> usedItemIds) {
         log.debug("Collecting items...");
-        Set<ItemDocument> items = new HashSet<>();
         log.debug("Expected weight: {}, max items amount: {}", expectedWeight, maxItems);
 
-        val lowest = itemRepository.findFirstByOrderByWeightAsc(chatId, PageRequest.of(0, 1)).stream().map(ItemWeightProjection::getWeight).findFirst().get();
-        val highest = itemRepository.findFirstByOrderByWeightDesc(chatId, PageRequest.of(0, 1)).stream().map(ItemWeightProjection::getWeight).findFirst().get();
-        log.debug("Items weight range: {} - {}", lowest, highest);
+        var weightsAbs = itemRepository.findClosestLesserWeight(chatId,
+                        expectedWeight.toVector().getNorm(),
+                        usedItemIds,
+                        PageRequest.of(0, maxItems)).stream()
+                .sorted(Comparator.comparing(ItemWeightProjection::getWeightAbs))
+                .collect(Collectors.toCollection(ArrayList::new));
 
-        var weight = max(lowest, min(highest, expectedWeight / maxItems));
-        while (items.stream().mapToInt(ItemDocument::getWeight).sum() - expectedWeight < expectedWeight * (1.0 + WEIGHT_PLAY_RANGE) && items.size() < maxItems) {
-            weight = max(lowest, min(highest, (expectedWeight - items.stream().mapToInt(ItemDocument::getWeight).sum()) / (maxItems - items.size())));
-            log.debug("Current weight: {}", weight);
-            var foundItems = findItems(chatId, weight, maxItems - items.size(), usedItemIds);
-            log.debug("Found items: {}", foundItems);
-            if (Objects.nonNull(foundItems) && !foundItems.isEmpty()) {
-                if (items.addAll(foundItems)) {
-                    usedItemIds.addAll(foundItems.stream().map(ItemDocument::getId).toList());
-                }
-            }
+        var weightsAbsSum = weightsAbs.stream().mapToDouble(ItemWeightProjection::getWeightAbs).sum();
+
+        while (abs(expectedWeight.toVector().getNorm() - weightsAbsSum) < expectedWeight.toVector().getNorm() - weightsAbsSum) {
+            weightsAbs.removeLast();
+            weightsAbs.add(itemRepository.findClosestLesserWeight(chatId, weightsAbs.getFirst().getWeightAbs(), usedItemIds,
+                    PageRequest.of(0, 1)).getFirst());
+            weightsAbsSum = weightsAbs.stream().mapToDouble(ItemWeightProjection::getWeightAbs).sum();
         }
-        return items.isEmpty() ? Collections.emptySet() : generateItemsNamesAndConvertFromDoc(items);
+        val items = findItems(chatId, weightsAbs.stream().map(ItemWeightProjection::getId).toList());
+        return items.isEmpty() ? Collections.emptySet() : generateItemsNamesAndUpdate(items);
+    }
+
+    private Set<Item> findItems(Long chatId, List<String> itemIds) {
+        val itemDocuments = itemRepository.findAllByChatIdAndIdIn(chatId, itemIds);
+        return itemDocuments.stream().map(itemDocument ->
+                        switch (itemDocument.getItemType()) {
+                            case WEAPON -> ItemMapper.INSTANCE.mapToWeapon(itemDocument);
+                            case WEARABLE -> ItemMapper.INSTANCE.mapToWearable(itemDocument);
+                            case USABLE -> ItemMapper.INSTANCE.mapToUsable(itemDocument);
+                        })
+                .collect(Collectors.toCollection(HashSet::new));
     }
 
     public Item findItem(Long chatId, String itemId) {
@@ -145,52 +138,27 @@ public class ItemService {
         itemRepository.deleteAllByChatId(chatId);
     }
 
-    private List<ItemDocument> findItems(Long chatId, int weight, int limit, Set<String> usedItemIds) {
-        log.debug("Searching for item weighted {}...", weight);
-
-        val exactWeightItems = itemRepository.findByChatIdAndWeightAndIdNotIn(chatId, weight, usedItemIds, PageRequest.of(0, limit));
-        if (Objects.nonNull(exactWeightItems) && !exactWeightItems.isEmpty()) {
-            return exactWeightItems;
-        }
-
-        val closestLesserWeightList = itemRepository.findClosestLesserWeight(chatId, weight, usedItemIds, PageRequest.of(0, 1));
-        val closestGreaterWeightList = itemRepository.findClosestGreaterWeight(chatId, weight, usedItemIds, PageRequest.of(0, 1));
-
-        if (Objects.nonNull(closestLesserWeightList) && !closestLesserWeightList.isEmpty() &&
-                Objects.nonNull(closestGreaterWeightList) && !closestGreaterWeightList.isEmpty()) {
-            val closestLesserWeight = closestLesserWeightList.getFirst().getWeight();
-            val closestGreaterWeight = closestGreaterWeightList.getFirst().getWeight();
-
-            if (closestGreaterWeight - weight < weight - closestLesserWeight) {
-                return itemRepository.findByChatIdAndWeightAndIdNotIn(chatId, closestGreaterWeight, usedItemIds, PageRequest.of(0, limit));
-            } else {
-                return itemRepository.findByChatIdAndWeightAndIdNotIn(chatId, closestLesserWeight, usedItemIds, PageRequest.of(0, limit));
-            }
-        } else {
-            if (Objects.nonNull(closestLesserWeightList) && !closestLesserWeightList.isEmpty()) {
-                val closestLesserWeight = closestLesserWeightList.getFirst().getWeight();
-                return itemRepository.findByChatIdAndWeightAndIdNotIn(chatId, closestLesserWeight, usedItemIds, PageRequest.of(0, limit));
-            }
-            if (Objects.nonNull(closestGreaterWeightList) && !closestGreaterWeightList.isEmpty()) {
-                val closestGreatestWeight = closestGreaterWeightList.getFirst().getWeight();
-                return itemRepository.findByChatIdAndWeightAndIdNotIn(chatId, closestGreatestWeight, usedItemIds, PageRequest.of(0, limit));
-            }
-        }
-        return Collections.emptyList();
-    }
+    //TODO: parallel item naming
 
     @NotNull
-    private Set<Item> generateItemsNamesAndConvertFromDoc(Set<ItemDocument> items) {
-        val attributesNamesMap = itemNamingService.generateNames(items.stream().filter(item -> Objects.isNull(item.getName())).map(ItemDocument::getAttributes).collect(Collectors.toSet()));
-        itemRepository.saveAll(items.stream().filter(itemDocument -> attributesNamesMap.containsKey(itemDocument.getAttributes()))
-                .peek(itemDocument -> itemDocument.setName(attributesNamesMap.get(itemDocument.getAttributes())))
-                .collect(Collectors.toSet()));
-        return items.stream().map(itemDocument -> {
-            if (itemDocument.getItemType().equals(ItemType.WEARABLE)) {
-                return itemMapper.mapToWearable(itemDocument);
-            } else if (itemDocument.getItemType().equals(ItemType.WEAPON)) {
-                return itemMapper.mapToWeapon(itemDocument);
-            } else return null;
-        }).collect(Collectors.toSet());
+    private Set<Item> generateItemsNamesAndUpdate(Set<Item> items) {
+        val attributesNamesMap = itemNamingService.generateNames(items.stream().filter(item -> Objects.isNull(item.getName())).map(Item::getAttributes).collect(Collectors.toSet()));
+        return items.stream().filter(item -> attributesNamesMap.containsKey(item.getAttributes()))
+                .peek(item -> {
+                    item.setName(attributesNamesMap.get(item.getAttributes()));
+                    saveItem(item);
+                })
+                .collect(Collectors.toSet());
+    }
+
+    @Transactional
+    public <T extends Item> List<Item> saveItems(List<T> items) {
+        val itemDocuments = items.stream().map(ItemMapper.INSTANCE::mapToDocument).toList();
+        val savedItemDocuments = itemRepository.saveAll(itemDocuments);
+        return savedItemDocuments.stream().map(itemDocument -> switch (itemDocument.getItemType()) {
+            case WEAPON -> ItemMapper.INSTANCE.mapToWeapon(itemDocument);
+            case WEARABLE -> ItemMapper.INSTANCE.mapToWearable(itemDocument);
+            case USABLE -> ItemMapper.INSTANCE.mapToUsable(itemDocument);
+        }).toList();
     }
 }

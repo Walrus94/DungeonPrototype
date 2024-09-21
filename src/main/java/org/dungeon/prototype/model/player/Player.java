@@ -7,11 +7,15 @@ import org.dungeon.prototype.model.Direction;
 import org.dungeon.prototype.model.Point;
 import org.dungeon.prototype.model.effect.Effect;
 import org.dungeon.prototype.model.inventory.Inventory;
+import org.dungeon.prototype.model.weight.Weight;
+import org.dungeon.prototype.service.PlayerLevelService;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 
 import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 import static org.apache.commons.math3.util.FastMath.max;
 
 @Data
@@ -43,9 +47,20 @@ public class Player {
     private List<Effect> effects;
     private EnumMap<PlayerAttribute, Integer> attributes;
 
-    public void addXp(Integer xpReward) {
-        xp += xpReward;
+    public boolean addXp(Integer xpReward) {
+        double reward = xpReward * xpBonus;
+        xp = xp + (int) reward;
         log.debug("Rewarded xp: {}, total: {}", xpReward, xp);
+        if (xp > nextLevelXp) {
+            playerLevel++;
+            log.debug("Level {} achieved!", playerLevel);
+            refillHp();
+            refillMana();
+            nextLevelXp = PlayerLevelService.calculateXPForLevel(playerLevel);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     public void decreaseDefence(int amount) {
@@ -84,7 +99,36 @@ public class Player {
         }
     }
 
+    public <T extends Effect> void addEffect(T effect) {
+        if (isNull(this.effects)) {
+            this.effects = new ArrayList<>();
+        }
+        this.effects.add(effect);
+    }
+
     public <T extends Effect> boolean removeEffects(List<T> effects) {
         return this.effects.removeAll(effects);
+    }
+
+    public Weight getWeight() {
+        return Weight.builder()
+                .hpToMaxHp((double) (hp / maxHp) * hp)
+                .hpDeficiencyToMaxHp((double) ((maxHp - hp ) / maxHp) * hp)
+                .manaToMaxMana((double) (mana / maxMana) * mana)
+                .manaDeficiencyToMaxMana((double) ((maxMana - mana)/ maxMana) * mana)
+                .armorToMaxArmor((double) (defense / maxDefense) * defense)
+                .armorDeficiencyToMaxArmor((double) ((maxDefense - defense) / maxDefense) * defense)
+                .chanceToDodge(chanceToDodge * defense)
+                .goldBonusToGold(goldBonus / gold)
+                .xpBonus(xpBonus)
+                .attack((1.0 - primaryAttack.getChanceToMiss()) * primaryAttack.getAttack() +
+                        (nonNull(secondaryAttack) ? (1.0 - secondaryAttack.getChanceToMiss()) * secondaryAttack.getAttack() : 0.0))
+                .criticalHitChance(primaryAttack.getCriticalHitChance() +
+                        (nonNull(secondaryAttack) ? secondaryAttack.getCriticalHitChance() : 0.0))
+                .criticalHitMultiplier(primaryAttack.getCriticalHitMultiplier() +
+                        (nonNull(secondaryAttack) ? secondaryAttack.getCriticalHitMultiplier() : 0.0))
+                .chanceToKnockout(primaryAttack.getChanceToKnockOut() +
+                        (nonNull(secondaryAttack) ? secondaryAttack.getChanceToKnockOut() : 0.0))
+                .build();
     }
 }

@@ -6,6 +6,7 @@ import org.dungeon.prototype.model.inventory.attributes.weapon.Size;
 import org.dungeon.prototype.model.inventory.items.Usable;
 import org.dungeon.prototype.model.inventory.items.Weapon;
 import org.dungeon.prototype.model.inventory.items.Wearable;
+import org.dungeon.prototype.model.weight.Weight;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -191,7 +192,7 @@ public class Inventory {
     }
 
     public Integer calculateMaxDefense() {
-        return getArmorItems().stream().filter(Objects::nonNull).mapToInt(Wearable::getArmor).sum();
+        return getArmorItems().stream().mapToInt(Wearable::getArmor).sum();
     }
 
     public void clear() {
@@ -205,6 +206,19 @@ public class Inventory {
 
     public boolean isEquipped(Item item) {
         return getArmorItems().contains(item) || getWeapons().contains(item);
+    }
+
+    public Weight getWeight() {
+        return Stream.concat(items.stream(),
+                        Stream.concat(getArmorItems().stream(),
+                                getWeapons().stream()))
+                .map(Item::getWeight)
+                .reduce(Weight::add)
+                .orElse(new Weight());
+    }
+
+    public Weight getUnequippedWeight() {
+        return items.stream().map(Item::getWeight).reduce(Weight::add).orElse(new Weight());
     }
 
     private boolean processUsable(Usable usable) {

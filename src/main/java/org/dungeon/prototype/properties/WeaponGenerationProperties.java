@@ -21,8 +21,8 @@ public class WeaponGenerationProperties {
     private Map<WeaponMaterial, AdjustmentAttributes> weaponMaterialAdjustmentAttributes;
     private Map<WeaponHandlerMaterial, AdjustmentAttributes> weaponHandlerMaterialAdjustmentAttributes;
     private Map<WeaponHandlerMaterial, AdjustmentAttributes> completeMaterialAdjustmentAttributes;
-    private Map<Size, SizeAdjustmentAttributes> sizeAdjustmentAttributes;
-    private Map<WeaponAttackType, AttackTypeAdjustmentAttributes> attackTypeAdjustmentAttributes;
+    private Map<Size, AdjustmentAttributes> sizeAdjustmentAttributes;
+    private Map<WeaponAttackType, AdjustmentAttributes> attackTypeAdjustmentAttributes;
     private Map<Quality, Double> qualityAdjustmentRatio;
     @Data
     public static class WeaponDefaultAttributes {

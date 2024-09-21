@@ -193,7 +193,7 @@ public class MessageService {
                 " -> " + emoji.get(BLACK_HEART) + " " + generateBar(monster.getHp(), monster.getMaxHp(), emoji.get(RED_SQUARE), barBlocks) + "\n" +
                 emoji.get(DIAMOND) + ": " + generateBar(player.getMana(), player.getMaxMana(), emoji.get(BLUE_SQUARE), barBlocks) +
                 //TODO: consider moving to attack buttons
-                " -> " + emoji.get(AXE) + monster.getPrimaryAttack().getAttack() + "\n" + //TODO: use current attack after callback handling improvement
+                " -> " + emoji.get(AXE) + monster.getCurrentAttack().getAttack() + "\n" +
                 emoji.get(SHIELD) + ": " + player.getDefense() + "\n" +
                 "Gold: " + player.getGold() + " " + emoji.get(TREASURE) + "\n" +
                 emoji.get(STONKS) + ": " + generateXpBar(player.getXp(), player.getPlayerLevel(), player.getNextLevelXp());
@@ -246,7 +246,7 @@ public class MessageService {
                         "attack: " + attack + "\n" + "Chance to miss: " + DECIMAL_FORMAT.format(chanceToMiss) + "\n" +
                         "chance to knock out: " + DECIMAL_FORMAT.format(chanceToKnockOut) + "\n" +
                         "critical hit chance: " + DECIMAL_FORMAT.format(criticalHitChance) + "\n" +
-                        (weapon.getHasMagic() ? "Magic type: " + weapon.getMagicType() : "") + "\n" +
+                        (weapon.getMagicType().toVector().getNorm() > 0 ? "Magic type: " + weapon.getMagicType().toString() : "") + "\n" +
                         (isCompleteDragonBone ? "This weapon is made completely of Dragon bone!\n" : "\n");
 
             }
@@ -258,7 +258,7 @@ public class MessageService {
                 yield item.getName() + "\n" + description + "\n" +
                         "armor: " + armor + "\n" +
                         (nonNull(chanceToDodge) && chanceToDodge > 0.0 ? "chance to dodge: " + DECIMAL_FORMAT.format(chanceToDodge) + "\n" : "") +
-                        (wearable.getHasMagic() ? "Magic type: " + wearable.getMagicType() : "");
+                        (wearable.getMagicType().toVector().getNorm() > 0 ? "Magic type: " + wearable.getMagicType() : "");
             }
             case USABLE -> "";
         };
@@ -294,7 +294,7 @@ public class MessageService {
                 (!expirableEffects.isEmpty() ? "_Expirable effects:_ " +
                         player.getEffects().stream()
                                 .filter(effect -> !effect.isPermanent())
-                                .map(effect -> effect + ", expires in " + ((ExpirableEffect) effect).getTurnsLasts() + " turns")
+                                .map(effect -> effect + ", expires in " + ((ExpirableEffect) effect).getTurnsLeft() + " turns")
                                 .collect(Collectors.joining("\n", "\n", "\n")) : "") +
                 emoji.get(STONKS) + ": " + player.getXp() + " xp " + generateXpBar(player.getXp(), player.getPlayerLevel(), player.getNextLevelXp());
     }

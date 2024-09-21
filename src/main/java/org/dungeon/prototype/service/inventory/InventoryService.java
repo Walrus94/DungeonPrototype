@@ -2,11 +2,11 @@ package org.dungeon.prototype.service.inventory;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.dungeon.prototype.model.effect.Effect;
 import org.dungeon.prototype.model.inventory.Inventory;
 import org.dungeon.prototype.model.inventory.attributes.wearable.WearableType;
 import org.dungeon.prototype.model.inventory.items.Weapon;
 import org.dungeon.prototype.model.inventory.items.Wearable;
+import org.dungeon.prototype.model.player.Player;
 import org.dungeon.prototype.model.room.content.Merchant;
 import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.repository.InventoryRepository;
@@ -22,8 +22,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Optional;
-import java.util.stream.Collectors;
-
 
 @Slf4j
 @Service
@@ -71,8 +69,7 @@ public class InventoryService {
      * @param chatId id of chat where message sent
      * @return true if message successfully sent
      */
-    public boolean sendOrUpdateInventoryMessage(Long chatId) {
-        val player = playerService.getPlayer(chatId);
+    public boolean sendOrUpdateInventoryMessage(Long chatId, Player player) {
         messageService.sendInventoryMessage(chatId, player.getInventory());
         return true;
     }
@@ -88,9 +85,7 @@ public class InventoryService {
         val item = itemService.findItem(chatId, itemId);
         val inventory = player.getInventory();
         if (inventory.equipItem(item)) {
-            player.addEffects(item.getEffects().stream()
-                    .map(permanentEffect -> (Effect) permanentEffect)
-                    .collect(Collectors.toCollection(ArrayList::new)));
+            player.addEffects(new ArrayList<>(item.getEffects()));
             player = effectService.updateArmorEffect(player);
             playerService.updatePlayer(player);
             saveOrUpdateInventory(inventory);
@@ -187,7 +182,7 @@ public class InventoryService {
      * @param callbackType optional value, present if item equipped, permitted values:
      *                     {@link CallbackType.HEAD}, {@link CallbackType.VEST}, {@link CallbackType.GLOVES},
      *                     {@link CallbackType.BOOTS}, {@link CallbackType.LEFT_HAND}, {@link CallbackType.RIGHT_HAND}
-     * @return
+     * @return true if successfully opened inventory item information
      */
     public boolean openInventoryItemInfo(Long chatId, String itemId, CallbackType inventoryType, Optional<CallbackType> callbackType) {
         val item = itemService.findItem(chatId, itemId);

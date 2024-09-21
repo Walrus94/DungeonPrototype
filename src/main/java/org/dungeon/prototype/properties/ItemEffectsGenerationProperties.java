@@ -13,8 +13,4 @@ import java.util.Map;
 public class ItemEffectsGenerationProperties {
     private Map<Quality, Integer> minimumAmountPerItemMap;
     private Map<Quality, Integer> maximumAmountPerItemMap;
-    private Map<Integer, Double> randomEffectAdditionMap;
-    private Map<Double, Double> randomEffectMultiplierMap;
-    private Integer weightAdditionRatio;
-    private Integer weightMultiplierRatio;
 }

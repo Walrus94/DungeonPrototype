@@ -56,12 +56,11 @@ class RoomServiceTest extends BaseServiceUnitTest {
         roomDocument.setChatId(CHAT_ID);
         roomDocument.setId(CURRENT_ROOM_ID);
 
-        when(playerService.getPlayer(CHAT_ID)).thenReturn(player);
         when(roomRepository.findByChatIdAndId(CHAT_ID, player.getCurrentRoomId())).thenReturn(roomDocument);
         ArgumentCaptor<Room> roomArgumentCaptor = ArgumentCaptor.forClass(Room.class);
         when(messageService.sendRoomMessage(eq(CHAT_ID), eq(player), roomArgumentCaptor.capture())).thenReturn(true);
 
-        val actualResult = roomService.sendOrUpdateRoomMessage(CHAT_ID);
+        val actualResult = roomService.sendOrUpdateRoomMessage(CHAT_ID, player);
 
         assertTrue(actualResult);
         val actualRoom = roomArgumentCaptor.getValue();
@@ -152,20 +151,10 @@ class RoomServiceTest extends BaseServiceUnitTest {
     void openMerchantBuyMenu() {
         val player = getPlayer(CHAT_ID, CURRENT_ROOM_ID);
         val roomContent = getMerchant();
-        val room = new RoomDocument();
-        val roomContentDocument = new RoomContentDocument();
-        roomContentDocument.setRoomType(RoomType.MERCHANT);
-        roomContentDocument.setItems(roomContent.getItems().stream().map(item -> {
-            val result = new ItemDocument();
-            result.setItemType(item.getItemType());
-            result.setId(item.getId());
-            return result;
-        }).collect(Collectors.toList()));
-        room.setRoomContent(roomContentDocument);
-        when(playerService.getPlayer(CHAT_ID)).thenReturn(player);
-        when(roomRepository.findByChatIdAndId(CHAT_ID, player.getCurrentRoomId())).thenReturn(room);
+        val currentRoom = new Room();
+        currentRoom.setRoomContent(roomContent);
 
-        val actualResult = roomService.openMerchantBuyMenu(CHAT_ID);
+        val actualResult = roomService.openMerchantBuyMenu(CHAT_ID, player, currentRoom);
 
         ArgumentCaptor<Set<Item>> argument = ArgumentCaptor.forClass(Set.class);
         verify(messageService).sendMerchantBuyMenuMessage(eq(CHAT_ID), eq(player.getGold()), argument.capture());
@@ -178,22 +167,13 @@ class RoomServiceTest extends BaseServiceUnitTest {
     @DisplayName("Successfully opens menu with list of merchant's items to buy")
     void openMerchantSellMenu() {
         val player = getPlayer(CHAT_ID, CURRENT_ROOM_ID);
-        val room = new RoomDocument();
-        val roomContent = new RoomContentDocument();
-        roomContent.setRoomType(RoomType.MERCHANT);
-        roomContent.setItems(getMerchant().getItems().stream().map(item -> {
-            val result = new ItemDocument();
-            result.setItemType(item.getItemType());
-            result.setId(item.getId());
-            return result;
-        }).collect(Collectors.toList()));
+        val room = new Room();
+        val roomContent = getMerchant();
         room.setRoomContent(roomContent);
         room.setId(CURRENT_ROOM_ID);
         room.setChatId(CHAT_ID);
-        when(playerService.getPlayer(CHAT_ID)).thenReturn(player);
-        when(roomRepository.findByChatIdAndId(CHAT_ID, CURRENT_ROOM_ID)).thenReturn(room);
 
-        val actualResult = roomService.openMerchantSellMenu(CHAT_ID);
+        val actualResult = roomService.openMerchantSellMenu(CHAT_ID, player, room);
 
         verify(messageService).sendMerchantSellMenuMessage(CHAT_ID, player);
         assertTrue(actualResult);

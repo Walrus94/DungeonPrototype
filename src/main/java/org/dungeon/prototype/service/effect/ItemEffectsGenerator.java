@@ -1,76 +1,113 @@
 package org.dungeon.prototype.service.effect;
 
 import lombok.val;
-import org.dungeon.prototype.model.effect.PermanentEffect;
+import org.apache.commons.math3.util.Pair;
+import org.dungeon.prototype.model.effect.Effect;
 import org.dungeon.prototype.model.effect.attributes.Action;
 import org.dungeon.prototype.model.effect.attributes.EffectAttribute;
-import org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttributes;
-import org.dungeon.prototype.model.inventory.attributes.wearable.WearableAttributes;
+import org.dungeon.prototype.model.inventory.Item;
+import org.dungeon.prototype.model.inventory.items.Usable;
+import org.dungeon.prototype.model.inventory.items.Weapon;
+import org.dungeon.prototype.model.inventory.items.Wearable;
 import org.dungeon.prototype.properties.ItemsGenerationProperties;
+import org.dungeon.prototype.service.item.ItemService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import static org.dungeon.prototype.model.effect.attributes.EffectAttribute.CHANCE_TO_DODGE;
-import static org.dungeon.prototype.model.effect.attributes.EffectAttribute.CRITICAL_HIT_CHANCE;
-import static org.dungeon.prototype.model.effect.attributes.EffectAttribute.KNOCK_OUT_CHANCE;
-import static org.dungeon.prototype.model.effect.attributes.EffectAttribute.MISS_CHANCE;
-import static org.dungeon.prototype.util.RandomUtil.getRandomEffectAddition;
-import static org.dungeon.prototype.util.RandomUtil.getRandomEffectMultiplier;
+import static java.util.Objects.nonNull;
+import static org.dungeon.prototype.model.effect.attributes.Action.MULTIPLY;
+import static org.dungeon.prototype.model.effect.attributes.EffectAttribute.*;
 import static org.dungeon.prototype.util.RandomUtil.getRandomInt;
 
 @Component
 public class ItemEffectsGenerator {
     @Autowired
-    ItemsGenerationProperties itemsGenerationProperties;
+    private ItemService itemService;
+    @Autowired
+    private EffectFactory effectFactory;
+    @Autowired
+    private ItemsGenerationProperties itemsGenerationProperties;
 
-    public List<PermanentEffect> generateWeaponEffects(WeaponAttributes weaponAttributes) {
-        val properties = itemsGenerationProperties.getEffects();
-        val minEffectsAmount = itemsGenerationProperties.getEffects().getMinimumAmountPerItemMap().get(weaponAttributes.getQuality());
-        val maxEffectsAmount = itemsGenerationProperties.getEffects().getMaximumAmountPerItemMap().get(weaponAttributes.getQuality());
-        val amount = getRandomInt(minEffectsAmount, maxEffectsAmount);
-        return Stream.generate(() -> {
-            val effect = new PermanentEffect();
-            val attribute = EffectAttribute.values()[getRandomInt(0, EffectAttribute.values().length - 1)];
-            effect.setAttribute(attribute);
-            val action = Set.of(CRITICAL_HIT_CHANCE, MISS_CHANCE, KNOCK_OUT_CHANCE, CHANCE_TO_DODGE).contains(attribute)
-                    ? Action.MULTIPLY : Action.values()[getRandomInt(0, Action.values().length - 1)];
-            effect.setAction(action);
-            if (action.equals(Action.ADD)) {
-                effect.setAmount(getRandomEffectAddition(properties.getRandomEffectAdditionMap()));
-                effect.setWeight(effect.getAmount() * properties.getWeightAdditionRatio());
-            } else {
-                effect.setMultiplier(getRandomEffectMultiplier(properties.getRandomEffectMultiplierMap()));
-                effect.setWeight((int) ((effect.getMultiplier() - 1.0) * properties.getWeightMultiplierRatio()));
+    public double addItemEffect(Long chatId, String itemId, double expectedWeightChange) {
+        val item = itemService.findItem(chatId, itemId);
+        if (nonNull(item)) {
+            if (item instanceof Usable) {
+                return 0.0;
             }
-            return effect;
-        }).limit(amount).collect(Collectors.toList());
+            val minEffectsAmount = itemsGenerationProperties.getEffects().getMinimumAmountPerItemMap().get(item.getAttributes().getQuality());
+            val maxEffectsAmount = itemsGenerationProperties.getEffects().getMaximumAmountPerItemMap().get(item.getAttributes().getQuality());
+
+            if (item.getEffects().size() < minEffectsAmount) {
+                val amount = minEffectsAmount - item.getEffects().size();
+                for (int i = 0; i < amount; i++) {
+                    return generateAndAddItemEffect(expectedWeightChange / amount, item);
+                }
+            } else if (item.getEffects().size() < maxEffectsAmount) {
+                return generateAndAddItemEffect(expectedWeightChange, item);
+            }
+        }
+        return 0.0;
     }
 
-    public List<PermanentEffect> generateWearableEffects(WearableAttributes wearableAttributes) {
-        val properties = itemsGenerationProperties.getEffects();
-        val minEffectsAmount = itemsGenerationProperties.getEffects().getMinimumAmountPerItemMap().get(wearableAttributes.getQuality());
-        val maxEffectsAmount = itemsGenerationProperties.getEffects().getMaximumAmountPerItemMap().get(wearableAttributes.getQuality());
-        val amount = getRandomInt(minEffectsAmount, maxEffectsAmount);
-        return Stream.generate(() -> {
-            val effect = new PermanentEffect();
-            val attribute = EffectAttribute.values()[getRandomInt(0, EffectAttribute.values().length - 1)];
-            effect.setAttribute(attribute);
-            val action = Set.of(CRITICAL_HIT_CHANCE, MISS_CHANCE, KNOCK_OUT_CHANCE, CHANCE_TO_DODGE).contains(attribute)
-                    ? Action.MULTIPLY : Action.values()[getRandomInt(0, Action.values().length - 1)];
-            effect.setAction(action);
-            if (action.equals(Action.ADD)) {
-                effect.setAmount(getRandomEffectAddition(properties.getRandomEffectAdditionMap()));
-                effect.setWeight(effect.getAmount() * properties.getWeightAdditionRatio());
-            } else {
-                effect.setMultiplier(getRandomEffectMultiplier(properties.getRandomEffectMultiplierMap()));
-                effect.setWeight((int) ((effect.getMultiplier() - 1.0) * properties.getWeightMultiplierRatio()));
+    public Pair<String, Double> copyItemAndAddEffect(Long chatId, String itemId, double expectedWeightChange) {
+        val vanillaItem = itemService.findItem(chatId, itemId);
+        if (nonNull(vanillaItem)) {
+            switch (vanillaItem.getItemType()) {
+                case WEAPON -> {
+                    val weapon = new Weapon((Weapon) vanillaItem);
+                    if (generateAndAddItemEffect(expectedWeightChange, weapon) > 0.0) {
+                        return Pair.create(weapon.getId(), weapon.getWeight().toVector().getNorm());
+                    }
+                }
+                case WEARABLE -> {
+                    val wearable = new Wearable((Wearable) vanillaItem);
+                    if (generateAndAddItemEffect(expectedWeightChange, wearable) > 0.0) {
+                        return Pair.create(wearable.getId(), wearable.getWeight().toVector().getNorm());
+                    }
+                }
+                case USABLE -> {
+                    val usable = new Usable((Usable) vanillaItem);
+                    if (generateAndAddItemEffect(expectedWeightChange, usable) > 0.0) {
+                        return Pair.create(usable.getId(), usable.getWeight().toVector().getNorm());
+                    }
+                }
             }
-            return effect;
-        }).limit(amount).collect(Collectors.toList());
+        }
+        return null;
+    }
+
+    private double generateAndAddItemEffect(double expectedWeightChange, Item item) {
+        Effect effect;
+        Action action;
+        EffectAttribute attribute;
+        List<EffectAttribute> applicableAttributes;
+        if (item instanceof Wearable wearable) {
+            applicableAttributes = switch (wearable.getAttributes().getWearableType()) {
+                case HELMET -> List.of(CHANCE_TO_DODGE, XP_BONUS, GOLD_BONUS);
+                case VEST -> List.of(CRITICAL_HIT_MULTIPLIER, CHANCE_TO_DODGE, MISS_CHANCE, XP_BONUS, GOLD_BONUS);
+                case GLOVES ->
+                        List.of(CRITICAL_HIT_CHANCE, MISS_CHANCE, KNOCK_OUT_CHANCE, CRITICAL_HIT_MULTIPLIER, XP_BONUS, GOLD_BONUS);
+                case BOOTS -> List.of(CRITICAL_HIT_CHANCE, KNOCK_OUT_CHANCE, MISS_CHANCE, XP_BONUS, GOLD_BONUS);
+            };
+            attribute = applicableAttributes.get(getRandomInt(0, applicableAttributes.size() - 1));
+            action = MULTIPLY;
+        } else if (item instanceof Weapon) {
+            applicableAttributes = List.of(CHANCE_TO_DODGE, XP_BONUS, GOLD_BONUS, MAX_ARMOR,
+                            HEALTH_MAX, HEALTH_MAX_ONLY, MANA_MAX, MANA_MAX_ONLY);
+            attribute = applicableAttributes.get(getRandomInt(0, applicableAttributes.size() - 1));
+            if (attribute.equals(CHANCE_TO_DODGE)) {
+                action = MULTIPLY;
+            } else {
+                action = Action.values()[getRandomInt(0, Action.values().length)];
+            }
+        } else {
+            return 0.0;
+        }
+        effect = effectFactory.generateItemEffect(item, attribute, action, expectedWeightChange);
+        item.getEffects().add(effect);
+        item = itemService.saveItem(item);
+        return item.getWeight().toVector().getNorm();
     }
 }

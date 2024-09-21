@@ -3,6 +3,8 @@ package org.dungeon.prototype.model.document.monster;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.dungeon.prototype.model.document.item.EffectDocument;
+import org.dungeon.prototype.model.document.weight.WeightDocument;
+import org.dungeon.prototype.model.inventory.attributes.MagicType;
 import org.dungeon.prototype.model.monster.MonsterAttack;
 import org.dungeon.prototype.model.monster.MonsterClass;
 import org.springframework.data.annotation.Id;
@@ -18,12 +20,12 @@ public class MonsterDocument {
     @Id
     private String id;
     private MonsterClass monsterClass;
-    private Integer level;
     private MonsterAttack primaryAttack;
     private MonsterAttack secondaryAttack;
+    private MagicType magicType;
     private Integer maxHp;
     private Integer hp;
-    private Integer xpReward;
+    private WeightDocument weight;
 
     private LinkedList<MonsterAttack> attackPattern;
     private MonsterAttack currentAttack;

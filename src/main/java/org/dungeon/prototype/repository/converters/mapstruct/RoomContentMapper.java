@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;
 
-@Mapper(uses = {MonsterMapper.class, EffectMapper.class, ItemMapper.class})
+@Mapper(uses = {MonsterMapper.class, EffectMapper.class, ItemMapper.class, WeightMapper.class})
 public interface RoomContentMapper {
     RoomContentMapper INSTANCE = Mappers.getMapper(RoomContentMapper.class);
 
@@ -58,7 +58,7 @@ public interface RoomContentMapper {
             @Mapping(target = "items", ignore = true),
             @Mapping(target = "chanceToBreakWeapon", ignore = true),
             @Mapping(target = "attackBonus", ignore = true),
-            @Mapping(target = "armorRestored", ignore = true)
+            @Mapping(target = "armorRestored", ignore = true),
     })
     RoomContentDocument mapToDocument(Shrine roomContent);
 
@@ -66,7 +66,7 @@ public interface RoomContentMapper {
             @Mapping(target = "monster", ignore = true),
             @Mapping(target = "gold", ignore = true),
             @Mapping(target = "items", ignore = true),
-            @Mapping(target = "effect", ignore = true)
+            @Mapping(target = "effect", ignore = true),
     })
     RoomContentDocument mapToDocument(Anvil anvil);
 
@@ -99,12 +99,12 @@ public interface RoomContentMapper {
 
             case MANA_SHRINE -> {
                 val room = new ManaShrine();
-                room.setEffect(EffectMapper.INSTANCE.mapToExpirableEffect(document.getEffect()));
+                room.setEffect(EffectMapper.INSTANCE.mapToExpirableAdditionEffect(document.getEffect()));
                 yield room;
             }
             case HEALTH_SHRINE -> {
                 val room = new HealthShrine();
-                room.setEffect(EffectMapper.INSTANCE.mapToExpirableEffect(document.getEffect()));
+                room.setEffect(EffectMapper.INSTANCE.mapToExpirableAdditionEffect(document.getEffect()));
                 yield room;
             }
         };

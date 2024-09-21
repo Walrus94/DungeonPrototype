@@ -1,43 +1,70 @@
 package org.dungeon.prototype.repository.converters.mapstruct;
 
 import org.dungeon.prototype.model.document.item.EffectDocument;
+import org.dungeon.prototype.model.effect.AdditionEffect;
 import org.dungeon.prototype.model.effect.Effect;
+import org.dungeon.prototype.model.effect.ExpirableAdditionEffect;
 import org.dungeon.prototype.model.effect.ExpirableEffect;
-import org.dungeon.prototype.model.effect.PermanentEffect;
+import org.dungeon.prototype.model.effect.ExpirableMultiplicationEffect;
+import org.dungeon.prototype.model.effect.MultiplicationEffect;
+import org.dungeon.prototype.model.effect.PermanentAdditionEffect;
+import org.dungeon.prototype.model.effect.PermanentMultiplicationEffect;
+import org.dungeon.prototype.model.effect.attributes.Action;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Mappings;
 import org.mapstruct.Named;
 import org.mapstruct.factory.Mappers;
 
-@Mapper
+@Mapper(uses = WeightMapper.class)
 public interface EffectMapper {
     EffectMapper INSTANCE = Mappers.getMapper(EffectMapper.class);
 
     @Mappings({
-            @Mapping(target = "turnsLasts", source = "effect", qualifiedByName = "mapTurnsLastsToDocument"),
+            @Mapping(target = "turnsLeft", source = "effect", qualifiedByName = "mapTurnsLeftToDocument"),
+            @Mapping(target = "amount", source = "effect", qualifiedByName = "mapAmountToDocument"),
+            @Mapping(target = "multiplier", source = "effect", qualifiedByName = "mapMultiplierToDocument"),
             @Mapping(target = "isAccumulated", source = "effect", qualifiedByName = "mapIsAccumulatedToDocument"),
-            @Mapping(target = "baseAmount", source = "effect", qualifiedByName = "mapBaseAmountToDocument"),
-            @Mapping(target = "isPermanent", expression = "java(effect instanceof PermanentEffect)")
+            @Mapping(target = "isPermanent", expression = "java(effect instanceof PermanentMultiplicationEffect)"),
     })
     EffectDocument mapToDocument(Effect effect);
 
     default Effect mapToEffect(EffectDocument document) {
-        if (document.getIsPermanent()) {
-            return mapToPermanentEffect(document);
+        if (document.getAction().equals(Action.MULTIPLY)) {
+            return mapToMultiplicationEffect(document);
         } else {
-            return mapToExpirableEffect(document);
+            return mapToAdditionEffect(document);
         }
     }
 
-    ExpirableEffect mapToExpirableEffect(EffectDocument document);
+    default AdditionEffect mapToAdditionEffect(EffectDocument document) {
+        if (document.getIsPermanent()) {
+            return mapToPermanentAdditionEffect(document);
+        } else {
+            return mapToExpirableAdditionEffect(document);
+        }
+    }
 
-    PermanentEffect mapToPermanentEffect(EffectDocument document);
+    default MultiplicationEffect mapToMultiplicationEffect(EffectDocument document) {
+        if (document.getIsPermanent()) {
+            return mapToPermanentMultiplicationEffect(document);
+        } else {
+            return mapToExpirableMultiplicationEffect(document);
+        }
+    }
 
-    @Named("mapTurnsLastsToDocument")
-    default Integer mapTurnsLastsToDocument(Effect effect) {
+    PermanentAdditionEffect mapToPermanentAdditionEffect(EffectDocument document);
+
+    ExpirableAdditionEffect mapToExpirableAdditionEffect(EffectDocument document);
+
+    PermanentMultiplicationEffect mapToPermanentMultiplicationEffect(EffectDocument document);
+
+    ExpirableMultiplicationEffect mapToExpirableMultiplicationEffect(EffectDocument document);
+
+    @Named("mapTurnsLeftToDocument")
+    default Integer mapTurnsLeftToDocument(Effect effect) {
         if (effect instanceof ExpirableEffect) {
-            return ((ExpirableEffect) effect).getTurnsLasts();
+            return ((ExpirableEffect) effect).getTurnsLeft();
         } else {
             return null;
         }
@@ -46,15 +73,25 @@ public interface EffectMapper {
     @Named("mapIsAccumulatedToDocument")
     default Boolean mapIsAccumulatedToDocument(Effect effect) {
         if (effect instanceof ExpirableEffect) {
-            return ((ExpirableEffect) effect).getIsAccumulated();
+            return ((ExpirableEffect) effect).isAccumulated();
         } else {
             return null;
         }
     }
-    @Named("mapBaseAmountToDocument")
-    default Integer mapBaseAmountToDocument(Effect effect) {
-        if (effect instanceof ExpirableEffect) {
-            return ((ExpirableEffect) effect).getBaseAmount();
+
+    @Named("mapAmountToDocument")
+    default Integer mapAmountToDocument(Effect effect) {
+        if (effect instanceof AdditionEffect) {
+            return ((AdditionEffect) effect).getAmount();
+        } else {
+            return null;
+        }
+    }
+
+    @Named("mapMultiplierToDocument")
+    default Double mapMultiplierToDocument(Effect effect) {
+        if (effect instanceof MultiplicationEffect) {
+            return ((MultiplicationEffect) effect).getMultiplier();
         } else {
             return null;
         }

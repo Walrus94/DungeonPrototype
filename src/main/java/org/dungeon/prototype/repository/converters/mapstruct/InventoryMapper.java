@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;
 
-@Mapper(uses = ItemMapper.class)
+@Mapper(uses = {ItemMapper.class, WeightMapper.class})
 public interface InventoryMapper {
     InventoryMapper INSTANCE = Mappers.getMapper(InventoryMapper.class);
 

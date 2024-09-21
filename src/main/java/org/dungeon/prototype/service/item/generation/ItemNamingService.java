@@ -1,4 +1,4 @@
-package org.dungeon.prototype.service.item;
+package org.dungeon.prototype.service.item.generation;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;

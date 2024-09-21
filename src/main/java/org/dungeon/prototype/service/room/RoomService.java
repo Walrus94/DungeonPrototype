@@ -2,6 +2,7 @@ package org.dungeon.prototype.service.room;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.dungeon.prototype.model.player.Player;
 import org.dungeon.prototype.model.player.PlayerAttribute;
 import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.content.Merchant;
@@ -40,8 +41,7 @@ public class RoomService {
      * @param chatId id of chat where message sent
      * @return true if message successfully sent
      */
-    public boolean sendOrUpdateRoomMessage(Long chatId) {
-        val player = playerService.getPlayer(chatId);
+    public boolean sendOrUpdateRoomMessage(Long chatId, Player player) {
         val room = getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
         return messageService.sendRoomMessage(chatId, player, room);
     }
@@ -50,7 +50,7 @@ public class RoomService {
      * Looks for room in repository by passed parameters
      * @param chatId id of chat
      * @param id of requested room
-     * @return
+     * @return room
      */
     public Room getRoomByIdAndChatId(Long chatId, String id) {
         val roomDocument = roomRepository.findByChatIdAndId(chatId, id);
@@ -86,12 +86,12 @@ public class RoomService {
 
     /**
      * Sends menu with list of merchant's items to buy
-     * @param chatId id of chat where message sent
+     *
+     * @param chatId      id of chat where message sent
+     * @param currentRoom current room
      * @return true if message successfully sent
      */
-    public boolean openMerchantBuyMenu(Long chatId) {
-        val player = playerService.getPlayer(chatId);
-        val currentRoom = getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+    public boolean openMerchantBuyMenu(Long chatId, Player player, Room currentRoom) {
         if (currentRoom.getRoomContent() instanceof Merchant merchant) {
             messageService.sendMerchantBuyMenuMessage(chatId, player.getGold(), merchant.getItems());
             return true;
@@ -104,9 +104,7 @@ public class RoomService {
      * @param chatId id of chat where message sent
      * @return true if message successfully sent
      */
-    public boolean openMerchantSellMenu(Long chatId) {
-        val player = playerService.getPlayer(chatId);
-        val currentRoom = getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+    public boolean openMerchantSellMenu(Long chatId, Player player, Room currentRoom) {
         if (currentRoom.getRoomContent() instanceof Merchant) {
             messageService.sendMerchantSellMenuMessage(chatId, player);
             return true;

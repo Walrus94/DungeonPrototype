@@ -51,10 +51,9 @@ class TreasureServiceTest extends BaseServiceUnitTest {
         roomContent.setItems(getItems());
         room.setRoomContent(roomContent);
 
-        when(playerService.getPlayer(CHAT_ID)).thenReturn(player);
         when(roomService.getRoomByIdAndChatId(CHAT_ID, CURRENT_ROOM_ID)).thenReturn(room);
 
-        treasureService.openTreasure(CHAT_ID);
+        treasureService.openTreasure(CHAT_ID, player);
 
         verify(messageService).sendTreasureMessage(CHAT_ID, roomContent);
     }
@@ -69,11 +68,10 @@ class TreasureServiceTest extends BaseServiceUnitTest {
         roomContent.setItems(new HashSet<>());
         room.setRoomContent(roomContent);
 
-        when(playerService.getPlayer(CHAT_ID)).thenReturn(player);
         when(roomService.getRoomByIdAndChatId(CHAT_ID, CURRENT_ROOM_ID)).thenReturn(room);
         doNothing().when(levelService).updateAfterTreasureLooted(room);
 
-        treasureService.openTreasure(CHAT_ID);
+        treasureService.openTreasure(CHAT_ID, player);
 
         verify(messageService).sendRoomMessage(CHAT_ID, player, room);
     }
@@ -83,19 +81,17 @@ class TreasureServiceTest extends BaseServiceUnitTest {
     @DisplayName("Successfully collects gold and sends room message since treasure is looted")
     void collectTreasureGoldNoItemsLeft() {
         val player = getPlayer(CHAT_ID, CURRENT_ROOM_ID);
-        val room = new Room();
+        val currentRoom = new Room();
         val roomContent = new Treasure();
         roomContent.setGold(100);
         roomContent.setItems(new HashSet<>());
-        room.setRoomContent(roomContent);
+        currentRoom.setRoomContent(roomContent);
 
-        when(playerService.getPlayer(CHAT_ID)).thenReturn(player);
-        when(roomService.getRoomByIdAndChatId(CHAT_ID, CURRENT_ROOM_ID)).thenReturn(room);
         ArgumentCaptor<Player> playerArgumentCaptor = ArgumentCaptor.forClass(Player.class);
         when(playerService.updatePlayer(playerArgumentCaptor.capture())).thenReturn(player);
         when(messageService.sendRoomMessage(eq(CHAT_ID), eq(player), any(Room.class))).thenReturn(true);
 
-        val actualResult = treasureService.collectTreasureGold(CHAT_ID);
+        val actualResult = treasureService.collectTreasureGold(CHAT_ID, player, currentRoom);
 
         assertTrue(actualResult);
         val actualPlayer = playerArgumentCaptor.getValue();
@@ -112,19 +108,17 @@ class TreasureServiceTest extends BaseServiceUnitTest {
     @DisplayName("Successfully collecting only gold, leaving items in treasure")
     void collectTreasureGoldItemsLeft() {
         val player = getPlayer(CHAT_ID, CURRENT_ROOM_ID);
-        val room = new Room();
+        val currentRoom = new Room();
         val roomContent = new Treasure();
         roomContent.setGold(100);
         roomContent.setItems(getItems());
-        room.setRoomContent(roomContent);
+        currentRoom.setRoomContent(roomContent);
 
-        when(playerService.getPlayer(CHAT_ID)).thenReturn(player);
-        when(roomService.getRoomByIdAndChatId(CHAT_ID, CURRENT_ROOM_ID)).thenReturn(room);
 
         ArgumentCaptor<Player> playerArgumentCaptor = ArgumentCaptor.forClass(Player.class);
         when(playerService.updatePlayer(playerArgumentCaptor.capture())).thenReturn(player);
 
-        val actualResult = treasureService.collectTreasureGold(CHAT_ID);
+        val actualResult = treasureService.collectTreasureGold(CHAT_ID, player, currentRoom);
 
         assertTrue(actualResult);
         ArgumentCaptor<Treasure> treasureArgumentCaptor = ArgumentCaptor.forClass(Treasure.class);
@@ -141,14 +135,11 @@ class TreasureServiceTest extends BaseServiceUnitTest {
     @DisplayName("Successfully collects all treasure and sends updated room message")
     void collectAllTreasure() {
         val player = getPlayer(CHAT_ID, CURRENT_ROOM_ID);
-        val room = new Room();
+        val currentRoom = new Room();
         val roomContent = new Treasure();
         roomContent.setGold(100);
         roomContent.setItems(getItems());
-        room.setRoomContent(roomContent);
-
-        when(playerService.getPlayer(CHAT_ID)).thenReturn(player);
-        when(roomService.getRoomByIdAndChatId(CHAT_ID, CURRENT_ROOM_ID)).thenReturn(room);
+        currentRoom.setRoomContent(roomContent);
 
         ArgumentCaptor<Player> playerArgumentCaptor = ArgumentCaptor.forClass(Player.class);
         when(playerService.updatePlayer(playerArgumentCaptor.capture())).thenReturn(player);
@@ -157,7 +148,7 @@ class TreasureServiceTest extends BaseServiceUnitTest {
 
         when(inventoryService.saveOrUpdateInventory(inventoryArgumentCaptor.capture())).thenReturn(player.getInventory());
 
-        val actualResult = treasureService.collectAllTreasure(CHAT_ID);
+        val actualResult = treasureService.collectAllTreasure(CHAT_ID, player, currentRoom);
 
         ArgumentCaptor<Room> roomArgumentCaptor = ArgumentCaptor.forClass(Room.class);
         verify(levelService).updateAfterTreasureLooted(roomArgumentCaptor.capture());

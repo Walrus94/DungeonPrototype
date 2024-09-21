@@ -37,11 +37,7 @@ public class ItemDocument {
     private Integer amount;
     private String name;
     @Indexed
-    private Integer weight;
-    private boolean hasMagic;
+    private Double weightAbs;
     private MagicType magicType;
     private List<EffectDocument> effects = new ArrayList<>();
-
-    private Integer sellingPrice;
-    private Integer buyingPrice;
 }

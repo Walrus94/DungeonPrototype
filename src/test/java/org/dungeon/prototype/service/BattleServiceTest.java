@@ -8,10 +8,8 @@ import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.content.MonsterRoom;
 import org.dungeon.prototype.properties.BattleProperties;
 import org.dungeon.prototype.properties.CallbackType;
-import org.dungeon.prototype.service.level.LevelService;
 import org.dungeon.prototype.service.message.MessageService;
 import org.dungeon.prototype.service.room.MonsterService;
-import org.dungeon.prototype.service.room.RoomService;
 import org.dungeon.prototype.util.RandomUtil;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,7 +23,6 @@ import java.util.Map;
 import static org.dungeon.prototype.TestData.getMonster;
 import static org.dungeon.prototype.TestData.getPlayer;
 import static org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttackType.SLASH;
-import static org.dungeon.prototype.model.room.RoomType.ZOMBIE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -42,10 +39,6 @@ class BattleServiceTest extends BaseServiceUnitTest {
     @Mock
     private MonsterService monsterService;
     @Mock
-    private LevelService levelService;
-    @Mock
-    private RoomService roomService;
-    @Mock
     private MessageService messageService;
     @InjectMocks
     private BattleService battleService;
@@ -59,10 +52,7 @@ class BattleServiceTest extends BaseServiceUnitTest {
         val roomContent = mock(MonsterRoom.class);
         when(currentRoom.getRoomContent()).thenReturn(roomContent);
         when(roomContent.getMonster()).thenReturn(monster);
-        when(roomContent.getRoomType()).thenReturn(ZOMBIE);
 
-        when(playerService.getPlayer(CHAT_ID)).thenReturn(player);
-        when(roomService.getRoomByIdAndChatId(CHAT_ID, CURRENT_ROOM_ID)).thenReturn(currentRoom);
         try (MockedStatic<RandomUtil> randomUtilMock = mockStatic(RandomUtil.class)) {
             randomUtilMock.when(() -> RandomUtil.flipAdjustedCoin(1.0)).thenReturn(true);
             randomUtilMock.when(() -> RandomUtil.flipAdjustedCoin(0.0)).thenReturn(false);
@@ -77,10 +67,9 @@ class BattleServiceTest extends BaseServiceUnitTest {
             when(battleProperties.getPlayerDefenseRatioMatrix()).thenReturn(playerDefenseRatioMatrix);
             when(messageService.sendRoomMessage(CHAT_ID, player, currentRoom)).thenReturn(true);
 
-            battleService.attack(CHAT_ID, CallbackType.ATTACK);
+            battleService.attack(CHAT_ID, player, currentRoom, CallbackType.ATTACK);
 
             verify(playerService).updatePlayer(player);
-            verify(monsterService).saveOrUpdateMonster(monster);
             assertEquals(15, player.getHp());
             assertEquals(6, monster.getHp());
             verify(messageService).sendRoomMessage(CHAT_ID, player, currentRoom);
@@ -91,15 +80,12 @@ class BattleServiceTest extends BaseServiceUnitTest {
     @DisplayName("Successfully process player attacking monster and killing it")
     public void attack_monsterKilled() {
         val player = getPlayer(CHAT_ID, CURRENT_ROOM_ID, 20, 30);
-        val monster = getMonster(4, 15);
+        val monster = getMonster(1, 15);
         val currentRoom = mock(Room.class);
         val roomContent = mock(MonsterRoom.class);
         when(currentRoom.getRoomContent()).thenReturn(roomContent);
         when(roomContent.getMonster()).thenReturn(monster);
-        when(roomContent.getRoomType()).thenReturn(ZOMBIE);
 
-        when(playerService.getPlayer(CHAT_ID)).thenReturn(player);
-        when(roomService.getRoomByIdAndChatId(CHAT_ID, CURRENT_ROOM_ID)).thenReturn(currentRoom);
         try (MockedStatic<RandomUtil> randomUtilMock = mockStatic(RandomUtil.class)) {
             randomUtilMock.when(() -> RandomUtil.flipAdjustedCoin(1.0)).thenReturn(true);
             randomUtilMock.when(() -> RandomUtil.flipAdjustedCoin(0.0)).thenReturn(false);
@@ -110,12 +96,10 @@ class BattleServiceTest extends BaseServiceUnitTest {
             when(battleProperties.getMonsterDefenseRatioMatrix()).thenReturn(monsterDefenseRatioMatrix);
             when(messageService.sendRoomMessage(CHAT_ID, player, currentRoom)).thenReturn(true);
 
-            battleService.attack(CHAT_ID, CallbackType.ATTACK);
+            battleService.attack(CHAT_ID, player, currentRoom, CallbackType.ATTACK);
 
             verify(playerService).updatePlayer(player);
-            verify(levelService).updateAfterMonsterKill(currentRoom);
             assertEquals(20, player.getHp());
-            assertEquals(400, player.getXp());
             verify(messageService).sendRoomMessage(CHAT_ID, player, currentRoom);
         }
     }
@@ -129,10 +113,7 @@ class BattleServiceTest extends BaseServiceUnitTest {
         val roomContent = mock(MonsterRoom.class);
         when(currentRoom.getRoomContent()).thenReturn(roomContent);
         when(roomContent.getMonster()).thenReturn(monster);
-        when(roomContent.getRoomType()).thenReturn(ZOMBIE);
 
-        when(playerService.getPlayer(CHAT_ID)).thenReturn(player);
-        when(roomService.getRoomByIdAndChatId(CHAT_ID, CURRENT_ROOM_ID)).thenReturn(currentRoom);
         try (MockedStatic<RandomUtil> randomUtilMock = mockStatic(RandomUtil.class)) {
             randomUtilMock.when(() -> RandomUtil.flipAdjustedCoin(1.0)).thenReturn(true);
             randomUtilMock.when(() -> RandomUtil.flipAdjustedCoin(0.0)).thenReturn(false);
@@ -148,7 +129,7 @@ class BattleServiceTest extends BaseServiceUnitTest {
 
             when(messageService.sendRoomMessage(CHAT_ID, player, currentRoom)).thenReturn(true);
 
-            val actualResult = battleService.attack(CHAT_ID, CallbackType.ATTACK);
+            val actualResult = battleService.attack(CHAT_ID, player, currentRoom, CallbackType.ATTACK);
 
             verify(playerService).updatePlayer(player);
             assertEquals(0, player.getHp());

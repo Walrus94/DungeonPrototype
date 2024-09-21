@@ -2,8 +2,10 @@ package org.dungeon.prototype.service.effect;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.dungeon.prototype.model.effect.AdditionEffect;
 import org.dungeon.prototype.model.effect.Effect;
 import org.dungeon.prototype.model.effect.ExpirableEffect;
+import org.dungeon.prototype.model.effect.MultiplicationEffect;
 import org.dungeon.prototype.model.effect.attributes.EffectAttribute;
 import org.dungeon.prototype.model.monster.Monster;
 import org.dungeon.prototype.model.player.Player;
@@ -27,8 +29,7 @@ import static java.util.Objects.nonNull;
 import static org.apache.commons.math3.util.FastMath.max;
 import static org.apache.commons.math3.util.FastMath.min;
 import static org.dungeon.prototype.model.effect.attributes.Action.ADD;
-import static org.dungeon.prototype.model.effect.attributes.Action.MULTIPLY;
-import static org.dungeon.prototype.model.effect.attributes.EffectAttribute.ARMOR;
+import static org.dungeon.prototype.model.effect.attributes.EffectAttribute.MAX_ARMOR;
 import static org.dungeon.prototype.model.effect.attributes.EffectAttribute.HEALTH;
 import static org.dungeon.prototype.model.effect.attributes.EffectAttribute.HEALTH_MAX;
 import static org.dungeon.prototype.model.effect.attributes.EffectAttribute.HEALTH_MAX_ONLY;
@@ -45,30 +46,15 @@ public class EffectService {
     private PlayerService playerService;
 
     public Monster updateMonsterEffects(Monster monster) {
-        removeExpiredEffects(monster.getEffects());
         val monsterAttack = monster.getCurrentAttack();
-        monster.getEffects().stream()
+        monster.getEffects()
                 .forEach(monsterEffect -> {
                     switch (monsterEffect.getAttribute()) {
-                        case ATTACK -> {
-                            switch (monsterEffect.getAction()) {
-                                case ADD ->
-                                        monsterAttack.setAttack(monsterAttack.getAttack() + monsterEffect.getAmount());
-                                case MULTIPLY ->
-                                        monsterAttack.setAttack((int) (monsterAttack.getAttack() * monsterEffect.getMultiplier()));
-                            }
-                        }
-                        case HEALTH -> {
-                            switch (monsterEffect.getAction()) {
-                                case ADD ->
-                                        monster.setHp(min(monster.getMaxHp(), monster.getHp() + monsterEffect.getAmount()));
-                                case MULTIPLY ->
-                                        monster.setHp((int) min(monster.getMaxHp(), monster.getHp() * monsterEffect.getMultiplier()));
-                            }
-                        }
+                        case ATTACK -> monsterAttack.setAttack(monsterAttack.getAttack() + monsterEffect.getAmount());
+                        case HEALTH -> monster.setHp(max(0, min(monster.getMaxHp(), monster.getHp() + monsterEffect.getAmount())));
                     }
-                    monsterEffect.decreaseTurnsLasts();
                 });
+        removeExpiredEffects(monster.getEffects());
         return monster;
     }
 
@@ -81,6 +67,18 @@ public class EffectService {
         calculateManaEffects(player, mappedEffects);
         calculateBattleEffects(player, mappedEffects);
         removeExpiredEffects(player.getEffects());
+        return player;
+    }
+
+    public Player updateArmorEffect(Player player) {
+        val effects = player.getEffects().stream().filter(effect -> MAX_ARMOR.equals(effect.getAttribute()))
+                .collect(Collectors.toCollection(() ->
+                        new PriorityQueue<>(Comparator.comparing(Effect::getAction))));
+        val maxDefense = summarizeEffects(effects, player.getInventory().calculateMaxDefense());
+        player.setMaxDefense(maxDefense);
+        if (isNull(player.getDefense()) || player.getDefense() > maxDefense) {
+            player.setDefense(maxDefense);
+        }
         return player;
     }
 
@@ -129,6 +127,8 @@ public class EffectService {
                         player.setChanceToDodge(value);
                     }
                 }
+                case XP_BONUS -> player.setXpBonus(summarizeEffects(playerEffects, 1.0));
+                case GOLD_BONUS -> player.setGoldBonus(summarizeEffects(playerEffects, 1.0));
             }
         });
         player.setPrimaryAttack(primaryAttack);
@@ -137,18 +137,17 @@ public class EffectService {
 
     private void calculateHealthEffects(Player player, Map<EffectAttribute, PriorityQueue<Effect>> mappedEffects) {
         val defaultMaxHp = playerService.getDefaultMaxHp(player);
-        val baseHp = player.getHp() * defaultMaxHp / player.getMaxHp() ;
         val MaxHpEffects = getEffectsPriorityQueue(mappedEffects,
                 (attribute -> Set.of(HEALTH_MAX, HEALTH_MAX_ONLY).contains(attribute)));
         val maxHp = summarizeEffects(MaxHpEffects, defaultMaxHp);
-        val hpEffects = mappedEffects.entrySet().stream()
+        val combinedHpEffects = mappedEffects.entrySet().stream()
                 .filter(entry -> HEALTH_MAX.equals(entry.getKey()))
                 .map(Map.Entry::getValue)
                 .flatMap(Collection::stream)
                 .collect(Collectors.toCollection(() ->
                         new PriorityQueue<>(Comparator.comparing(Effect::getAction))));
-        final ArrayList<ExpirableEffect> hpOnlyEffects = getBarEffectsList(mappedEffects, HEALTH);
-        var hp = summarizeEffects(hpEffects, baseHp);
+        final ArrayList<AdditionEffect> hpOnlyEffects = getBarEffectsList(mappedEffects, HEALTH);
+        var hp = summarizeAdditionalBarEffects(combinedHpEffects, player.getHp());
         hp = summarizeBarEffect(hpOnlyEffects, hp);
         player.setMaxHp(maxHp);
         player.setHp(max(0, min(maxHp, hp)));
@@ -156,33 +155,20 @@ public class EffectService {
 
     private void calculateManaEffects(Player player, Map<EffectAttribute, PriorityQueue<Effect>> mappedEffects) {
         val defaultMaxMana = playerService.getDefaultMaxMana(player);
-        val baseMana = player.getMana() * defaultMaxMana / player.getMaxMana() ;
         val MaxManaEffects = getEffectsPriorityQueue(mappedEffects,
                 attribute -> Set.of(MANA_MAX, MANA_MAX_ONLY).contains(attribute));
         val maxMana = summarizeEffects(MaxManaEffects, defaultMaxMana);
-        val manaEffects = mappedEffects.entrySet().stream()
+        val combinedManaEffects = mappedEffects.entrySet().stream()
                 .filter(entry -> MANA_MAX.equals(entry.getKey()))
                 .map(Map.Entry::getValue)
                 .flatMap(Collection::stream)
                 .collect(Collectors.toCollection(() ->
                         new PriorityQueue<>(Comparator.comparing(Effect::getAction))));
-        final ArrayList<ExpirableEffect> manaOnlyEffects = getBarEffectsList(mappedEffects, MANA);
-        var mana = summarizeEffects(manaEffects, baseMana);
+        final ArrayList<AdditionEffect> manaOnlyEffects = getBarEffectsList(mappedEffects, MANA);
+        var mana = summarizeAdditionalBarEffects(combinedManaEffects, player.getMana());
         mana = summarizeBarEffect(manaOnlyEffects, mana);
         player.setMaxMana(maxMana);
         player.setMana(max(0, min(maxMana, mana)));
-    }
-
-    public Player updateArmorEffect(Player player) {
-        val effects = player.getEffects().stream().filter(effect -> ARMOR.equals(effect.getAttribute()))
-                .collect(Collectors.toCollection(() ->
-                        new PriorityQueue<>(Comparator.comparing(Effect::getAction))));
-        val maxDefense = summarizeEffects(effects, player.getInventory().calculateMaxDefense());
-        player.setMaxDefense(maxDefense);
-        if (isNull(player.getDefense()) || player.getDefense() > maxDefense) {
-            player.setDefense(maxDefense);
-        }
-        return player;
     }
 
     private static PriorityQueue<Effect> getEffectsPriorityQueue(Map<EffectAttribute, PriorityQueue<Effect>> mappedEffects,
@@ -195,16 +181,14 @@ public class EffectService {
                         new PriorityQueue<>(Comparator.comparing(Effect::getAction))));
     }
 
-    private static ArrayList<ExpirableEffect> getBarEffectsList(Map<EffectAttribute, PriorityQueue<Effect>> mappedEffects,
+    private static ArrayList<AdditionEffect> getBarEffectsList(Map<EffectAttribute, PriorityQueue<Effect>> mappedEffects,
                                                                 EffectAttribute bar) {
         return mappedEffects.entrySet().stream()
                 .filter(entry -> bar.equals(entry.getKey()))
                 .map(Map.Entry::getValue)
                 .flatMap(Collection::stream)
-                .filter(effect -> effect instanceof ExpirableEffect)
-                .map(effect -> (ExpirableEffect) effect)
-                .filter(ExpirableEffect::getIsAccumulated)
-                .filter(effect -> ADD.equals(effect.getAction()))
+                .filter(effect -> effect instanceof AdditionEffect)
+                .map(effect -> (AdditionEffect) effect)
                 .collect(Collectors.toCollection(ArrayList::new));
     }
 
@@ -212,8 +196,8 @@ public class EffectService {
         val effectsMap = effects.stream()
                 .collect(Collectors.groupingBy(Effect::getAction));
         return effectsMap.values().stream().mapToDouble(playerEffects -> playerEffects.stream()
-                        .filter(e -> MULTIPLY.equals(e.getAction()))
-                        .map(Effect::getMultiplier)
+                        .filter(e -> e instanceof MultiplicationEffect)
+                        .map(effect -> ((MultiplicationEffect)effect).getMultiplier())
                         .reduce(initialValue, (m1, m2) -> m1 * m2))
                 .findFirst().orElse(initialValue);
     }
@@ -223,30 +207,46 @@ public class EffectService {
                 .collect(Collectors.groupingBy(Effect::getAction));
         return effectsMap.values().stream().mapToInt(playerEffects -> {
             Double multiplyFactor = playerEffects.stream()
-                    .filter(e -> MULTIPLY.equals(e.getAction()))
-                    .map(Effect::getMultiplier)
+                    .filter(effect -> effect instanceof MultiplicationEffect)
+                    .map(effect -> ((MultiplicationEffect) effect).getMultiplier())
                     .reduce(initialValue.doubleValue(), (m1, m2) -> m1 * m2);
             return playerEffects.stream()
-                    .filter(e -> ADD.equals(e.getAction()))
-                    .map(Effect::getAmount)
+                    .filter(e -> e instanceof AdditionEffect)
+                    .map(effect -> ((AdditionEffect) effect).getAmount())
                     .reduce(multiplyFactor.intValue(), Integer::sum);
         }).findFirst().orElse(initialValue);
-
     }
 
-    private Integer summarizeBarEffect(List<ExpirableEffect> effects, Integer initialValue) {
+    private Integer summarizeAdditionalBarEffects(PriorityQueue<Effect> effects, Integer initialValue) {
+        val effectsMap = effects.stream()
+                .collect(Collectors.groupingBy(Effect::getAction));
+        return effectsMap.values().stream().mapToInt(playerEffects -> {
+            Double multiplyFactor = playerEffects.stream()
+                    .filter(effect -> effect instanceof MultiplicationEffect)
+                    .filter(effect -> !effect.hasFirstTurnPassed())
+                    .map(effect -> ((MultiplicationEffect) effect).getMultiplier())
+                    .reduce(initialValue.doubleValue(), (m1, m2) -> m1 * m2);
+            return playerEffects.stream()
+                    .filter(e -> e instanceof AdditionEffect)
+                    .filter(effect -> !effect.hasFirstTurnPassed())
+                    .map(effect -> ((AdditionEffect) effect).getAmount())
+                    .reduce(multiplyFactor.intValue(), Integer::sum);
+        }).findFirst().orElse(initialValue);
+    }
+
+    private Integer summarizeBarEffect(List<AdditionEffect> effects, Integer initialValue) {
         val effectsMap = effects.stream()
                 .collect(Collectors.groupingBy(Effect::getAction));
         return effectsMap.values().stream().mapToInt(playerEffects -> playerEffects.stream()
                 .filter(e -> ADD.equals(e.getAction()))
-                .map(Effect::getAmount)
+                .map(AdditionEffect::getAmount)
                 .reduce(initialValue, Integer::sum)).findFirst().orElse(initialValue);
     }
 
     private <T extends Effect> void removeExpiredEffects(List<T> effects) {
         val effectsToRemove = effects.stream()
                 .filter(effect -> effect instanceof ExpirableEffect)
-                .filter(effect -> ((ExpirableEffect) effect).decreaseTurnsLasts() < 1)
+                .filter(effect -> ((ExpirableEffect) effect).decreaseTurnsLeft() < 1)
                 .toList();
         effects.removeAll(effectsToRemove);
     }

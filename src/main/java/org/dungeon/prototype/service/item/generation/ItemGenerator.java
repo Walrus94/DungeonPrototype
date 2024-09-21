@@ -1,53 +1,60 @@
-package org.dungeon.prototype.service.item;
+package org.dungeon.prototype.service.item.generation;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.math3.util.Pair;
+import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.inventory.attributes.MagicType;
 import org.dungeon.prototype.model.inventory.attributes.Quality;
-import org.dungeon.prototype.model.effect.Effect;
-import org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttackType;
-import org.dungeon.prototype.model.inventory.attributes.weapon.WeaponHandlerMaterial;
 import org.dungeon.prototype.model.inventory.attributes.weapon.Handling;
-import org.dungeon.prototype.model.inventory.attributes.weapon.WeaponMaterial;
 import org.dungeon.prototype.model.inventory.attributes.weapon.Size;
-import org.dungeon.prototype.model.inventory.attributes.weapon.WeaponType;
+import org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttackType;
 import org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttributes;
+import org.dungeon.prototype.model.inventory.attributes.weapon.WeaponHandlerMaterial;
+import org.dungeon.prototype.model.inventory.attributes.weapon.WeaponMaterial;
+import org.dungeon.prototype.model.inventory.attributes.weapon.WeaponType;
 import org.dungeon.prototype.model.inventory.attributes.wearable.WearableAttributes;
 import org.dungeon.prototype.model.inventory.attributes.wearable.WearableMaterial;
 import org.dungeon.prototype.model.inventory.attributes.wearable.WearableType;
 import org.dungeon.prototype.model.inventory.items.Weapon;
 import org.dungeon.prototype.model.inventory.items.Wearable;
 import org.dungeon.prototype.properties.GenerationProperties;
-import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.effect.ItemEffectsGenerator;
+import org.dungeon.prototype.service.item.ItemService;
 import org.dungeon.prototype.util.RandomUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.Objects.isNull;
-import static org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttackType.BLUNT;
-import static org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttackType.SLASH;
-import static org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttackType.STAB;
-import static org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttackType.STRIKE;
+import static java.util.Objects.nonNull;
 import static org.dungeon.prototype.model.inventory.attributes.weapon.Handling.SINGLE_HANDED;
 import static org.dungeon.prototype.model.inventory.attributes.weapon.Handling.TWO_HANDED;
 import static org.dungeon.prototype.model.inventory.attributes.weapon.Size.LARGE;
 import static org.dungeon.prototype.model.inventory.attributes.weapon.Size.MEDIUM;
 import static org.dungeon.prototype.model.inventory.attributes.weapon.Size.SMALL;
+import static org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttackType.BLUNT;
+import static org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttackType.SLASH;
+import static org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttackType.STAB;
+import static org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttackType.STRIKE;
 import static org.dungeon.prototype.model.inventory.attributes.weapon.WeaponHandlerMaterial.LEATHER;
 import static org.dungeon.prototype.model.inventory.attributes.weapon.WeaponHandlerMaterial.TREATED_LEATHER;
 import static org.dungeon.prototype.model.inventory.attributes.weapon.WeaponMaterial.DIAMOND;
@@ -65,74 +72,93 @@ import static org.dungeon.prototype.model.inventory.attributes.wearable.Wearable
 import static org.dungeon.prototype.model.inventory.attributes.wearable.WearableMaterial.MITHRIL;
 import static org.dungeon.prototype.model.inventory.attributes.wearable.WearableMaterial.STEEL;
 import static org.dungeon.prototype.model.inventory.attributes.wearable.WearableMaterial.WOOL;
-import static org.dungeon.prototype.util.GenerationUtil.*;
+import static org.dungeon.prototype.util.GenerationUtil.applyAdjustment;
+import static org.dungeon.prototype.util.GenerationUtil.multiplyAllParametersBy;
 import static org.dungeon.prototype.util.RandomUtil.getRandomEnumValue;
-import static org.dungeon.prototype.util.RandomUtil.getRandomInt;
+import static org.dungeon.prototype.util.RandomUtil.getRandomMagicType;
 
 @Slf4j
-@Component
+@Service
 public class ItemGenerator {
     @Value("${generation.items.weapon.weapon-attributes-pool-size}")
     private Integer weaponAttributesPoolSize;
     @Value("${generation.items.weapon.weapon-per-game}")
     private Integer weaponPerGame;
+    @Value("${generation.items.wearables.wearable-attribute-pool-size}")
+    private Integer wearableAttributesPoolSize;
     @Value("${generation.items.wearables.wearables-per-game}")
     private Integer wearablesPerGame;
     @Value("${generation.items.wearables.default-armor}")
     private Integer defaultArmor;
-    @Value("${generation.items.wearables.wearable-min-effects-play}")
-    private Integer wearableMinEffectsPlay;
-    @Value("${generation.items.wearables.wearable-max-effects-play}")
-    private Integer wearableMaxEffectsPlay;
-    @Value("${generation.items.selling-price-ratio}")
-    private double sellingPriceRatio;
-    @Value("${generation.items.buying-price-ratio}")
-    private double buyingPriceRatio;
+    @Autowired
+    private ItemService itemService;
     @Autowired
     private ItemEffectsGenerator itemEffectsGenerator;
     @Autowired
-    private EffectService effectService;
-    @Autowired
     private GenerationProperties generationProperties;
+    private final Map<Long, CyclicBarrier> barriersByChat = new ConcurrentHashMap<>();
 
+    /**
+     * Generates items for game: runs two async generators
+     * for {@link Wearable} and {@link Weapon} items
+     * for game and stores results to repository.
+     * Items should be removed when game is over
+     *
+     * @param chatId id of chat where game runs
+     */
     @Transactional
-    public Set<Weapon> generateWeapons(Long chatId) {
-        Set<Weapon> totalWeapons = new HashSet<>();
+    public void generateItems(Long chatId) {
+        barriersByChat.put(chatId, new CyclicBarrier(2));
+
+        CompletableFuture<Void> weaponsFuture = CompletableFuture.runAsync(() -> generateWeapons(chatId));
+        CompletableFuture<Void> wearablesFuture = CompletableFuture.runAsync(() -> generateWearables(chatId));
+
+        CompletableFuture<Void> combinedFuture = CompletableFuture.allOf(weaponsFuture, wearablesFuture);
+
+        try {
+            combinedFuture.get();
+        } catch (InterruptedException | ExecutionException e) {
+            log.error("Error on generating items: {}", e.getMessage());
+        }
+    }
+
+    private void generateWeapons(Long chatId) {
         Set<WeaponAttributes> generatedAttributesCombinations = new HashSet<>();
         while (generatedAttributesCombinations.size() < weaponAttributesPoolSize) {
             val type = getRandomEnumValue(List.of(WeaponType.values()));
-            log.debug("Weapon type: {}", type);
             Handling handling;
             switch (type) {
                 case SWORD, AXE -> handling = getRandomEnumValue(List.of(SINGLE_HANDED, TWO_HANDED));
                 case DAGGER -> handling = SINGLE_HANDED;
                 default -> handling = getRandomEnumValue(List.of(Handling.values())); //TODO: consider more constraints
             }
-            log.debug("Weapon handling: {}", handling);
             WeaponMaterial weaponMaterial;
             switch (type) {
-                case SWORD, AXE, DAGGER -> weaponMaterial = getRandomEnumValue(List.of(WeaponMaterial.IRON, WeaponMaterial.STEEL, PLATINUM, DIAMOND, WeaponMaterial.MITHRIL, DRAGON_BONE));
+                case SWORD, AXE, DAGGER ->
+                        weaponMaterial = getRandomEnumValue(List.of(WeaponMaterial.IRON, WeaponMaterial.STEEL, PLATINUM, DIAMOND, WeaponMaterial.MITHRIL, DRAGON_BONE));
                 case CLUB -> weaponMaterial = getRandomEnumValue(List.of(WOOD, STONE, ENCHANTED_WOOD));
-                case MACE -> weaponMaterial = getRandomEnumValue(List.of(WeaponMaterial.STONE, WeaponMaterial.IRON, WeaponMaterial.STEEL, PLATINUM, DIAMOND, WeaponMaterial.MITHRIL, OBSIDIAN, DRAGON_BONE, ENCHANTED_WOOD));
-                case STAFF -> weaponMaterial = getRandomEnumValue(List.of(WOOD, STONE, OBSIDIAN, WeaponMaterial.MITHRIL, DRAGON_BONE, ENCHANTED_WOOD));
+                case MACE ->
+                        weaponMaterial = getRandomEnumValue(List.of(WeaponMaterial.STONE, WeaponMaterial.IRON, WeaponMaterial.STEEL, PLATINUM, DIAMOND, WeaponMaterial.MITHRIL, OBSIDIAN, DRAGON_BONE, ENCHANTED_WOOD));
+                case STAFF ->
+                        weaponMaterial = getRandomEnumValue(List.of(WOOD, STONE, OBSIDIAN, WeaponMaterial.MITHRIL, DRAGON_BONE, ENCHANTED_WOOD));
                 default -> weaponMaterial = getRandomEnumValue(List.of(WeaponMaterial.values()));
             }
-            log.debug("Weapon material: {}", weaponMaterial);
             WeaponHandlerMaterial weaponHandlerMaterial;
             switch (weaponMaterial) {
-                case WOOD -> weaponHandlerMaterial = getRandomEnumValue(List.of(WeaponHandlerMaterial.WOOD, WeaponHandlerMaterial.LEATHER, TREATED_LEATHER));
-                case STONE -> weaponHandlerMaterial = getRandomEnumValue(List.of(WeaponHandlerMaterial.LEATHER, TREATED_LEATHER));
-                case ENCHANTED_WOOD -> weaponHandlerMaterial = getRandomEnumValue(List.of(WeaponHandlerMaterial.WOOD, LEATHER, TREATED_LEATHER));
+                case WOOD ->
+                        weaponHandlerMaterial = getRandomEnumValue(List.of(WeaponHandlerMaterial.WOOD, WeaponHandlerMaterial.LEATHER, TREATED_LEATHER));
+                case STONE ->
+                        weaponHandlerMaterial = getRandomEnumValue(List.of(WeaponHandlerMaterial.LEATHER, TREATED_LEATHER));
+                case ENCHANTED_WOOD ->
+                        weaponHandlerMaterial = getRandomEnumValue(List.of(WeaponHandlerMaterial.WOOD, LEATHER, TREATED_LEATHER));
                 default -> weaponHandlerMaterial = getRandomEnumValue(List.of(WeaponHandlerMaterial.values()));
             }
-            log.debug("Weapon handler material: {}", weaponHandlerMaterial);
             Quality quality;
             if (DRAGON_BONE.equals(weaponMaterial) && WeaponHandlerMaterial.DRAGON_BONE.equals(weaponHandlerMaterial)) {
                 quality = Quality.MYTHIC;
             } else {
                 quality = getRandomEnumValue(List.of(Quality.values()));
             }
-            log.debug("Weapon quality: {}", quality);
             Size size;
             if (TWO_HANDED.equals(handling)) {
                 size = LARGE;
@@ -143,7 +169,6 @@ public class ItemGenerator {
                     size = getRandomEnumValue(List.of(Size.values()));
                 }
             }
-            log.debug("Weapon size: {}", size);
             WeaponAttackType weaponAttackType;
             switch (type) {
                 case SWORD -> weaponAttackType = getRandomEnumValue(List.of(STAB, SLASH));
@@ -153,7 +178,6 @@ public class ItemGenerator {
                 case MACE -> weaponAttackType = getRandomEnumValue(List.of(SLASH, BLUNT));
                 default -> weaponAttackType = STRIKE;
             }
-            log.debug("Weapon attack type: {}", weaponAttackType);
             val attributes = new WeaponAttributes();
             attributes.setWeaponType(type);
             attributes.setHandling(handling);
@@ -169,30 +193,30 @@ public class ItemGenerator {
             }
             generatedAttributesCombinations.add(attributes);
         }
-        val weapons = generatedAttributesCombinations.stream()
-                .map(weaponAttributes -> generateWeapon(weaponAttributes, chatId))
-                .toList();
-        RandomUtil.getRandomWeaponsStream(weapons.stream()
-                .map(weapon -> {
-                    val probability = (double) (weapon.getWeight());
-                    return new Pair<>(weapon, probability);
-                }).toList(), weaponPerGame).forEach(weapon -> {
-                    log.debug("Generated weapon: {}", weapon);
-                    totalWeapons.add(weapon);
-                });
-        return totalWeapons;
+
+        val vanillaWeapons = generatedAttributesCombinations.stream()
+                .flatMap(attributes -> Stream.of(generateVanillaWeapon(attributes, chatId)))
+                .limit(weaponPerGame)
+                .collect(Collectors.toList());
+        val savedItems = itemService.saveItems(vanillaWeapons);
+
+        log.debug("{} weapons without effects generated.", savedItems.size());
+        awaitBarrier(chatId);
+
+        log.debug("Adding effects to weapons...");
+        addEffects(chatId, savedItems, weaponPerGame);
     }
 
-    @Transactional
-    public Set<Wearable> generateWearables(Long chatId) {
+
+    private void generateWearables(Long chatId) {
         Set<WearableAttributes> attributesCombinations = new HashSet<>();
         Map<WearableType, Integer> typesCount = new HashMap<>();
-        while (attributesCombinations.size() < wearablesPerGame) {
+        while (attributesCombinations.size() < wearableAttributesPoolSize) {
             var type = getRandomEnumValue(List.of(WearableType.values()));
             WearableMaterial material = null;
             switch (type) {
                 case VEST -> {
-                    material = RandomUtil.getRandomEnumValue(List.of(WearableMaterial.values()), List.of(ELVEN_SILK, WOOL));
+                    material = RandomUtil.getRandomEnumValue(List.of(WearableMaterial.values()));
                     if (typesCount.containsKey(WearableType.VEST)) {
                         typesCount.put(WearableType.VEST, typesCount.get(WearableType.VEST) + 1);
                     } else {
@@ -236,20 +260,69 @@ public class ItemGenerator {
             }
             attributesCombinations.add(wearableAttributes);
         }
-        return attributesCombinations.stream()
-                .flatMap(attributes -> Stream.concat(Stream.of(generateVanillaWearable(attributes, chatId)),
-                        Stream.generate(() -> generateWearable(attributes, chatId))
-                                .limit(getRandomInt(wearableMinEffectsPlay, wearableMaxEffectsPlay))))
-                .peek(wearable -> log.debug("Generated wearable: {}", wearable))
-                .collect(Collectors.toSet());
+        val vanillaWearables = attributesCombinations.stream()
+                .flatMap(attributes -> Stream.of(generateVanillaWearable(attributes, chatId)))
+                .collect(Collectors.toList());
+        val savedItems = itemService.saveItems(vanillaWearables);
+        log.debug("{} wearables without effects generated.", savedItems.size());
+        awaitBarrier(chatId);
+
+        log.debug("Adding effects to wearables...");
+        addEffects(chatId, savedItems, wearablesPerGame);
     }
 
-    private Weapon generateWeapon(WeaponAttributes weaponAttributes, Long chatId) {
+    private void addEffects(Long chatId, List<Item> savedItems, Integer limit) {
+        val weightScale = savedItems.stream()
+                .map(item -> Pair.create(item.getId(), item.getWeight().toVector().getNorm()))
+                .sorted(Comparator.comparing(Pair::getValue))
+                .collect(Collectors.toCollection(ArrayList::new));
+        double largestSegment = 0.0;
+        int startSegmentIndex = 0;
+        val vanillaItemsIds = weightScale.stream().map(Pair::getKey).toList();
+        while (weightScale.size() < limit) {
+            for (int i = 1; i < weightScale.size(); i++) {
+                //TODO: add loop and proceed further in selected direction by scale to next itemId
+                double segment = weightScale.get(i).getValue() - weightScale.get(i - 1).getValue();
+                if (segment > largestSegment) {
+                    largestSegment = segment;
+                    startSegmentIndex = i;
+                }
+            }
+            val expectedWeightChange = startSegmentIndex > weightScale.size() / 2 ? largestSegment / 4 : -largestSegment / 4;
+            val point = expectedWeightChange > 0 ? startSegmentIndex : startSegmentIndex + 1;
+            val itemId = weightScale.get(point).getKey();
+            if (vanillaItemsIds.contains(itemId)) {
+                val newItemData = itemEffectsGenerator.copyItemAndAddEffect(chatId, weightScale.get(point).getKey(), expectedWeightChange);
+                if (nonNull(newItemData)) {
+                    insertNewItem(newItemData, weightScale);
+                }
+            } else {
+                val updatedWeight = itemEffectsGenerator.addItemEffect(chatId, weightScale.get(point).getKey(), expectedWeightChange);
+                if (updatedWeight > 0.0) {
+                    val oldValue = weightScale.get(point);
+                    weightScale.remove(point);
+                    insertNewItem(Pair.create(oldValue.getKey(), updatedWeight), weightScale);
+                }
+            }
+        }
+    }
+
+    private void insertNewItem(Pair<String, Double> newItemData, List<Pair<String, Double>> weightScale) {
+        int insertPosition = Collections.binarySearch(weightScale, newItemData, Comparator.comparing(Pair::getValue));
+        if (insertPosition < 0) {
+            insertPosition = -insertPosition - 1;
+        }
+
+        // Insert the element at the correct position to maintain sorted order
+        weightScale.add(insertPosition, newItemData);
+    }
+
+    private Weapon generateVanillaWeapon(WeaponAttributes weaponAttributes, Long chatId) {
         log.debug("Generating weapon...");
         val weapon = new Weapon();
         weapon.setAttributes(weaponAttributes);
         weapon.setChatId(chatId);
-        weapon.setEffects(itemEffectsGenerator.generateWeaponEffects(weaponAttributes));
+        weapon.setEffects(Collections.emptyList());
         return calculateParameters(weapon);
     }
 
@@ -264,71 +337,50 @@ public class ItemGenerator {
         weapon.setChanceToMiss(defaultAttributes.getChanceToMiss());
         weapon.setChanceToKnockOut(defaultAttributes.getChanceToKnockOut());
         if (STAFF.equals(weapon.getAttributes().getWeaponType())) {
-            weapon.setHasMagic(true);
-            weapon.setMagicType(MagicType.values()[getRandomInt(0, MagicType.values().length - 1)]);
+            weapon.setMagicType(getRandomMagicType());
         }
 
         val handlingAdjustmentAttributes = properties.getHandlingAdjustmentAttributes().get(weapon.getAttributes().getHandling());
-        weapon.setAttack((int) (weapon.getAttack() * handlingAdjustmentAttributes.getAttackRatio()));
-        weapon.setChanceToMiss(weapon.getChanceToMiss() * handlingAdjustmentAttributes.getChanceToMissRatio());
-        weapon.setCriticalHitChance(weapon.getCriticalHitChance() * handlingAdjustmentAttributes.getCriticalChanceRatio());
-        weapon.setCriticalHitMultiplier(weapon.getCriticalHitMultiplier() * handlingAdjustmentAttributes.getCriticalMultiplierRatio());
+        applyAdjustment(weapon, handlingAdjustmentAttributes);
 
         val weaponMaterialAdjustmentAttributes = properties.getWeaponMaterialAdjustmentAttributes().get(weapon.getAttributes().getWeaponMaterial());
-        weapon.setAttack((int) (weapon.getAttack() * weaponMaterialAdjustmentAttributes.getAttackRatio()));
-        weapon.setChanceToMiss(weapon.getChanceToMiss() * weaponMaterialAdjustmentAttributes.getChanceToMissRatio());
-        weapon.setCriticalHitChance(weapon.getCriticalHitChance() * weaponMaterialAdjustmentAttributes.getCriticalChanceRatio());
-        weapon.setCriticalHitMultiplier(weapon.getCriticalHitMultiplier() * weaponMaterialAdjustmentAttributes.getCriticalMultiplierRatio());
-        weapon.setChanceToKnockOut(weapon.getChanceToKnockOut() * weaponMaterialAdjustmentAttributes.getKnockOutChanceRatio());
-        if (ENCHANTED_WOOD.equals(weapon.getAttributes().getWeaponMaterial()) && (isNull(weapon.getHasMagic()) || !weapon.getHasMagic())) {
-            weapon.setHasMagic(true);
-            weapon.setMagicType(MagicType.values()[getRandomInt(0, MagicType.values().length - 1)]);
+        applyAdjustment(weapon, weaponMaterialAdjustmentAttributes);
+        if (ENCHANTED_WOOD.equals(weapon.getAttributes().getWeaponMaterial())) {
+            weapon.setMagicType(getRandomMagicType());
         }
         if (DRAGON_BONE.equals(weapon.getAttributes().getWeaponMaterial()) && WeaponHandlerMaterial.DRAGON_BONE.equals(weapon.getAttributes().getWeaponHandlerMaterial())) {
+            log.debug("Complete Dragon bone!");
             weapon.setIsCompleteDragonBone(true);
-            weapon.setHasMagic(true);
-            weapon.setMagicType(MagicType.CHAOTIC);//TODO: add magic coordinates to store type
+            weapon.setMagicType(MagicType.of(0.0, 1.0));
         } else {
             weapon.setIsCompleteDragonBone(false);
         }
 
-        val completeMaterialAdjustmentAttributes= properties.getCompleteMaterialAdjustmentAttributes();
+        val completeMaterialAdjustmentAttributes = properties.getCompleteMaterialAdjustmentAttributes();
         val handlerMaterial = getEqualWeaponHandlerMaterial(weapon);
         if (handlerMaterial.isPresent() && completeMaterialAdjustmentAttributes.containsKey(handlerMaterial.get())) {
+            log.debug("Weapon and handler materials matched, {}", handlerMaterial.get());
             val completeMaterialAdjustment = completeMaterialAdjustmentAttributes.get(handlerMaterial.get());
-            weapon.setAttack((int) (weapon.getAttack() * completeMaterialAdjustment.getAttackRatio()));
-            weapon.setChanceToMiss(weapon.getChanceToMiss() * completeMaterialAdjustment.getChanceToMissRatio());
-            weapon.setCriticalHitChance(weapon.getCriticalHitChance() * completeMaterialAdjustment.getCriticalChanceRatio());
-            weapon.setCriticalHitMultiplier(weapon.getCriticalHitMultiplier() * completeMaterialAdjustment.getCriticalMultiplierRatio());
-            weapon.setChanceToKnockOut(weapon.getChanceToKnockOut() * completeMaterialAdjustment.getKnockOutChanceRatio());
+            applyAdjustment(weapon, completeMaterialAdjustment);
         } else {
+            log.debug("Weapon and handler materials differs!");
             val weaponHandlerAdjustment = properties.getWeaponHandlerMaterialAdjustmentAttributes().get(weapon.getAttributes().getWeaponHandlerMaterial());
-            weapon.setAttack((int) (weapon.getAttack() * weaponHandlerAdjustment.getAttackRatio()));
-            weapon.setChanceToMiss(weapon.getChanceToMiss() * weaponHandlerAdjustment.getChanceToMissRatio());
-            weapon.setCriticalHitChance(weapon.getCriticalHitChance() * weaponHandlerAdjustment.getCriticalChanceRatio());
-            weapon.setCriticalHitMultiplier(weapon.getCriticalHitMultiplier() * weaponHandlerAdjustment.getCriticalMultiplierRatio());
-            weapon.setChanceToKnockOut(weapon.getChanceToKnockOut() * weaponHandlerAdjustment.getKnockOutChanceRatio());
+            applyAdjustment(weapon, weaponHandlerAdjustment);
         }
         val sizeAdjustment = properties.getSizeAdjustmentAttributes().get(weapon.getAttributes().getSize());
         weapon.setAttack((int) (weapon.getAttack() * sizeAdjustment.getAttackRatio()));
         weapon.setChanceToMiss(weapon.getChanceToMiss() * sizeAdjustment.getChanceToMissRatio());
 
         val attackTypeAdjustment = properties.getAttackTypeAdjustmentAttributes().get(weapon.getAttributes().getWeaponAttackType());
-        weapon.setAttack((int) (weapon.getAttack() * attackTypeAdjustment.getAttackRatio()));
-        weapon.setCriticalHitChance(weapon.getCriticalHitChance() * attackTypeAdjustment.getCriticalChanceRatio());
-        weapon.setCriticalHitMultiplier(weapon.getCriticalHitMultiplier() * attackTypeAdjustment.getCriticalMultiplierRatio());
-        weapon.setChanceToKnockOut(weapon.getChanceToKnockOut() * attackTypeAdjustment.getKnockOutChanceRatio());
+        applyAdjustment(weapon, attackTypeAdjustment);
         if (STRIKE.equals(weapon.getAttributes().getWeaponAttackType())) {
-            if (isNull(weapon.getHasMagic()) || !weapon.getHasMagic()) {
-                weapon.setHasMagic(true);
-                weapon.setMagicType(MagicType.values()[getRandomInt(0, MagicType.values().length - 1)]);
-            }
+            weapon.setMagicType(getRandomMagicType());
         }
         val qualityAdjustmentRatio = properties.getQualityAdjustmentRatio().get(weapon.getAttributes().getQuality());
         multiplyAllParametersBy(weapon, qualityAdjustmentRatio);
-        weapon.setWeight(calculateWeight(weapon));
-        weapon.setSellingPrice((int) (weapon.getWeight() * sellingPriceRatio));
-        weapon.setBuyingPrice((int) (weapon.getWeight() * buyingPriceRatio));
+        if (isNull(weapon.getMagicType())) {
+            weapon.setMagicType(MagicType.of(0.0, 0.0));
+        }
         return weapon;
     }
 
@@ -345,6 +397,7 @@ public class ItemGenerator {
     }
 
     private Wearable generateVanillaWearable(WearableAttributes wearableAttributes, Long chatId) {
+        log.debug("Generating wearable...");
         val wearable = new Wearable();
         wearable.setAttributes(wearableAttributes);
         wearable.setChatId(chatId);
@@ -352,18 +405,12 @@ public class ItemGenerator {
         return calculateParameters(wearable);
     }
 
-    private Wearable generateWearable(WearableAttributes wearableAttributes, Long chatId) {
-        val wearable = new Wearable();
-        wearable.setAttributes(wearableAttributes);
-        wearable.setChatId(chatId);
-        wearable.setEffects(itemEffectsGenerator.generateWearableEffects(wearableAttributes));
-        return calculateParameters(wearable);
-    }
-
     private Wearable calculateParameters(Wearable wearable) {
+        log.debug("Calculating wearable params...");
         if (wearable.getAttributes().getWearableMaterial().equals(WearableMaterial.ENCHANTED_LEATHER)) {
-            wearable.setHasMagic(true);
-            wearable.setMagicType(MagicType.values()[getRandomInt(0, MagicType.values().length - 1)]);
+            wearable.setMagicType(getRandomMagicType());
+        } else {
+            wearable.setMagicType(MagicType.of(0.0, 0.0));
         }
         var armor = defaultArmor;
         var chanceToDodge = 0.0;
@@ -373,14 +420,19 @@ public class ItemGenerator {
         }
         armor += wearablesProperties.getArmorBonus().get(wearable.getAttributes().getWearableMaterial());
         val qualityRatio = wearablesProperties.getQualityAdjustmentRatio().get(wearable.getAttributes().getQuality());
-        armor = (int) (armor *  qualityRatio);
+        armor = (int) (armor * qualityRatio);
         chanceToDodge *= qualityRatio;
         wearable.setArmor(armor);
         wearable.setChanceToDodge(chanceToDodge);
-        wearable.setWeight(armor * 100 + wearable.getEffects().stream().mapToInt(Effect::getWeight).sum());
-
-        wearable.setSellingPrice((int) (wearable.getWeight() * sellingPriceRatio));
-        wearable.setBuyingPrice((int) (wearable.getWeight() * buyingPriceRatio));
         return wearable;
+    }
+
+    private void awaitBarrier(Long chatId) {
+        try {
+            barriersByChat.get(chatId).await();  // Wait for both threads to complete generating vanilla items
+        } catch (Exception e) {
+            Thread.currentThread().interrupt();
+            log.error("Error while waiting at barrier: {}", e.getMessage());
+        }
     }
 }

@@ -5,11 +5,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.val;
 import org.dungeon.prototype.model.Point;
-import org.dungeon.prototype.model.monster.MonsterClass;
 import org.dungeon.prototype.model.room.RoomsSegment;
 import org.dungeon.prototype.model.ui.level.GridSection;
+import org.dungeon.prototype.model.weight.Weight;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -18,19 +22,14 @@ public class LevelRoomTypeClusters {
     private Integer totalRooms;
     private Set<String> usedItemIds;
     private Map<RoomsSegment, RoomTypesCluster> clusters = new HashMap<>();
+    private Weight expectedWeight;
     private PriorityQueue<GridSection> deadEnds;
     private Map<Point, RoomsSegment> deadEndToSegmentMap;
-    private Map<MonsterClass, Integer> monsterClassesCounters;
     @Getter
     private RoomsSegment mainSegment;
     @Getter
     private Integer roomTreasures;
     private Integer roomsLeft;
-    private Double healthShrineInitialProbability;
-    private Double manaShrineInitialProbability;
-    private Double merchantInitialProbability;
-    private boolean hasHealthShrineRoom;
-    private boolean hasManaShrineRoom;
     private boolean hasMerchantRoom;
 
     public boolean hasDeadEnds() {

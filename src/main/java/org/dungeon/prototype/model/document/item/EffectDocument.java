@@ -2,6 +2,7 @@ package org.dungeon.prototype.model.document.item;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.dungeon.prototype.model.document.weight.WeightDocument;
 import org.dungeon.prototype.model.effect.attributes.Action;
 import org.dungeon.prototype.model.effect.attributes.EffectApplicant;
 import org.dungeon.prototype.model.effect.attributes.EffectAttribute;
@@ -19,9 +20,9 @@ public class EffectDocument {
     private Boolean isPermanent;
     private Boolean isAccumulated;
     private Action action;
-    private Integer turnsLasts;
+    private Boolean hasFirstTurnPassed;
+    private Integer turnsLeft;
     private Integer amount;
-    private Integer baseAmount;
     private Double multiplier;
-    private Integer weight;
+    private WeightDocument weight;
 }

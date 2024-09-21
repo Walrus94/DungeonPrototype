@@ -2,6 +2,8 @@ package org.dungeon.prototype.service.room;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.dungeon.prototype.model.player.Player;
+import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.RoomType;
 import org.dungeon.prototype.model.room.content.Treasure;
 import org.dungeon.prototype.service.PlayerService;
@@ -30,8 +32,7 @@ public class TreasureService {
     @Autowired
     MessageService messageService;
 
-    public boolean openTreasure(Long chatId) {
-        val player = playerService.getPlayer(chatId);
+    public boolean openTreasure(Long chatId, Player player) {
         val treasure = openTreasure(chatId, player.getCurrentRoomId());
         if (treasure.isPresent()) {
             messageService.sendTreasureMessage(chatId, treasure.get());
@@ -42,9 +43,7 @@ public class TreasureService {
         }
     }
 
-    public boolean collectTreasureGold(Long chatId) {
-        val player = playerService.getPlayer(chatId);
-        val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+    public boolean collectTreasureGold(Long chatId, Player player, Room currentRoom) {
         val treasure = (Treasure) currentRoom.getRoomContent();
 
         player.addGold(treasure.getGold());
@@ -59,9 +58,7 @@ public class TreasureService {
         return true;
     }
 
-    public boolean collectAllTreasure(Long chatId) {
-        var player = playerService.getPlayer(chatId);
-        var currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+    public boolean collectAllTreasure(Long chatId, Player player, Room currentRoom) {
         val treasure = (Treasure) currentRoom.getRoomContent();
         log.debug("Treasure contents - gold: {}, items: {}", treasure.getGold(), treasure.getItems());
         val items = treasure.getItems();

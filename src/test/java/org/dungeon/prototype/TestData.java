@@ -4,17 +4,23 @@ import lombok.experimental.UtilityClass;
 import lombok.val;
 import org.dungeon.prototype.model.Level;
 import org.dungeon.prototype.model.Point;
-import org.dungeon.prototype.model.effect.ExpirableEffect;
-import org.dungeon.prototype.model.effect.attributes.Action;
+import org.dungeon.prototype.model.effect.Effect;
+import org.dungeon.prototype.model.effect.ExpirableMultiplicationEffect;
 import org.dungeon.prototype.model.effect.attributes.EffectApplicant;
 import org.dungeon.prototype.model.effect.attributes.EffectAttribute;
+import org.dungeon.prototype.model.effect.ExpirableAdditionEffect;
 import org.dungeon.prototype.model.inventory.Inventory;
 import org.dungeon.prototype.model.inventory.Item;
+import org.dungeon.prototype.model.inventory.attributes.MagicType;
+import org.dungeon.prototype.model.inventory.attributes.Quality;
 import org.dungeon.prototype.model.inventory.attributes.weapon.Handling;
 import org.dungeon.prototype.model.inventory.attributes.weapon.Size;
 import org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttributes;
 import org.dungeon.prototype.model.inventory.attributes.weapon.WeaponHandlerMaterial;
 import org.dungeon.prototype.model.inventory.attributes.weapon.WeaponMaterial;
+import org.dungeon.prototype.model.inventory.attributes.wearable.WearableAttributes;
+import org.dungeon.prototype.model.inventory.attributes.wearable.WearableMaterial;
+import org.dungeon.prototype.model.inventory.attributes.wearable.WearableType;
 import org.dungeon.prototype.model.inventory.items.Usable;
 import org.dungeon.prototype.model.inventory.items.Weapon;
 import org.dungeon.prototype.model.inventory.items.Wearable;
@@ -28,7 +34,12 @@ import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.content.Merchant;
 import org.dungeon.prototype.model.ui.level.LevelMap;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static org.dungeon.prototype.model.Direction.E;
 import static org.dungeon.prototype.model.Direction.N;
@@ -61,14 +72,41 @@ public class TestData {
     }
 
     public static Monster getMonster(Integer health, Integer maxHealth) {
-        val monster = new Monster();
-        monster.setMonsterClass(MonsterClass.ZOMBIE);
-        monster.setPrimaryAttack(MonsterAttack.of(MonsterAttackType.SLASH, 5));
-        monster.setSecondaryAttack(MonsterAttack.of(MonsterAttackType.SLASH, 5));
+        val monster = Monster.builder()
+                .monsterClass(MonsterClass.ZOMBIE)
+                .primaryAttack(MonsterAttack.builder()
+                        .attackType(MonsterAttackType.SLASH)
+                        .effect(ExpirableAdditionEffect.builder()
+                                .isAccumulated(true)
+                                .amount(-5)
+                                .attribute(EffectAttribute.HEALTH)
+                                .build())
+                        .attack(5)
+                        .criticalHitChance(0.0)
+                        .criticalHitMultiplier(0.0)
+                        .chanceToMiss(0.0)
+                        .chanceToKnockOut(0.0)
+                        .causingEffectProbability(0.0)
+                        .build())
+                .secondaryAttack(MonsterAttack.builder()
+                        .attackType(MonsterAttackType.SLASH)
+                        .effect(ExpirableAdditionEffect.builder()
+                                .amount(2)
+                                .turnsLeft(3)
+                                .isAccumulated(true)
+                                .attribute(EffectAttribute.HEALTH)
+                                .build())
+                        .attack(5)
+                        .criticalHitChance(0.0)
+                        .criticalHitMultiplier(0.0)
+                        .chanceToMiss(0.0)
+                        .chanceToKnockOut(0.0)
+                        .causingEffectProbability(0.0)
+                        .build())
+                .hp(health)
+                .maxHp(maxHealth)
+                .build();
         monster.setAttackPattern(monster.getDefaultAttackPattern());
-        monster.setHp(health);
-        monster.setMaxHp(maxHealth);
-        monster.setXpReward(300);
         return monster;
     }
 
@@ -111,7 +149,7 @@ public class TestData {
         player.setNextLevelXp(1200L);
         player.setHp(health);
         player.setMaxHp(maxHealth);
-        player.setMana(10);
+        player.setMana(5);
         player.setMaxMana(10);
         return player;
     }
@@ -119,12 +157,42 @@ public class TestData {
     public static Inventory getInventory() {
         val inventory = new Inventory();
         inventory.setPrimaryWeapon(getWeapon());
+        inventory.setVest(getVest());
+        inventory.setBoots(getBoots());
+        inventory.setItems(new ArrayList<>());
         return inventory;
+    }
+
+    private static Wearable getVest() {
+        Wearable vest = new Wearable();
+        WearableAttributes attributes = new WearableAttributes();
+        attributes.setWearableType(WearableType.VEST);
+        attributes.setQuality(Quality.COMMON);
+        attributes.setWearableMaterial(WearableMaterial.CLOTH);
+        vest.setAttributes(attributes);
+        vest.setArmor(5);
+        vest.setEffects(new ArrayList<>());
+        vest.setMagicType(MagicType.of(0.0,0.0));
+        return vest;
+    }
+
+    private static Wearable getBoots() {
+        Wearable boots = new Wearable();
+        WearableAttributes attributes = new WearableAttributes();
+        attributes.setWearableType(WearableType.BOOTS);
+        attributes.setQuality(Quality.COMMON);
+        attributes.setWearableMaterial(WearableMaterial.LEATHER);
+        boots.setAttributes(attributes);
+        boots.setChanceToDodge(0.1);
+        boots.setArmor(0);
+        boots.setEffects(new ArrayList<>());
+        boots.setMagicType(MagicType.of(0.0,0.0));
+        return boots;
     }
 
     public static Weapon getWeapon() {
         val weapon = new Weapon();
-        weapon.setId("item_id");
+        weapon.setId("weapon_id");
         val weaponAttributes = new WeaponAttributes();
         weaponAttributes.setWeaponType(SWORD);
         weaponAttributes.setWeaponAttackType(SLASH);
@@ -135,8 +203,11 @@ public class TestData {
         weapon.setAttack(5);
         weapon.setChanceToMiss(0.0);
         weapon.setCriticalHitChance(0.0);
+        weapon.setCriticalHitMultiplier(1.0);
+        weapon.setChanceToKnockOut(0.0);
         weapon.setAttributes(weaponAttributes);
         weapon.setEffects(new ArrayList<>());
+        weapon.setMagicType(MagicType.of(0.0,0.0));
         return weapon;
     }
 
@@ -165,22 +236,63 @@ public class TestData {
         return items;
     }
 
-    public static List<ExpirableEffect> getMonsterEffects() {
-        List<ExpirableEffect> effects = new ArrayList<>();
-        ExpirableEffect knockOut = new ExpirableEffect();
-        knockOut.setAttribute(EffectAttribute.MOVING);
-        knockOut.setApplicableTo(EffectApplicant.MONSTER);
-        knockOut.setTurnsLasts(3);
-        knockOut.setIsAccumulated(false);
+    public static List<ExpirableAdditionEffect> getMonsterEffects() {
+        List<ExpirableAdditionEffect> effects = new ArrayList<>();
+        ExpirableAdditionEffect knockOut = ExpirableAdditionEffect.builder()
+                .turnsLeft(3)
+                .isAccumulated(true)
+                .applicableTo(EffectApplicant.MONSTER)
+                .attribute(EffectAttribute.MOVING)
+                .build();
         effects.add(knockOut);
 
-        ExpirableEffect regeneration = new ExpirableEffect();
-        regeneration.setAttribute(EffectAttribute.HEALTH);
-        regeneration.setApplicableTo(EffectApplicant.MONSTER);
-        regeneration.setTurnsLasts(2);
-        regeneration.setIsAccumulated(true);
-        regeneration.setAmount(5);
-        regeneration.setAction(Action.ADD);
+        ExpirableAdditionEffect regeneration = ExpirableAdditionEffect.builder()
+                .turnsLeft(2)
+                .amount(5)
+                .isAccumulated(true)
+                .attribute(EffectAttribute.HEALTH)
+                .applicableTo(EffectApplicant.MONSTER)
+                .build();
+        effects.add(regeneration);
+        return effects;
+    }
+
+    public static List<Effect> getPlayerEffects() {
+        List<Effect> effects = new ArrayList<>();
+        ExpirableAdditionEffect manaRegeneration = ExpirableAdditionEffect.builder()
+                .attribute(EffectAttribute.MANA)
+                .turnsLeft(3)
+                .amount(1)
+                .isAccumulated(true)
+                .applicableTo(EffectApplicant.PLAYER)
+                .build();
+        effects.add(manaRegeneration);
+
+        ExpirableMultiplicationEffect weaponEffect = ExpirableMultiplicationEffect.builder()
+                .turnsLeft(1)
+                .attribute(EffectAttribute.CRITICAL_HIT_CHANCE)
+                .multiplier(1.07)
+                .applicableTo(EffectApplicant.PLAYER)
+                .build();
+        effects.add(weaponEffect);
+
+        ExpirableMultiplicationEffect wearableEffect = ExpirableMultiplicationEffect.builder()
+                .turnsLeft(2)
+                .applicableTo(EffectApplicant.PLAYER)
+                .attribute(EffectAttribute.CHANCE_TO_DODGE)
+                .multiplier(1.05)
+                .build();
+        effects.add(wearableEffect);
+
+        ExpirableAdditionEffect armorEffect = ExpirableAdditionEffect.builder()
+                .applicableTo(EffectApplicant.PLAYER)
+                .attribute(EffectAttribute.MAX_ARMOR)
+                .amount(5)
+                .turnsLeft(3)
+                .isAccumulated(false)
+                .build();
+        effects.add(armorEffect);
+
         return effects;
     }
 }

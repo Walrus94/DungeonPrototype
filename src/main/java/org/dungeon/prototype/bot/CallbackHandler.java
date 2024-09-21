@@ -1,5 +1,6 @@
 package org.dungeon.prototype.bot;
 
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.annotations.aspect.AnswerCallback;
 import org.dungeon.prototype.model.player.PlayerAttribute;
@@ -7,7 +8,9 @@ import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.properties.KeyboardButtonProperties;
 import org.dungeon.prototype.service.BattleService;
 import org.dungeon.prototype.service.PlayerService;
+import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.inventory.InventoryService;
+import org.dungeon.prototype.service.item.generation.ItemGenerator;
 import org.dungeon.prototype.service.level.LevelService;
 import org.dungeon.prototype.service.room.RoomService;
 import org.dungeon.prototype.service.room.TreasureService;
@@ -16,6 +19,7 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static org.dungeon.prototype.properties.CallbackType.BOOTS;
@@ -26,23 +30,32 @@ import static org.dungeon.prototype.properties.CallbackType.LEFT_HAND;
 import static org.dungeon.prototype.properties.CallbackType.MERCHANT_SELL_MENU;
 import static org.dungeon.prototype.properties.CallbackType.RIGHT_HAND;
 import static org.dungeon.prototype.properties.CallbackType.VEST;
+import static org.dungeon.prototype.util.LevelUtil.getDirectionSwitchByCallBackData;
+import static org.dungeon.prototype.util.LevelUtil.getErrorMessageByCallBackData;
+import static org.dungeon.prototype.util.LevelUtil.getNextPointInDirection;
+import static org.dungeon.prototype.util.RoomGenerationUtils.getMonsterRoomTypes;
 
+@Slf4j
 @Component
 public class CallbackHandler {
     @Autowired
-    PlayerService playerService;
+    private PlayerService playerService;
     @Autowired
-    LevelService levelService;
+    private LevelService levelService;
     @Autowired
-    RoomService roomService;
+    private RoomService roomService;
     @Autowired
-    InventoryService inventoryService;
+    private InventoryService inventoryService;
     @Autowired
-    BattleService battleService;
+    private ItemGenerator itemGenerator;
     @Autowired
-    TreasureService treasureService;
+    private EffectService effectService;
     @Autowired
-    KeyboardButtonProperties keyboardButtonProperties;
+    private BattleService battleService;
+    @Autowired
+    private TreasureService treasureService;
+    @Autowired
+    private KeyboardButtonProperties keyboardButtonProperties;
 
     /**
      * Handles callbacks from incoming updates
@@ -59,37 +72,38 @@ public class CallbackHandler {
 
         return switch (callBackData) {
             case START_GAME ->
-                    levelService.startNewGame(chatId);
+                    handleStartingNewGame(chatId);
             case CONTINUE_GAME ->
-                    levelService.continueGame(chatId);
+                    handleContinuingGame(chatId);
             case NEXT_LEVEL ->
-                    levelService.nextLevel(chatId);
+                    handleNextLevel(chatId);
             case LEFT, RIGHT, FORWARD, BACK ->
-                    levelService.moveToRoom(chatId, callBackData);
+                    handleMovingToRoom(chatId, callBackData);
             case ATTACK, SECONDARY_ATTACK ->
-                    battleService.attack(chatId, callBackData);
+                    handleAttack(chatId, callBackData);
             case TREASURE_OPEN ->
-                    treasureService.openTreasure(chatId);
+                    handleOpeningTreasure(chatId);
             case TREASURE_GOLD_COLLECTED ->
-                    treasureService.collectTreasureGold(chatId);
+                    handleCollectingTreasureGold(chatId);
             case SHRINE ->
-                    levelService.shrineRefill(chatId);
+                    handleShrineRefill(chatId);
             case MERCHANT_BUY_MENU, MERCHANT_BUY_MENU_BACK ->
-                    roomService.openMerchantBuyMenu(chatId);
+                    handleOpenMerchantBuyMenu(chatId);
             case MERCHANT_SELL_MENU, MERCHANT_SELL_MENU_BACK ->
-                    roomService.openMerchantSellMenu(chatId);
+                    handleOpenMerchantSellMenu(chatId);
             case MAP ->
-                    levelService.sendOrUpdateMapMessage(chatId);
+                    handleSendingMapMessage(chatId);
             case INVENTORY ->
-                    inventoryService.sendOrUpdateInventoryMessage(chatId);
+                    handleSendingInventoryMessage(chatId);
             case PLAYER_STATS ->
                     playerService.sendPlayerStatsMessage(chatId);
             case MENU_BACK ->
-                    roomService.sendOrUpdateRoomMessage(chatId);
+                    handleSendingRoomMessage(chatId);
             case TREASURE_COLLECT_ALL ->
-                    treasureService.collectAllTreasure(chatId);
+                    handleCollectingTreasure(chatId);
             case RESTORE_ARMOR -> roomService.restoreArmor(chatId);
             case SHARPEN_WEAPON -> true;
+            //TODO: extract and refactor
             default -> {
                 if (callData.startsWith("btn_treasure_item_collected_")) {
                     val itemId = callData.replaceFirst("^" + "btn_treasure_item_collected_", "");
@@ -194,6 +208,121 @@ public class CallbackHandler {
                 yield false;
             }
         };
+    }
+
+    private boolean handleStartingNewGame(Long chatId) {
+        itemGenerator.generateItems(chatId);
+        val defaultInventory = inventoryService.getDefaultInventory(chatId);
+        var player = playerService.getPlayerPreparedForNewGame(chatId, defaultInventory);
+        player = effectService.updatePlayerEffects(player);
+        player = effectService.updateArmorEffect(player);
+        log.debug("Player loaded: {}", player);
+        return levelService.startNewGame(chatId, player);
+    }
+
+    private boolean handleContinuingGame(Long chatId) {
+        val player = playerService.getPlayer(chatId);
+        val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+        if (Objects.isNull(currentRoom)) {
+            log.error("Couldn't find current room by id: {}", player.getCurrentRoomId());
+            return false;
+        }
+        return levelService.continueGame(chatId, player, currentRoom);
+    }
+
+    private boolean handleNextLevel(Long chatId) {
+        var player = playerService.getPlayer(chatId);
+        levelService.nextLevel(chatId, player);
+        return false;
+    }
+
+    private boolean handleSendingRoomMessage(Long chatId) {
+        val player = playerService.getPlayer(chatId);
+        return roomService.sendOrUpdateRoomMessage(chatId, player);
+    }
+
+    private boolean handleOpeningTreasure(Long chatId) {
+        val player = playerService.getPlayer(chatId);
+        treasureService.openTreasure(chatId, player);
+        return false;
+    }
+
+    private boolean handleCollectingTreasure(Long chatId) {
+        var player = playerService.getPlayer(chatId);
+        var currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+        return treasureService.collectAllTreasure(chatId, player, currentRoom);
+    }
+
+    private boolean handleCollectingTreasureGold(Long chatId) {
+        val player = playerService.getPlayer(chatId);
+        val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+        treasureService.collectTreasureGold(chatId, player, currentRoom);
+        return false;
+    }
+
+    private boolean handleMovingToRoom(Long chatId, CallbackType callBackData) {
+        var player = playerService.getPlayer(chatId);
+        val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+        if (Objects.isNull(currentRoom)) {
+            log.error("Unable to find room with id {}", player.getCurrentRoomId());
+            return false;
+        }
+        val newDirection = getDirectionSwitchByCallBackData(player.getDirection(), callBackData);
+        val errorMessage = getErrorMessageByCallBackData(callBackData);
+        if (!currentRoom.getAdjacentRooms().containsKey(newDirection) || !currentRoom.getAdjacentRooms().get((newDirection))) {
+            log.error(errorMessage);
+            return false;
+        }
+        val nextRoom = levelService.getRoomByChatIdAndCoordinates(chatId, getNextPointInDirection(currentRoom.getPoint(), newDirection));
+        if (nextRoom == null) {
+            log.error(errorMessage);
+            return false;
+        }
+        log.debug("Moving to {} door: {}", callBackData.toString().toLowerCase(), nextRoom.getPoint());
+        return levelService.moveToRoom(chatId, player, nextRoom, newDirection);
+    }
+
+    private boolean handleShrineRefill(Long chatId) {
+        val player = playerService.getPlayer(chatId);
+        val level = levelService.getLevel(chatId);
+        val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+        if (Objects.isNull(currentRoom)) {
+            log.error("Unable to find room by Id:, {}", player.getCurrentRoomId());
+            return false;
+        }
+        return levelService.shrineRefill(chatId, player, currentRoom, level);
+    }
+
+    private boolean handleAttack(Long chatId, CallbackType callBackData) {
+        var player = playerService.getPlayer(chatId);
+        val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+        if (!getMonsterRoomTypes().contains(currentRoom.getRoomContent().getRoomType())) {
+            log.error("No monster to attack!");
+            return false;
+        }
+        return battleService.attack(chatId, player, currentRoom, callBackData);
+    }
+
+    private boolean handleOpenMerchantBuyMenu(Long chatId) {
+        val player = playerService.getPlayer(chatId);
+        val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+        return roomService.openMerchantBuyMenu(chatId, player, currentRoom);
+    }
+
+    private boolean handleOpenMerchantSellMenu(Long chatId) {
+        val player = playerService.getPlayer(chatId);
+        val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+        return roomService.openMerchantSellMenu(chatId, player, currentRoom);
+    }
+
+    private boolean handleSendingMapMessage(Long chatId) {
+        val player = playerService.getPlayer(chatId);
+        return levelService.sendOrUpdateMapMessage(chatId, player);
+    }
+
+    private boolean handleSendingInventoryMessage(Long chatId) {
+        val player = playerService.getPlayer(chatId);
+        return inventoryService.sendOrUpdateInventoryMessage(chatId, player);
     }
 
     private Optional<CallbackType> getCallbackType(String callData) {

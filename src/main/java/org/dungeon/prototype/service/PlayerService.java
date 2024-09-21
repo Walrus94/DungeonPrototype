@@ -5,7 +5,6 @@ import lombok.val;
 import org.dungeon.prototype.annotations.aspect.ChatStateUpdate;
 import org.dungeon.prototype.model.inventory.Inventory;
 import org.dungeon.prototype.model.player.Player;
-import org.dungeon.prototype.model.player.PlayerAttack;
 import org.dungeon.prototype.model.player.PlayerAttribute;
 import org.dungeon.prototype.properties.PlayerProperties;
 import org.dungeon.prototype.repository.PlayerRepository;
@@ -13,7 +12,7 @@ import org.dungeon.prototype.repository.converters.mapstruct.PlayerMapper;
 import org.dungeon.prototype.repository.projections.NicknameProjection;
 import org.dungeon.prototype.service.message.MessageService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -27,7 +26,7 @@ import static org.dungeon.prototype.util.PlayerUtil.getPrimaryAttack;
 import static org.dungeon.prototype.util.PlayerUtil.getSecondaryAttack;
 
 @Slf4j
-@Component
+@Service
 public class PlayerService {
     @Autowired
     PlayerRepository playerRepository;

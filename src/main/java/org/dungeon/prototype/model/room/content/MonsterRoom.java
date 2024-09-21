@@ -5,6 +5,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.dungeon.prototype.model.monster.Monster;
 import org.dungeon.prototype.model.room.RoomType;
+import org.dungeon.prototype.model.weight.Weight;
 
 import static org.dungeon.prototype.util.RoomGenerationUtils.convertToRoomType;
 
@@ -16,12 +17,12 @@ public class MonsterRoom implements RoomContent {
     private Monster monster;
 
     @Override
-    public Integer getRoomContentWeight() {
-        return monster.getWeight();
+    public Weight getRoomContentWeight() {
+        return monster.getWeight().getNegative();
     }
 
     @Override
     public RoomType getRoomType() {
-        return convertToRoomType(monster.getMonsterClass(), monster.getHp() > 0);
+        return convertToRoomType(monster.getMonsterClass());
     }
 }
