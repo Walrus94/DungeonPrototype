@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.math3.util.Pair;
+import org.dungeon.prototype.exception.ItemGenerationException;
 import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.inventory.attributes.MagicType;
 import org.dungeon.prototype.model.inventory.attributes.Quality;
@@ -19,6 +20,7 @@ import org.dungeon.prototype.model.inventory.attributes.wearable.WearableMateria
 import org.dungeon.prototype.model.inventory.attributes.wearable.WearableType;
 import org.dungeon.prototype.model.inventory.items.Weapon;
 import org.dungeon.prototype.model.inventory.items.Wearable;
+import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.properties.GenerationProperties;
 import org.dungeon.prototype.service.effect.ItemEffectsGenerator;
 import org.dungeon.prototype.service.item.ItemService;
@@ -118,7 +120,7 @@ public class ItemGenerator {
         try {
             combinedFuture.get();
         } catch (InterruptedException | ExecutionException e) {
-            log.error("Error on generating items: {}", e.getMessage());
+            throw new ItemGenerationException(chatId, e.getMessage(), CallbackType.DEFAULT_ERROR_RETURN);
         }
     }
 

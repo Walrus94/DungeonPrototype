@@ -2,6 +2,11 @@ package org.dungeon.prototype.bot;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.dungeon.prototype.exception.CallbackException;
+import org.dungeon.prototype.exception.ChatStateUpdateException;
+import org.dungeon.prototype.exception.DeleteMessageException;
+import org.dungeon.prototype.exception.SendMessageException;
+import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.service.PlayerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -58,7 +63,7 @@ public class DungeonBot extends TelegramLongPollingBot {
             //handles message text if present
             val chatId = update.getMessage().getChatId();
             val messageText = update.getMessage().getText();
-            if (!handleBotCommand(update, chatId, messageText)) {
+            if (!handleBotCommand(chatId, messageText)) {
                 playerService.registerPlayerAndSendStartMessage(chatId, messageText);
             }
         } else if (update.hasCallbackQuery()) {
@@ -67,9 +72,7 @@ public class DungeonBot extends TelegramLongPollingBot {
             val chatId = callbackQuery.getMessage().getChatId() == null ?
                     update.getMessage().getChatId() :
                     callbackQuery.getMessage().getChatId();
-            if (!callbackHandler.handleCallbackQuery(chatId, callbackQuery)) {
-                log.warn("Unable to handle callback {}", callbackQuery.getId());
-            }
+            callbackHandler.handleCallbackQuery(chatId, callbackQuery);
         }
     }
 
@@ -87,7 +90,7 @@ public class DungeonBot extends TelegramLongPollingBot {
         try {
             execute(answerCallbackQuery);
         } catch (TelegramApiException e) {
-            log.error("Unable to answer callback: {}", callbackQueryId);
+            throw new CallbackException(callbackQueryId, e.getMessage());
         }
     }
 
@@ -113,15 +116,13 @@ public class DungeonBot extends TelegramLongPollingBot {
      * @param chatId id of chat to update
      * @param from initial state
      * @param to resulting state
-     * @return false, in case chat not initialized or has
-     * different initial state
      */
-    public boolean updateChatState(Long chatId, ChatState from, ChatState to) {
+    public void updateChatState(Long chatId, ChatState from, ChatState to) {
         if (chatStateByIdMap.containsKey(chatId) && chatStateByIdMap.get(chatId).getChatState().equals(from)) {
             chatStateByIdMap.get(chatId).setChatState(to);
-            return true;
+        } else {
+            throw new ChatStateUpdateException(chatId, from, to);
         }
-        return false;
     }
 
     /**
@@ -150,12 +151,11 @@ public class DungeonBot extends TelegramLongPollingBot {
         try {
             val messageId = execute(message).getMessageId();
             if (messageId == -1) {
-                //TODO: handle exception
+                throw new SendMessageException(chatId, CallbackType.DEFAULT_ERROR_RETURN);
             }
             updateLastMessage(chatId, messageId);
         } catch (TelegramApiException e) {
-            log.error("Unable to send message: ", e);
-            //TODO: handle exception
+            throw new SendMessageException(e.getMessage(), chatId, CallbackType.DEFAULT_ERROR_RETURN);
         }
     }
 
@@ -165,19 +165,16 @@ public class DungeonBot extends TelegramLongPollingBot {
      * Should be executed by annotating method with {@link org.dungeon.prototype.annotations.aspect.PhotoMessageSending}
      * @param chatId id of chat
      * @param message message to be sent
-     * @return true if message successfully sent
      */
-    public boolean sendMessage(Long chatId, SendPhoto message) {
+    public void sendMessage(Long chatId, SendPhoto message) {
         try {
             val messageId = execute(message).getMessageId();
             if (messageId == -1) {
-                return false;
+                throw new SendMessageException(chatId, CallbackType.DEFAULT_ERROR_RETURN);
             }
             updateLastMessage(chatId, messageId);
-            return true;
         } catch (TelegramApiException e) {
-            log.error("Unable to send message: ", e);
-            return false;
+            throw new SendMessageException(e.getMessage(), chatId, CallbackType.DEFAULT_ERROR_RETURN);
         }
     }
 
@@ -198,25 +195,23 @@ public class DungeonBot extends TelegramLongPollingBot {
         }
     }
 
-    private boolean deleteMessage(long chatId, Integer messageId) {
+    private void deleteMessage(long chatId, Integer messageId) {
         val deleteMessage = DeleteMessage.builder()
                 .chatId(chatId)
                 .messageId(messageId)
                 .build();
         try {
-            return execute(deleteMessage);
+            if (!execute(deleteMessage)) {
+                throw new DeleteMessageException(chatId, messageId, CallbackType.DEFAULT_ERROR_RETURN);
+            }
         } catch (TelegramApiException e) {
-            log.error("Unable to edit message id:{}. {}", messageId, e);
-            return false;
+            throw new DeleteMessageException(chatId, messageId, e.getMessage(), CallbackType.DEFAULT_ERROR_RETURN);
         }
     }
 
-    private boolean handleBotCommand(Update update, Long chatId, String messageText) {
+    private boolean handleBotCommand(Long chatId, String messageText) {
         if (messageText.equals("/start") && isStartAvailable(chatId)) {
-            val nickname = update.getMessage().getFrom().getUserName() == null ?
-                    update.getMessage().getFrom().getFirstName() :
-                    update.getMessage().getFrom().getUserName();
-            botCommandHandler.processStartAction(chatId, nickname);
+            botCommandHandler.processStartAction(chatId);
             return true;
         }
         return false;

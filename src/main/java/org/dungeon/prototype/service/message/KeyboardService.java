@@ -2,6 +2,7 @@ package org.dungeon.prototype.service.message;
 
 import lombok.RequiredArgsConstructor;
 import lombok.val;
+import org.dungeon.prototype.exception.CallbackParsingException;
 import org.dungeon.prototype.model.inventory.Inventory;
 import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.player.Player;
@@ -15,7 +16,6 @@ import org.dungeon.prototype.properties.KeyboardButtonProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
 import java.util.ArrayList;
@@ -29,7 +29,6 @@ import static org.dungeon.prototype.properties.CallbackType.BACK;
 import static org.dungeon.prototype.properties.CallbackType.BOOTS;
 import static org.dungeon.prototype.properties.CallbackType.TREASURE_COLLECT_ALL;
 import static org.dungeon.prototype.properties.CallbackType.CONTINUE_GAME;
-import static org.dungeon.prototype.properties.CallbackType.DEFAULT;
 import static org.dungeon.prototype.properties.CallbackType.FORWARD;
 import static org.dungeon.prototype.properties.CallbackType.GLOVES;
 import static org.dungeon.prototype.properties.CallbackType.HEAD;
@@ -258,6 +257,51 @@ public class KeyboardService {
         return inlineKeyboardMarkup;
     }
 
+    public InlineKeyboardMarkup getInventoryItemInfoReplyMarkup(Item item, CallbackType inventoryType) {
+        KeyboardButtonProperties.KeyboardButtonAttributes actionButton;
+        KeyboardButtonProperties.KeyboardButtonAttributes backButton;
+        switch (inventoryType) {
+            case INVENTORY ->
+            {
+                actionButton = keyboardButtonProperties.getButtons().get(ITEM_INVENTORY_EQUIP);
+                backButton = keyboardButtonProperties.getButtons().get(ITEM_INVENTORY_BACK);
+
+            }
+            case MERCHANT_SELL_MENU ->
+            {
+                actionButton = keyboardButtonProperties.getButtons().get(MERCHANT_SELL_PRICE);
+                backButton = keyboardButtonProperties.getButtons().get(MERCHANT_SELL_MENU_BACK);
+            }
+            default -> throw new CallbackParsingException(inventoryType.toString());
+        }
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        row.add(InlineKeyboardButton.builder()
+                .text(actionButton.getName().formatted(item.getSellingPrice()))
+                .callbackData(actionButton.getCallback().formatted(item.getId()))
+                .build());
+        row.add(InlineKeyboardButton.builder()
+                .text(backButton.getName())
+                .callbackData(backButton.getCallback())
+                .build());
+        return InlineKeyboardMarkup.builder()
+                .keyboard(List.of(row))
+                .build();
+    }
+
+    public InlineKeyboardMarkup getErrorKeyboardMarkup(CallbackType buttonData) {
+        return InlineKeyboardMarkup.builder()
+                .keyboard(List.of(
+                        List.of(
+                                InlineKeyboardButton.builder()
+                                        .text("Return")
+                                        .callbackData(buttonData.toString())
+                                        .build()
+                        )
+                ))
+                .build();
+
+    }
+
     private InlineKeyboardButton getButton(CallbackType type) {
         return InlineKeyboardButton.builder()
                 .text(keyboardButtonProperties.getButtons().get(type).getName())
@@ -279,65 +323,16 @@ public class KeyboardService {
                 .build();
     }
 
-    private List<InlineKeyboardButton> getInventoryItemListRow(Item item, CallbackType itemType, CallbackType itemAction) {
-        List<InlineKeyboardButton> row = new ArrayList<>();
-        val itemButtonProperties = keyboardButtonProperties.getButtons().get(itemType);
-        val actionButtonProperties = keyboardButtonProperties.getButtons().get(itemAction);
-        row.add(InlineKeyboardButton.builder()
-                .text(item.getName())
-                .callbackData(itemButtonProperties.getCallback().formatted(item.getId()))
-                .build());
-        row.add(InlineKeyboardButton.builder()
-                .text(actionButtonProperties.getName().formatted(item.getSellingPrice()))
-                .callbackData(actionButtonProperties.getCallback().formatted(item.getId()))
-                .build());
-        return row;
-    }
-
-    public InlineKeyboardMarkup getInventoryItemInfoReplyMarkup(Item item, CallbackType inventoryType) {
-        KeyboardButtonProperties.KeyboardButtonAttributes actionButton;
-        KeyboardButtonProperties.KeyboardButtonAttributes backButton;
-        switch (inventoryType) {
-            case INVENTORY ->
-            {
-                actionButton = keyboardButtonProperties.getButtons().get(ITEM_INVENTORY_EQUIP);
-                backButton = keyboardButtonProperties.getButtons().get(ITEM_INVENTORY_BACK);
-
-            }
-            case MERCHANT_SELL_MENU ->
-            {
-                actionButton = keyboardButtonProperties.getButtons().get(MERCHANT_SELL_PRICE);
-                backButton = keyboardButtonProperties.getButtons().get(MERCHANT_SELL_MENU_BACK);
-            }
-            default -> {
-                actionButton = keyboardButtonProperties.getButtons().get(DEFAULT);
-                backButton = keyboardButtonProperties.getButtons().get(DEFAULT);
-            }
-        }
-        List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(InlineKeyboardButton.builder()
-                .text(actionButton.getName().formatted(item.getSellingPrice()))
-                .callbackData(actionButton.getCallback().formatted(item.getId()))
-                .build());
-        row.add(InlineKeyboardButton.builder()
-                .text(backButton.getName())
-                .callbackData(backButton.getCallback())
-                .build());
-        return InlineKeyboardMarkup.builder()
-                .keyboard(List.of(row))
-                .build();
-    }
-
     public InlineKeyboardMarkup getEquippedItemInfoReplyMarkup(CallbackType inventoryType, Integer sellPrice) {
         val backButtonType = switch (inventoryType) {
             case INVENTORY -> ITEM_INVENTORY_BACK;
             case MERCHANT_SELL_MENU ->  MERCHANT_SELL_MENU_BACK;
-            default -> DEFAULT;
+            default -> throw new CallbackParsingException(inventoryType.toString());
         };
         val actionButtonType = switch (inventoryType) {
             case INVENTORY -> ITEM_INVENTORY_UN_EQUIP;
             case MERCHANT_SELL_MENU -> MERCHANT_SELL_PRICE;
-            default -> DEFAULT;
+            default -> throw new CallbackParsingException(inventoryType.toString());
         };
         val actionButtonProperties = keyboardButtonProperties.getButtons().get(actionButtonType);
         val backButtonProperties = keyboardButtonProperties.getButtons().get(backButtonType);
@@ -353,6 +348,44 @@ public class KeyboardService {
         return InlineKeyboardMarkup.builder()
                 .keyboard(List.of(row))
                 .build();
+    }
+
+    public InlineKeyboardMarkup getMerchantBuyItemInfoReplyMarkup(Item item) {
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        row.add(getMerchantBuyPriceButton(item));
+        row.add(getButton(MERCHANT_BUY_MENU_BACK));
+        buttons.add(row);
+        inlineKeyboardMarkup.setKeyboard(buttons);
+        return inlineKeyboardMarkup;
+    }
+
+    public InlineKeyboardMarkup getNewLevelUpgradeReplyMarkup(Player player) {
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
+        player.getAttributes().forEach((playerAttribute, value) -> {
+            List<InlineKeyboardButton> row = new ArrayList<>();
+            row.add(getPlayerAttributeButton(playerAttribute, value));
+            buttons.add(row);
+        });
+        inlineKeyboardMarkup.setKeyboard(buttons);
+        return inlineKeyboardMarkup;
+    }
+
+    private List<InlineKeyboardButton> getInventoryItemListRow(Item item, CallbackType itemType, CallbackType itemAction) {
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        val itemButtonProperties = keyboardButtonProperties.getButtons().get(itemType);
+        val actionButtonProperties = keyboardButtonProperties.getButtons().get(itemAction);
+        row.add(InlineKeyboardButton.builder()
+                .text(item.getName())
+                .callbackData(itemButtonProperties.getCallback().formatted(item.getId()))
+                .build());
+        row.add(InlineKeyboardButton.builder()
+                .text(actionButtonProperties.getName().formatted(item.getSellingPrice()))
+                .callbackData(actionButtonProperties.getCallback().formatted(item.getId()))
+                .build());
+        return row;
     }
 
     private List<InlineKeyboardButton> getInventoryItemsListButtonRow(Item item, CallbackType equippedType, CallbackType itemAction) {
@@ -389,29 +422,6 @@ public class KeyboardService {
                 .build();
     }
 
-    public InlineKeyboardMarkup getMerchantBuyItemInfoReplyMarkup(Item item) {
-        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
-        List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(getMerchantBuyPriceButton(item));
-        row.add(getButton(MERCHANT_BUY_MENU_BACK));
-        buttons.add(row);
-        inlineKeyboardMarkup.setKeyboard(buttons);
-        return inlineKeyboardMarkup;
-    }
-
-    public InlineKeyboardMarkup getNewLevelUpgradeReplyMarkup(Player player) {
-        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
-        player.getAttributes().forEach((playerAttribute, value) -> {
-            List<InlineKeyboardButton> row = new ArrayList<>();
-            row.add(getPlayerAttributeButton(playerAttribute, value));
-            buttons.add(row);
-        });
-        inlineKeyboardMarkup.setKeyboard(buttons);
-        return inlineKeyboardMarkup;
-    }
-
     private InlineKeyboardButton getPlayerAttributeButton(PlayerAttribute playerAttribute, Integer value) {
         val buttonProperties = keyboardButtonProperties.getButtons().get(PLAYER_ATTRIBUTE_UPGRADE);
         return InlineKeyboardButton.builder()
@@ -433,12 +443,6 @@ public class KeyboardService {
         return InlineKeyboardButton.builder()
                 .text(buttonProperties.getName().formatted(item.getBuyingPrice()))
                 .callbackData(buttonProperties.getCallback().formatted(item.getId()))
-                .build();
-    }
-
-    public ReplyKeyboardMarkup getPromptReplyKeyboardMarkup(String suggestedPrompt) {
-        return ReplyKeyboardMarkup.builder()
-                .inputFieldPlaceholder(suggestedPrompt)
                 .build();
     }
 }

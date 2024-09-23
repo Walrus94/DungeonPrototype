@@ -10,7 +10,6 @@ import java.util.Optional;
 import java.util.Queue;
 import java.util.stream.Collectors;
 
-import static org.apache.commons.math3.util.FastMath.abs;
 import static org.dungeon.prototype.util.LevelUtil.getIcon;
 
 @Data
@@ -26,15 +25,6 @@ public class RoomTypesCluster {
         return Objects.isNull(rooms) || rooms.isEmpty() ? new Weight() : rooms.stream()
                 .map(RoomContent::getRoomContentWeight)
                 .reduce(Weight::add).orElse(new Weight());
-    }
-    public Weight getLastAddedWeight() {
-        return Objects.isNull(rooms) || rooms.isEmpty() ? new Weight() : rooms.peek().getRoomContentWeight();
-    }
-
-    public Double getMiddleAbsWeight() {
-        return Objects.isNull(rooms) || rooms.isEmpty() ? 0 : rooms.stream()
-                .mapToDouble(roomContent -> abs(roomContent.getRoomContentWeight().toVector().getNorm()))
-                .sum() / rooms.size();
     }
 
     public Weight addRoom(RoomContent roomContent) {
@@ -55,6 +45,10 @@ public class RoomTypesCluster {
 
     public RoomContent getNextRoom() {
         return rooms.poll();
+    }
+
+    public int getRoomsLeft() {
+        return rooms.size();
     }
 
     @Override

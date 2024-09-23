@@ -16,16 +16,22 @@ import org.dungeon.prototype.model.weight.Weight;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Set;
 
 import static org.apache.commons.math3.util.FastMath.PI;
+import static org.apache.commons.math3.util.FastMath.abs;
 import static org.apache.commons.math3.util.FastMath.cos;
 import static org.apache.commons.math3.util.FastMath.exp;
 import static org.apache.commons.math3.util.FastMath.max;
 import static org.apache.commons.math3.util.FastMath.min;
 import static org.apache.commons.math3.util.FastMath.sin;
 import static org.apache.commons.math3.util.FastMath.sqrt;
+import static org.dungeon.prototype.model.room.RoomType.ANVIL;
 import static org.dungeon.prototype.model.room.RoomType.DRAGON;
+import static org.dungeon.prototype.model.room.RoomType.HEALTH_SHRINE;
+import static org.dungeon.prototype.model.room.RoomType.MANA_SHRINE;
 import static org.dungeon.prototype.model.room.RoomType.MERCHANT;
 import static org.dungeon.prototype.model.room.RoomType.NORMAL;
 import static org.dungeon.prototype.model.room.RoomType.SWAMP_BEAST;
@@ -75,16 +81,25 @@ public class RandomUtil {
         return MagicType.of(divine, arcane);
     }
 
+    /**
+     * Generates random room type
+     * @param expectedWeight input weight
+     * @param currentStep current progress across overall level generation
+     * @param totalRooms rooms on level
+     * @param penaltyPoints points coordinates with special rooms placed mapped by
+     *                      their type
+     * @return next room type
+     */
     public static RoomType getRandomRoomType(Weight expectedWeight,
                                              Integer currentStep,
                                              Integer totalRooms,
-                                             RoomType... excluded) {
+                                             EnumMap<RoomType, Set<Integer>> penaltyPoints) {
         log.debug("Current step: {} / {}", currentStep, totalRooms);
         Double positiveRoomDistribution = (cos(PI * currentStep / 2) + 1) / 2;
         log.debug("Positive weight treasure room distribution: {}", positiveRoomDistribution);
-        Double negativeRoomDistribution = (1 - cos(PI * currentStep / 2) + 1) / 2;
+        Double negativeRoomDistribution = (1 - cos(PI * currentStep / 2)) / 2;
         log.debug("Negative weight room distribution: {}", negativeRoomDistribution);
-        Double normalRoomDistribution = (double) (currentStep / (totalRooms * totalRooms));
+        Double normalRoomDistribution = (double) (currentStep / totalRooms);
         log.debug("Current normal room distribution: {}", normalRoomDistribution);
 
         return switch (getEnumeratedDistribution(List.of(Pair.create(NEGATIVE, negativeRoomDistribution),
@@ -98,29 +113,32 @@ public class RandomUtil {
                 val manaDeficiencyToMaxMana = expectedWeight.getManaDeficiencyToMaxMana();
                 val armorToMaxArmor = expectedWeight.getArmorToMaxArmor();
                 val goldBonusToGold = expectedWeight.getGoldBonusToGold();
-                val specialRoomDistribution = getExponentialDistribution(0.0, currentStep);
+                val specialRoomDistribution = getExponentialDistribution(currentStep, 0.0);
                 log.debug("Special room distribution: {}", specialRoomDistribution);
-                val treasureRoomDistribution = (double) (1 - currentStep / (totalRooms * totalRooms));
+                val treasureRoomDistribution =  sqrt(1.0 - (double) (currentStep / totalRooms));
                 log.debug("Treasure room distribution: {}", treasureRoomDistribution);
                 val healthShrineDistribution =
-                        getExponentialDistribution(totalRooms * hpDeficiencyToMaxHp, currentStep);
+                        getExponentialDistribution(currentStep, totalRooms * hpDeficiencyToMaxHp,
+                                penaltyPoints.get(HEALTH_SHRINE).stream().mapToDouble(Double::valueOf).toArray());
                 log.debug("Health shrine distribution: {}", healthShrineDistribution);
                 val manaShrineDistribution =
-                        getExponentialDistribution(totalRooms * manaDeficiencyToMaxMana, currentStep);
+                        getExponentialDistribution(currentStep, totalRooms * manaDeficiencyToMaxMana,
+                                penaltyPoints.get(MANA_SHRINE).stream().mapToDouble(Double::valueOf).toArray());
                 log.debug("Mana shrine distribution: {}", manaShrineDistribution);
 
                 val healthShrineProbability = healthShrineDistribution * hpToMaxHp;
                 log.debug("Health shrine probability: {}", healthShrineProbability);
                 val manaShrineProbability = manaShrineDistribution * manaToMaxMana;
                 log.debug("Mana shrine probability: {}", manaShrineProbability);
-                val merchantProbability = Arrays.asList(excluded).contains(MERCHANT) ? 0.0 :
+                val merchantProbability = penaltyPoints.get(MERCHANT).size() > 0 ? 0.0 :
                         specialRoomDistribution * goldBonusToGold; //TODO: add potential (unequipped items) weight
                 log.debug("Merchant probability: {}", merchantProbability);
-                val anvilProbability = specialRoomDistribution * armorToMaxArmor;
+                val anvilProbability = penaltyPoints.get(ANVIL).size() > 0 ? 0.0 :
+                        specialRoomDistribution * armorToMaxArmor;
                 val treasureProbability = treasureRoomDistribution * goldBonusToGold; //TODO: add potential (unequipped items) weight
                 log.debug("Treasure probability: {}", treasureProbability);
 
-                val sumProb = healthShrineProbability + manaShrineProbability + merchantProbability + treasureProbability;
+                val sumProb = healthShrineProbability + manaShrineProbability + merchantProbability + treasureProbability + anvilProbability;
 
                 if (sumProb == 0.0) {
                     yield  NORMAL;
@@ -133,6 +151,7 @@ public class RandomUtil {
                 probabilities.add(Pair.create(RoomType.HEALTH_SHRINE, max(0.0, min(1.0, healthShrineProbability * positiveProbabilitiesNormalizingFactor))));
                 probabilities.add(Pair.create(RoomType.MANA_SHRINE, max(0.0, min(1.0, manaShrineProbability * positiveProbabilitiesNormalizingFactor))));
                 probabilities.add(Pair.create(RoomType.MERCHANT, max(0.0, min(1.0, merchantProbability * positiveProbabilitiesNormalizingFactor))));
+                probabilities.add(Pair.create(ANVIL, max(0.0, min(1.0, anvilProbability * positiveProbabilitiesNormalizingFactor))));
 
                 yield getEnumeratedDistribution(probabilities).sample();
             }
@@ -207,11 +226,15 @@ public class RandomUtil {
 
     }
 
-    private static Double getExponentialDistribution(Double infPoint, Integer a) {
+    private static Double getExponentialDistribution(Integer a, Double infPoint, double... penaltyPoints) {
+        val penalty = Arrays.stream(penaltyPoints)
+                .map(point ->
+                        exp(abs(a - point)) / exp(abs(infPoint - point)))
+                .sum();
         return switch (a.compareTo(infPoint.intValue())) {
-                case 0 -> 1.0 ;
-                case 1 -> exp(a - infPoint);
-                case -1 -> exp(infPoint - a);
+                case 0 -> 1.0 - penalty ;
+                case 1 -> exp(a - infPoint) - penalty;
+                case -1 -> exp(infPoint - a) - penalty;
             default -> 0.0;
         };
     }

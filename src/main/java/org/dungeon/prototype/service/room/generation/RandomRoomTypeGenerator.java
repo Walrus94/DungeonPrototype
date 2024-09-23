@@ -19,14 +19,11 @@ import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static org.dungeon.prototype.model.room.RoomType.MERCHANT;
-import static org.dungeon.prototype.model.room.RoomType.TREASURE;
 import static org.dungeon.prototype.util.GenerationUtil.getWeightLimitNormalization;
 
 @Slf4j
@@ -37,22 +34,26 @@ public class RandomRoomTypeGenerator {
     @Autowired
     private RoomService roomService;
 
+    /**
+     * Generates clusters of content to distribute to given level
+     * @param level to add content to
+     * @param player current player
+     * @return level room content cluster container
+     */
     public LevelRoomTypeClusters generateClusters(Level level, Player player) {
         log.debug("Initializing room type generator parameters...");
         val levelRoomTypeClusters = new LevelRoomTypeClusters();
         levelRoomTypeClusters.setRoomsLeft(level.getRoomsMap().size() - 2);
         levelRoomTypeClusters.setChatId(level.getChatId());
         levelRoomTypeClusters.setTotalRooms(levelRoomTypeClusters.getRoomsLeft());
-        levelRoomTypeClusters.setRoomTreasures(0);
-        levelRoomTypeClusters.setHasMerchantRoom(false);
-        levelRoomTypeClusters.setUsedItemIds(new HashSet<>());
-        levelRoomTypeClusters.setExpectedWeight(player.getWeight().multiply(levelRoomTypeClusters.getTotalRooms().doubleValue()));
+        levelRoomTypeClusters.setExpectedWeight(player.getWeight() //TODO: test and adjust formula
+                .multiply(levelRoomTypeClusters.getTotalRooms().doubleValue()));
         levelRoomTypeClusters.setDeadEnds(new PriorityQueue<>(Comparator.comparing(GridSection::getStepsFromStart)));
         level.getDeadEnds().forEach(levelRoomTypeClusters.getDeadEnds()::offer);
         levelRoomTypeClusters.setDeadEndToSegmentMap(level.getDeadEndToSegmentMap());
         levelRoomTypeClusters.setMainSegment(LevelUtil.getMainSegment(level));
-        log.debug("Parameters - levelNumber:{}, deadEnds:{}, roomTreasures: {},  total: {}",
-                level.getNumber(), levelRoomTypeClusters.getDeadEnds().size(), levelRoomTypeClusters.getRoomTreasures(),
+        log.debug("Parameters - levelNumber:{}, deadEnds:{},  total: {}",
+                level.getNumber(), levelRoomTypeClusters.getDeadEnds().size(),
                 levelRoomTypeClusters.getRoomsLeft());
         log.debug("Start generating clusters...");
         Map<RoomsSegment, RoomTypesCluster> clusters = new HashMap<>();
@@ -94,37 +95,37 @@ public class RandomRoomTypeGenerator {
         return levelRoomTypeClusters;
     }
 
-    public RoomTypesCluster generateCluster(int totalRooms, Weight expectedWeight, LevelRoomTypeClusters levelRoomTypeClusters) {
-        log.debug("Generating cluster size {}...", totalRooms);
-        var cluster = new RoomTypesCluster(totalRooms);
+    private RoomTypesCluster generateCluster(int totalClusterRooms, Weight expectedWeight, LevelRoomTypeClusters levelRoomTypeClusters) {
+        log.debug("Generating cluster size {}...", totalClusterRooms);
+        var cluster = new RoomTypesCluster(totalClusterRooms);
         RoomContent roomContent;
         while (cluster.hasRoomLeft()) {
             var clusterWeight = cluster.getClusterWeight();
             log.debug("Next expected weight absolute value: {}", expectedWeight);
             log.debug("Generating random room...");
-            var roomsLeft = levelRoomTypeClusters.getRoomsLeft() - 1;
-            val currentStep = totalRooms - roomsLeft;//TODO verify with debugger
+            var clusterRoomsLeft = cluster.getRoomsLeft();
+            val currentStep = totalClusterRooms - clusterRoomsLeft;//TODO verify with debugger
             roomContent = nextRoomContent(expectedWeight, levelRoomTypeClusters);
             var lastAddedWeight = cluster.addRoom(roomContent);
             log.debug("Last added weight: {}", lastAddedWeight);
             log.debug("Added room content, {}", roomContent);
             expectedWeight = clusterWeight.add(lastAddedWeight.getNegative());
-            expectedWeight = getWeightLimitNormalization(expectedWeight, levelRoomTypeClusters.getExpectedWeight().toVector().getNorm(), currentStep, totalRooms);
+            expectedWeight = getWeightLimitNormalization(expectedWeight, levelRoomTypeClusters.getExpectedWeight().toVector().getNorm(), currentStep, totalClusterRooms);
             log.debug("Generated cluster: {}", cluster);
         }
         return cluster;
     }
 
-    public RoomContent nextRoomContent(Weight expectedWeight, LevelRoomTypeClusters levelRoomTypeClusters) {
+    private RoomContent nextRoomContent(Weight expectedWeight, LevelRoomTypeClusters levelRoomTypeClusters) {
         if (expectedWeight.toVector().getNorm() == 0.0) {//TODO: consider configuring threshold
             return new NormalRoom();
         }
         val roomContent = roomContentGenerationService.getNextRoomContent(levelRoomTypeClusters, expectedWeight);
-        if (Set.of(TREASURE, MERCHANT).contains(roomContent.getRoomType())) {
-            Set<Item> items = ((ItemsRoom) roomContent).getItems();
+        if (roomContent instanceof ItemsRoom itemsRoom) {
+            Set<Item> items = itemsRoom.getItems();
             levelRoomTypeClusters.addUsedItemsIds(items.stream().map(Item::getId).collect(Collectors.toSet()));
         }
-        levelRoomTypeClusters.setRoomsLeft(levelRoomTypeClusters.getRoomsLeft() - 1);
+        levelRoomTypeClusters.decreaseRoomsCount();
         return roomService.saveOrUpdateRoomContent(roomContent);
     }
 

@@ -22,7 +22,6 @@ class EffectServiceTest extends BaseServiceUnitTest {
 
     @InjectMocks
     private EffectService effectService;
-
     @Mock
     private PlayerService playerService;
 

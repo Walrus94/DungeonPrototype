@@ -15,7 +15,12 @@ public class MonsterService {
     @Autowired
     MonsterRepository monsterRepository;
 
-    public Monster saveOrUpdateMonster(Monster monster) {
+    /**
+     * Updates monster in repository
+     * @param monster to update
+     * @return updated monster
+     */
+    public Monster updateMonster(Monster monster) {
         val monsterDocument = MonsterMapper.INSTANCE.mapToDocument(monster);
         return MonsterMapper.INSTANCE.mapToMonster(monsterRepository.save(monsterDocument));
     }

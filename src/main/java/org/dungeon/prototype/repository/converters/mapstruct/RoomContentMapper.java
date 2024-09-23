@@ -80,7 +80,11 @@ public interface RoomContentMapper {
                 room.setMonster(MonsterMapper.INSTANCE.mapToMonster(document.getMonster()));
                 yield room;
             }
-            case ANVIL -> new Anvil();
+            case ANVIL -> Anvil.builder()
+                    .attackBonus(document.getAttackBonus())
+                    .chanceToBreakWeapon(document.getChanceToBreakWeapon())
+                    .armorRestored(document.isArmorRestored())
+                    .build();
             case START, END, NORMAL,
                     DRAGON_KILLED, WEREWOLF_KILLED, SWAMP_BEAST_KILLED, ZOMBIE_KILLED, VAMPIRE_KILLED,
                     SHRINE_DRAINED, TREASURE_LOOTED -> new EmptyRoom(document.getRoomType());

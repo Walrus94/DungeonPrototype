@@ -45,6 +45,11 @@ public class EffectService {
     @Autowired
     private PlayerService playerService;
 
+    /**
+     * Applies effects to monster, and removes expired ones
+     * @param monster to apply changes to
+     * @return updated monster
+     */
     public Monster updateMonsterEffects(Monster monster) {
         val monsterAttack = monster.getCurrentAttack();
         monster.getEffects()
@@ -58,6 +63,12 @@ public class EffectService {
         return monster;
     }
 
+    /**
+     * Calculates effects imply on player attributes,
+     * removes expired effects
+     * @param player to apply changes to
+     * @return updated player
+     */
     public Player updatePlayerEffects(Player player) {
         Map<EffectAttribute, PriorityQueue<Effect>> mappedEffects = player.getEffects().stream()
                 .collect(Collectors.groupingBy(Effect::getAttribute,
@@ -70,6 +81,11 @@ public class EffectService {
         return player;
     }
 
+    /**
+     * Calculates player armor effect
+     * @param player to apply changes to
+     * @return updated player
+     */
     public Player updateArmorEffect(Player player) {
         val effects = player.getEffects().stream().filter(effect -> MAX_ARMOR.equals(effect.getAttribute()))
                 .collect(Collectors.toCollection(() ->

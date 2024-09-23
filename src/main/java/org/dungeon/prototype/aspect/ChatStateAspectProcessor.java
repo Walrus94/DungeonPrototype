@@ -10,6 +10,7 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.dungeon.prototype.annotations.aspect.ChatStateUpdate;
 import org.dungeon.prototype.bot.ChatState;
 import org.dungeon.prototype.bot.DungeonBot;
+import org.dungeon.prototype.exception.ChatStateUpdateException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -39,7 +40,6 @@ public class ChatStateAspectProcessor {
             ChatState from = chatStateUpdate.from();
             ChatState to = chatStateUpdate.to();
 
-            // Proceed with the original method call
             return handleChatStateUpdate(joinPoint, from, to);
         }
         return null;
@@ -55,13 +55,12 @@ public class ChatStateAspectProcessor {
     private Object handleChatStateUpdate(ProceedingJoinPoint joinPoint, ChatState from, ChatState to) {
         Object[] args = joinPoint.getArgs();
         if (args.length > 0 && args[0] instanceof Long chatId) {
-
-            if (dungeonBot.updateChatState(chatId, from, to)) {
-                try {
-                    return joinPoint.proceed();
-                } catch (Throwable e) {
-                    return null;
-                }
+            try {
+                dungeonBot.updateChatState(chatId, from, to);
+                // Proceed with the original method call
+                return joinPoint.proceed();
+            } catch (Throwable e) {
+                throw new ChatStateUpdateException(chatId, from, to);
             }
         }
         return null;

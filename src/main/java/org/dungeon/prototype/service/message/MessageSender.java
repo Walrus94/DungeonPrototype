@@ -9,7 +9,6 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 
 @Slf4j
 @Service
@@ -38,15 +37,13 @@ public class MessageSender {
      * Does the same as {@link MessageSender::sendMessage} at the moment
      * @param chatId id of chat to send message
      * @param text text content of message
-     * @param keyboard inline keyboard content of message
      * @return message data processed by {@link MessagingAspectHandler}
      */
     @MessageSending
-    public SendMessage sendPromptMessage(Long chatId, ReplyKeyboardMarkup keyboard, String text) {
+    public SendMessage sendPromptMessage(Long chatId, String text) {
         return SendMessage.builder()
                 .chatId(chatId)
                 .text(text)
-                .replyMarkup(keyboard)
                 .build();
     }
 
@@ -57,7 +54,7 @@ public class MessageSender {
      * @param caption text caption
      * @param keyboardMarkup inline keyboard content of message
      * @param inputFile file with image
-     * @return
+     * @return photo message data processed by {@link MessagingAspectHandler}
      */
     @PhotoMessageSending
     public SendPhoto sendPhotoMessage(Long chatId, String caption, InlineKeyboardMarkup keyboardMarkup, InputFile inputFile) {

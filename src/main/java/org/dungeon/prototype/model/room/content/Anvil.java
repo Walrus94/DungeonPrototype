@@ -1,16 +1,25 @@
 package org.dungeon.prototype.model.room.content;
 
+import lombok.Builder;
 import lombok.Data;
 import org.dungeon.prototype.model.room.RoomType;
 import org.dungeon.prototype.model.weight.Weight;
 
 @Data
+@Builder
 public class Anvil implements RoomContent {
     private String id;
-    private Weight roomContentWeight;
     private Double chanceToBreakWeapon;
     private Integer attackBonus;
     private boolean armorRestored;
+
+    @Override
+    public Weight getRoomContentWeight() {
+        return Weight.builder()
+                .armorToMaxArmor(1.0)
+                .attack(attackBonus * (1 - chanceToBreakWeapon))
+                .build();
+    }
 
     @Override
     public RoomType getRoomType() {

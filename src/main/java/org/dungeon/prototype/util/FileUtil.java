@@ -3,6 +3,7 @@ package org.dungeon.prototype.util;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.dungeon.prototype.exception.FileLoadingException;
 import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.RoomType;
 import org.springframework.core.io.ClassPathResource;
@@ -44,9 +45,7 @@ public class FileUtil {
             inputFile.setMedia(new ByteArrayInputStream(imageData), imgFile.getFilename());
             return inputFile;
         } catch (IOException e) {
-            //TODO: improve exception handling
-            log.error("Error loading file: {}", e.getMessage());
-            return null;
+            throw new FileLoadingException(room.getChatId(), e.getMessage());
         }
     }
 

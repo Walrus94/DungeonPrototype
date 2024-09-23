@@ -19,13 +19,18 @@ public class BotCommandHandler {
     LevelService levelService;
     @Autowired
     MessageService messageService;
+
+    /**
+     * (Re-)Starts chat, initializes chat context and sends welcome message
+     * @param chatId id of the chat
+     */
     @InitializeChatContext
-    public void processStartAction(Long chatId, String suggestedNickname) {
+    public void processStartAction(Long chatId) {
         if (!playerService.hasPlayer(chatId)) {
-            messageService.sendRegisterMessage(chatId, suggestedNickname);
+            messageService.sendRegisterMessage(chatId);
         } else {
             val hasSavedGame = levelService.hasLevel(chatId);
-            val nickname = playerService.getNicknameByChatId(chatId).orElse("stranger");
+            val nickname = playerService.getNicknameByChatId(chatId);
             messageService.sendContinueMessage(chatId, nickname, hasSavedGame);
         }
     }

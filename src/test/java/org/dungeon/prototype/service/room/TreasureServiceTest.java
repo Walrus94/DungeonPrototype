@@ -89,11 +89,10 @@ class TreasureServiceTest extends BaseServiceUnitTest {
 
         ArgumentCaptor<Player> playerArgumentCaptor = ArgumentCaptor.forClass(Player.class);
         when(playerService.updatePlayer(playerArgumentCaptor.capture())).thenReturn(player);
-        when(messageService.sendRoomMessage(eq(CHAT_ID), eq(player), any(Room.class))).thenReturn(true);
+        doNothing().when(messageService).sendRoomMessage(eq(CHAT_ID), eq(player), any(Room.class));
 
-        val actualResult = treasureService.collectTreasureGold(CHAT_ID, player, currentRoom);
+        treasureService.collectTreasureGold(CHAT_ID, player, currentRoom);
 
-        assertTrue(actualResult);
         val actualPlayer = playerArgumentCaptor.getValue();
         assertEquals(200, actualPlayer.getGold());
 
@@ -118,9 +117,8 @@ class TreasureServiceTest extends BaseServiceUnitTest {
         ArgumentCaptor<Player> playerArgumentCaptor = ArgumentCaptor.forClass(Player.class);
         when(playerService.updatePlayer(playerArgumentCaptor.capture())).thenReturn(player);
 
-        val actualResult = treasureService.collectTreasureGold(CHAT_ID, player, currentRoom);
+        treasureService.collectTreasureGold(CHAT_ID, player, currentRoom);
 
-        assertTrue(actualResult);
         ArgumentCaptor<Treasure> treasureArgumentCaptor = ArgumentCaptor.forClass(Treasure.class);
         verify(messageService).sendTreasureMessage(eq(CHAT_ID), treasureArgumentCaptor.capture());
         val actualPlayer = playerArgumentCaptor.getValue();
@@ -144,15 +142,14 @@ class TreasureServiceTest extends BaseServiceUnitTest {
         ArgumentCaptor<Player> playerArgumentCaptor = ArgumentCaptor.forClass(Player.class);
         when(playerService.updatePlayer(playerArgumentCaptor.capture())).thenReturn(player);
         ArgumentCaptor<Inventory> inventoryArgumentCaptor = ArgumentCaptor.forClass(Inventory.class);
-        when(messageService.sendRoomMessage(eq(CHAT_ID), any(Player.class), any(Room.class))).thenReturn(true);
+        doNothing().when(messageService).sendRoomMessage(eq(CHAT_ID), any(Player.class), any(Room.class));
 
         when(inventoryService.saveOrUpdateInventory(inventoryArgumentCaptor.capture())).thenReturn(player.getInventory());
 
-        val actualResult = treasureService.collectAllTreasure(CHAT_ID, player, currentRoom);
+        treasureService.collectAllTreasure(CHAT_ID, player, currentRoom);
 
         ArgumentCaptor<Room> roomArgumentCaptor = ArgumentCaptor.forClass(Room.class);
         verify(levelService).updateAfterTreasureLooted(roomArgumentCaptor.capture());
-        assertTrue(actualResult);
         val actualPlayer = playerArgumentCaptor.getValue();
         val actualRoom = roomArgumentCaptor.getValue();
         val actualInventory = inventoryArgumentCaptor.getValue();

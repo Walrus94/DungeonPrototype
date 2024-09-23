@@ -105,6 +105,7 @@ public class TestData {
                         .build())
                 .hp(health)
                 .maxHp(maxHealth)
+                .effects(new ArrayList<>())
                 .build();
         monster.setAttackPattern(monster.getDefaultAttackPattern());
         return monster;

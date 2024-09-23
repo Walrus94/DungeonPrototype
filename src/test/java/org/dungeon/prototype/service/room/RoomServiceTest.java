@@ -22,19 +22,19 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.dungeon.prototype.TestData.getMerchant;
 import static org.dungeon.prototype.TestData.getPlayer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class RoomServiceTest extends BaseServiceUnitTest {
-
     @InjectMocks
     RoomService roomService;
     @Mock
@@ -56,13 +56,12 @@ class RoomServiceTest extends BaseServiceUnitTest {
         roomDocument.setChatId(CHAT_ID);
         roomDocument.setId(CURRENT_ROOM_ID);
 
-        when(roomRepository.findByChatIdAndId(CHAT_ID, player.getCurrentRoomId())).thenReturn(roomDocument);
+        when(roomRepository.findByChatIdAndId(CHAT_ID, player.getCurrentRoomId())).thenReturn(Optional.of(roomDocument));
         ArgumentCaptor<Room> roomArgumentCaptor = ArgumentCaptor.forClass(Room.class);
-        when(messageService.sendRoomMessage(eq(CHAT_ID), eq(player), roomArgumentCaptor.capture())).thenReturn(true);
+        doNothing().when(messageService).sendRoomMessage(eq(CHAT_ID), eq(player), roomArgumentCaptor.capture());
 
-        val actualResult = roomService.sendOrUpdateRoomMessage(CHAT_ID, player);
+        roomService.sendOrUpdateRoomMessage(CHAT_ID, player);
 
-        assertTrue(actualResult);
         val actualRoom = roomArgumentCaptor.getValue();
         assertEquals(roomDocument.getChatId(), actualRoom.getChatId());
         assertEquals(roomDocument.getId(), actualRoom.getId());
@@ -74,7 +73,7 @@ class RoomServiceTest extends BaseServiceUnitTest {
         val roomDocument = new RoomDocument();
         roomDocument.setId(CURRENT_ROOM_ID);
         roomDocument.setChatId(CHAT_ID);
-        when(roomRepository.findByChatIdAndId(CHAT_ID, CURRENT_ROOM_ID)).thenReturn(roomDocument);
+        when(roomRepository.findByChatIdAndId(CHAT_ID, CURRENT_ROOM_ID)).thenReturn(Optional.of(roomDocument));
 
         val actualRoom = roomService.getRoomByIdAndChatId(CHAT_ID, CURRENT_ROOM_ID);
 
@@ -154,13 +153,12 @@ class RoomServiceTest extends BaseServiceUnitTest {
         val currentRoom = new Room();
         currentRoom.setRoomContent(roomContent);
 
-        val actualResult = roomService.openMerchantBuyMenu(CHAT_ID, player, currentRoom);
+        roomService.openMerchantBuyMenu(CHAT_ID, player, currentRoom);
 
         ArgumentCaptor<Set<Item>> argument = ArgumentCaptor.forClass(Set.class);
         verify(messageService).sendMerchantBuyMenuMessage(eq(CHAT_ID), eq(player.getGold()), argument.capture());
         val actualItems = argument.getValue();
         assertEquals(roomContent.getItems(), actualItems);
-        assertTrue(actualResult);
     }
 
     @Test
@@ -173,10 +171,9 @@ class RoomServiceTest extends BaseServiceUnitTest {
         room.setId(CURRENT_ROOM_ID);
         room.setChatId(CHAT_ID);
 
-        val actualResult = roomService.openMerchantSellMenu(CHAT_ID, player, room);
+        roomService.openMerchantSellMenu(CHAT_ID, player, room);
 
         verify(messageService).sendMerchantSellMenuMessage(CHAT_ID, player);
-        assertTrue(actualResult);
     }
 
     @Test
@@ -196,16 +193,15 @@ class RoomServiceTest extends BaseServiceUnitTest {
         room.setRoomContent(roomContent);
 
         when(playerService.getPlayer(CHAT_ID)).thenReturn(player);
-        when(roomRepository.findByChatIdAndId(CHAT_ID, CURRENT_ROOM_ID)).thenReturn(room);
+        when(roomRepository.findByChatIdAndId(CHAT_ID, CURRENT_ROOM_ID)).thenReturn(Optional.of(room));
 
-        val actualResult = roomService.openMerchantBuyItem(CHAT_ID, itemId);
+        roomService.openMerchantBuyItem(CHAT_ID, itemId);
 
         ArgumentCaptor<Item> itemArgumentCaptor = ArgumentCaptor.forClass(Item.class);
         verify(messageService).sendMerchantBuyItemMessage(eq(CHAT_ID), itemArgumentCaptor.capture());
         val actualItem = itemArgumentCaptor.getValue();
 
         assertEquals(itemId, actualItem.getId());
-        assertTrue(actualResult);
     }
 
     @Test
@@ -217,17 +213,16 @@ class RoomServiceTest extends BaseServiceUnitTest {
         when(playerService.getPlayer(CHAT_ID)).thenReturn(player);
         when(effectService.updateArmorEffect(player)).thenReturn(player);
         when(playerService.updatePlayer(player)).thenReturn(player);
-        when(roomRepository.findByChatIdAndId(CHAT_ID, CURRENT_ROOM_ID)).thenReturn(room);
+        when(roomRepository.findByChatIdAndId(CHAT_ID, CURRENT_ROOM_ID)).thenReturn(Optional.of(room));
 
         ArgumentCaptor<Player> playerArgumentCaptor = ArgumentCaptor.forClass(Player.class);
         ArgumentCaptor<Room> roomArgumentCaptor = ArgumentCaptor.forClass(Room.class);
-        when(messageService.sendRoomMessage(eq(CHAT_ID), playerArgumentCaptor.capture(), roomArgumentCaptor.capture())).thenReturn(true);
+        doNothing().when(messageService).sendRoomMessage(eq(CHAT_ID), playerArgumentCaptor.capture(), roomArgumentCaptor.capture());
 
-        val actualResult = roomService.restoreArmor(CHAT_ID);
+        roomService.restoreArmor(CHAT_ID);
 
         val actualPlayer = playerArgumentCaptor.getValue();
         val actualRoom = roomArgumentCaptor.getValue();
-        assertTrue(actualResult);
         assertEquals(actualPlayer.getDefense(), actualPlayer.getMaxDefense());
         assertEquals(CURRENT_ROOM_ID, actualRoom.getId());
 
@@ -242,17 +237,16 @@ class RoomServiceTest extends BaseServiceUnitTest {
         room.setId(CURRENT_ROOM_ID);
         when(playerService.getPlayer(CHAT_ID)).thenReturn(player);
         when(playerService.updatePlayer(player)).thenReturn(player);
-        when(roomRepository.findByChatIdAndId(CHAT_ID, CURRENT_ROOM_ID)).thenReturn(room);
+        when(roomRepository.findByChatIdAndId(CHAT_ID, CURRENT_ROOM_ID)).thenReturn(Optional.of(room));
 
         ArgumentCaptor<Player> playerArgumentCaptor = ArgumentCaptor.forClass(Player.class);
         ArgumentCaptor<Room> roomArgumentCaptor = ArgumentCaptor.forClass(Room.class);
-        when(messageService.sendRoomMessage(eq(CHAT_ID), playerArgumentCaptor.capture(), roomArgumentCaptor.capture())).thenReturn(true);
+        doNothing().when(messageService).sendRoomMessage(eq(CHAT_ID), playerArgumentCaptor.capture(), roomArgumentCaptor.capture());
 
-        val actualResult = roomService.upgradePlayerAttribute(CHAT_ID, PlayerAttribute.MAGIC);
+        roomService.upgradePlayerAttribute(CHAT_ID, PlayerAttribute.MAGIC);
 
         val actualPlayer = playerArgumentCaptor.getValue();
         val actualRoom = roomArgumentCaptor.getValue();
-        assertTrue(actualResult);
         assertEquals(expectedValue, actualPlayer.getAttributes().get(PlayerAttribute.MAGIC));
         assertEquals(CURRENT_ROOM_ID, actualRoom.getId());
     }

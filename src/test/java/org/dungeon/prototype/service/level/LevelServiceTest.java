@@ -2,6 +2,7 @@ package org.dungeon.prototype.service.level;
 
 import lombok.val;
 import org.dungeon.prototype.TestData;
+import org.dungeon.prototype.exception.EntityNotFoundException;
 import org.dungeon.prototype.model.Level;
 import org.dungeon.prototype.model.Point;
 import org.dungeon.prototype.model.document.level.LevelDocument;
@@ -46,8 +47,10 @@ import static org.dungeon.prototype.model.Direction.S;
 import static org.dungeon.prototype.model.Direction.W;
 import static org.dungeon.prototype.model.room.RoomType.TREASURE_LOOTED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -56,7 +59,6 @@ import static org.mockito.Mockito.when;
 
 @ActiveProfiles("test")
 class LevelServiceTest extends BaseServiceUnitTest {
-
     @InjectMocks
     private LevelService levelService;
     @Mock
@@ -91,14 +93,12 @@ class LevelServiceTest extends BaseServiceUnitTest {
 
         when(levelRepository.existsByChatId(CHAT_ID)).thenReturn(false);
         when(levelRepository.save(any(LevelDocument.class))).thenReturn(document);
-        when(messageService.sendRoomMessage(CHAT_ID, player, level.getStart())).thenReturn(true);
+        doNothing().when(messageService).sendRoomMessage(CHAT_ID, player, level.getStart());
 
-        val actualResult = levelService.startNewGame(CHAT_ID, player);
+        levelService.startNewGame(CHAT_ID, player);
 
         verify(levelGenerationService).generateLevel(CHAT_ID, player, 1);
         verify(messageService).sendRoomMessage(CHAT_ID, player, level.getStart());
-
-        assertTrue(actualResult);
     }
 
     @Test
@@ -122,11 +122,11 @@ class LevelServiceTest extends BaseServiceUnitTest {
         document.setStart(start);
         when(levelRepository.save(any(LevelDocument.class))).thenReturn(document);
         when(effectService.updateArmorEffect(player)).thenReturn(player);
-        when(messageService.sendRoomMessage(CHAT_ID, player, level.getStart())).thenReturn(true);
+        doNothing().when(messageService).sendRoomMessage(CHAT_ID, player, level.getStart());
 
-        val actualResult = levelService.nextLevel(CHAT_ID, player);
+        levelService.nextLevel(CHAT_ID, player);
 
-        assertTrue(actualResult);
+        verify(messageService).sendRoomMessage(CHAT_ID, player, level.getStart());
     }
 
     @Test
@@ -138,12 +138,11 @@ class LevelServiceTest extends BaseServiceUnitTest {
         val levelNumber = new LevelNumberProjection();
         levelNumber.setNumber(1);
         when(levelRepository.findNumberByChatId(CHAT_ID)).thenReturn(Optional.of(levelNumber));
-        when(messageService.sendRoomMessage(CHAT_ID, player, currentRoom)).thenReturn(true);
+        doNothing().when(messageService).sendRoomMessage(CHAT_ID, player, currentRoom);
 
-        val actualResult = levelService.continueGame(CHAT_ID, player, currentRoom);
+        levelService.continueGame(CHAT_ID, player, currentRoom);
 
         verify(messageService).sendRoomMessage(CHAT_ID, player, currentRoom);
-        assertTrue(actualResult);
     }
 
     @Test
@@ -181,17 +180,16 @@ class LevelServiceTest extends BaseServiceUnitTest {
         when(playerService.updatePlayer(player)).thenReturn(player);
 
         ArgumentCaptor<Room> roomArgumentCaptor = ArgumentCaptor.forClass(Room.class);
-        when(messageService.sendRoomMessage(eq(CHAT_ID), eq(player), roomArgumentCaptor.capture())).thenReturn(true);
+        doNothing().when(messageService).sendRoomMessage(eq(CHAT_ID), eq(player), roomArgumentCaptor.capture());
 
         Room newRoom = new Room();
         newRoom.setPoint(new Point(5,6));
         newRoom.setChatId(CHAT_ID);
-        val actualResult = levelService.moveToRoom(CHAT_ID, player, newRoom, S);
+        levelService.moveToRoom(CHAT_ID, player, newRoom, S);
         val actualRoomValue = roomArgumentCaptor.getValue();
 
         assertEquals(newRoom.getChatId(), actualRoomValue.getChatId());
         assertEquals(newRoom.getPoint(), actualRoomValue.getPoint());
-        assertTrue(actualResult);
     }
 
     @Test
@@ -334,7 +332,7 @@ class LevelServiceTest extends BaseServiceUnitTest {
         try (MockedStatic<LevelUtil> levelUtilMockedStatic = mockStatic(LevelUtil.class)){
             levelUtilMockedStatic.when(() -> LevelUtil.printMap(grid, levelMap, position, N)).thenReturn("mapString");
             when(levelRepository.findByChatId(CHAT_ID)).thenReturn(Optional.of(level));
-            levelService.sendOrUpdateMapMessage(CHAT_ID , player);
+            levelService.sendMapMessage(CHAT_ID , player);
 
             verify(messageService).sendMapMenuMessage(CHAT_ID, "mapString");
         }
@@ -343,7 +341,19 @@ class LevelServiceTest extends BaseServiceUnitTest {
     @Test
     @DisplayName("Successfully loads level from repository")
     void getLevel() {
+        when(levelRepository.findByChatId(CHAT_ID)).thenReturn(Optional.of(new LevelDocument()));
+
         levelService.getLevel(CHAT_ID);
+
+        verify(levelRepository).findByChatId(CHAT_ID);
+    }
+
+    @Test
+    @DisplayName("Fails to load nonexistent level from repository")
+    void getLevel_Failed() {
+        when(levelRepository.findByChatId(CHAT_ID)).thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class, () -> levelService.getLevel(CHAT_ID));
 
         verify(levelRepository).findByChatId(CHAT_ID);
     }

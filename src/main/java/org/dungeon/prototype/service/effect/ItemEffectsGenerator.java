@@ -30,6 +30,13 @@ public class ItemEffectsGenerator {
     @Autowired
     private ItemsGenerationProperties itemsGenerationProperties;
 
+    /**
+     * Generates configured amount of effects to change item's weight norm by given delta
+     * @param chatId current chat's id
+     * @param itemId id of item to apply effect to
+     * @param expectedWeightChange expected weight norm delta
+     * @return added effect's weight norm
+     */
     public double addItemEffect(Long chatId, String itemId, double expectedWeightChange) {
         val item = itemService.findItem(chatId, itemId);
         if (nonNull(item)) {
@@ -41,9 +48,11 @@ public class ItemEffectsGenerator {
 
             if (item.getEffects().size() < minEffectsAmount) {
                 val amount = minEffectsAmount - item.getEffects().size();
+                double sum = 0.0;
                 for (int i = 0; i < amount; i++) {
-                    return generateAndAddItemEffect(expectedWeightChange / amount, item);
+                     sum += generateAndAddItemEffect(expectedWeightChange / amount, item);
                 }
+                return sum;
             } else if (item.getEffects().size() < maxEffectsAmount) {
                 return generateAndAddItemEffect(expectedWeightChange, item);
             }
@@ -51,6 +60,14 @@ public class ItemEffectsGenerator {
         return 0.0;
     }
 
+    /**
+     * Generates configured amount of effects to change item's weight norm by given delta
+     * and adds to copy of initial item
+     * @param chatId current chat's id
+     * @param itemId id of item to copy and apply effect to
+     * @param expectedWeightChange expected weight norm delta
+     * @return id and weight norm of newly created item
+     */
     public Pair<String, Double> copyItemAndAddEffect(Long chatId, String itemId, double expectedWeightChange) {
         val vanillaItem = itemService.findItem(chatId, itemId);
         if (nonNull(vanillaItem)) {

@@ -35,6 +35,12 @@ public class MonsterFactory {
     @Autowired
     private GenerationProperties generationProperties;
 
+    /**
+     * Generates monster of requested class with weight as close to given as possible
+     * @param weight expected weight
+     * @param monsterClass requested monster class
+     * @return generated monster
+     */
     public Monster generateMonsterByExpectedWeight(Weight weight, MonsterClass monsterClass) {
         val properties = generationProperties.getMonsters().get(monsterClass);
         val primaryAttack = properties.getPrimaryAttackType();

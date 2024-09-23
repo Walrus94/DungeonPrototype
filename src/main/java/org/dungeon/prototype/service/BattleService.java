@@ -11,6 +11,7 @@ import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.content.MonsterRoom;
 import org.dungeon.prototype.properties.BattleProperties;
 import org.dungeon.prototype.properties.CallbackType;
+import org.dungeon.prototype.service.level.LevelService;
 import org.dungeon.prototype.service.message.MessageService;
 import org.dungeon.prototype.service.room.MonsterService;
 import org.dungeon.prototype.util.RandomUtil;
@@ -29,6 +30,8 @@ public class BattleService {
     @Autowired
     private PlayerService playerService;
     @Autowired
+    private LevelService levelService;
+    @Autowired
     private MonsterService monsterService;
     @Autowired
     private MessageService messageService;
@@ -43,23 +46,26 @@ public class BattleService {
      * @param player    current player
      * @param currentRoom monster room
      * @param attackType player's attack type, {@link CallbackType#ATTACK} or {@link CallbackType#SECONDARY_ATTACK}
-     * @return true if processed with no exceptions
      */
     @TurnUpdate
     @BattleTurnUpdate
-    public boolean attack(Long chatId, Player player, Room currentRoom, CallbackType attackType) {
+    public void attack(Long chatId, Player player, Room currentRoom, CallbackType attackType) {
         var monster = ((MonsterRoom) currentRoom.getRoomContent()).getMonster();
         log.debug("Attacking monster: {}", monster);
         playerAttacks(monster, player, attackType);
 
         if (monster.getHp() < 1) {
             log.debug("Monster killed!");
+            levelService.updateAfterMonsterKill(currentRoom);
+            val newLevelAchieved = player.addXp(monster.getXpReward());
+            if (newLevelAchieved) {
+                messageService.sendLevelUpgradeMessage(chatId, player);
+            }
         } else {
             monsterAttacks(player, monster);
-            monsterService.saveOrUpdateMonster(monster);
         }
         playerService.updatePlayer(player);
-        return messageService.sendRoomMessage(chatId, player, currentRoom);
+        messageService.sendRoomMessage(chatId, player, currentRoom);
     }
 
     private void monsterAttacks(Player player, Monster monster) {
@@ -95,7 +101,7 @@ public class BattleService {
             player.decreaseHp(diff);
             log.debug("Player's health decreased by: {}", diff);
         }
-        monsterService.saveOrUpdateMonster(monster);
+        monsterService.updateMonster(monster);
     }
 
     private void playerAttacks(Monster monster, Player player, CallbackType attackType) {

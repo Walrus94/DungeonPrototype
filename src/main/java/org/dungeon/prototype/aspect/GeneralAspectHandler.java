@@ -3,7 +3,7 @@ package org.dungeon.prototype.aspect;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.aspectj.lang.JoinPoint;
-import org.aspectj.lang.annotation.AfterReturning;
+import org.aspectj.lang.annotation.After;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.dungeon.prototype.model.player.Player;
@@ -51,11 +51,9 @@ public class GeneralAspectHandler {
         handleRoomInitialization(joinPoint);
     }
 
-    @AfterReturning(value = "@annotation(org.dungeon.prototype.annotations.aspect.BattleTurnUpdate)", returning = "result")
-    public void afterBattleTurn(JoinPoint joinPoint, boolean result) {
-        if (result) {
-            handleAfterBattleTurn(joinPoint);
-        }
+    @After(value = "@annotation(org.dungeon.prototype.annotations.aspect.BattleTurnUpdate)")
+    public void afterBattleTurn(JoinPoint joinPoint) {
+        handleAfterBattleTurn(joinPoint);
     }
 
     private void handleRoomInitialization(JoinPoint joinPoint) {
@@ -69,7 +67,7 @@ public class GeneralAspectHandler {
                             monster.setAttackPattern(monster.getDefaultAttackPattern());
                         }
                         monster.setCurrentAttack(monster.getAttackPattern().poll());
-                        monsterService.saveOrUpdateMonster(monster);
+                        monsterService.updateMonster(monster);
                         roomService.saveOrUpdateRoomContent(monsterRoom);
                     }
                 }
@@ -102,18 +100,13 @@ public class GeneralAspectHandler {
                 if (args.length > 2 && args[2] instanceof Room room) {
                     if (room.getRoomContent() instanceof MonsterRoom monsterRoom) {
                         val monster = monsterRoom.getMonster();
-                        if (monster.getHp() < 1) {
-                            levelService.updateAfterMonsterKill(room);
-                            val newLevelAchieved = player.addXp(monster.getXpReward());
-                            if (newLevelAchieved) {
-                                messageService.sendLevelUpgradeMessage(chatId, player);
-                            }
-                        } else {
+                        if (monster.getHp() > 0) {
                             if (isNull(monster.getAttackPattern()) || monster.getAttackPattern().isEmpty()) {
                                 monster.setAttackPattern(monster.getDefaultAttackPattern());
                             }
                             monster.setCurrentAttack(monster.getAttackPattern().poll());
-                            monsterService.saveOrUpdateMonster(effectService.updateMonsterEffects(monsterRoom.getMonster()));
+                            monsterService.updateMonster(effectService.updateMonsterEffects(monsterRoom.getMonster()));
+                            messageService.sendRoomMessage(chatId, player, room);
                         }
                     }
                 }

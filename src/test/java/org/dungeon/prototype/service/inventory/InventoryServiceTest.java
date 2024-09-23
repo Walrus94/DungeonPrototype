@@ -175,14 +175,11 @@ class InventoryServiceTest extends BaseServiceUnitTest {
         when(effectService.updateArmorEffect(player)).thenReturn(player);
         when(inventoryRepository.save(any())).thenReturn(inventoryDocument);
 
-        val actualResult = inventoryService.equipItem(CHAT_ID, ITEM_ID);
+        inventoryService.equipItem(CHAT_ID, ITEM_ID);
 
         ArgumentCaptor<Inventory> inventoryArgumentCaptor = ArgumentCaptor.forClass(Inventory.class);
         verify(playerService).updatePlayer(player);
         verify(messageService).sendInventoryMessage(eq(CHAT_ID), inventoryArgumentCaptor.capture());
-
-
-        assertTrue(actualResult);
 
         val actualInventory = inventoryArgumentCaptor.getValue();
         assertEquals(item, player.getInventory().getGloves());
@@ -201,9 +198,7 @@ class InventoryServiceTest extends BaseServiceUnitTest {
         ArgumentCaptor<InventoryDocument> inventoryDocumentArgumentCaptor = ArgumentCaptor.forClass(InventoryDocument.class);
         when(inventoryRepository.save(inventoryDocumentArgumentCaptor.capture())).thenReturn(new InventoryDocument());
 
-        val actualResult = inventoryService.unEquipItem(CHAT_ID, "weapon_id");
-
-        assertTrue(actualResult);
+        inventoryService.unEquipItem(CHAT_ID, "weapon_id");
 
         verify(effectService).updateArmorEffect(player);
         verify(messageService).sendInventoryMessage(eq(CHAT_ID), any(Inventory.class));
@@ -252,9 +247,8 @@ class InventoryServiceTest extends BaseServiceUnitTest {
             ArgumentCaptor<Player> playerArgumentCaptor = ArgumentCaptor.forClass(Player.class);
             when(playerService.updatePlayer(playerArgumentCaptor.capture())).thenReturn(player);
 
-            val actualResult = inventoryService.sellItem(CHAT_ID, ITEM_ID);
+            inventoryService.sellItem(CHAT_ID, ITEM_ID);
 
-            assertTrue(actualResult);
             val actualInventory = inventoryDocumentArgumentCaptor.getValue();
             val actualPlayer = playerArgumentCaptor.getValue();
             assertEquals(104, actualPlayer.getGold());
@@ -271,13 +265,7 @@ class InventoryServiceTest extends BaseServiceUnitTest {
         room.setId(CURRENT_ROOM_ID);
         val merchant = new Merchant();
         val item = new Wearable();
-//        val weight = mock(Weight.class);
-//        val vector = mock(ArrayRealVector.class);
-//        when(weight.toVector()).thenReturn(vector);
-//        when(vector.getNorm()).thenReturn(4.0);
         item.setId(ITEM_ID);
-//        when(item.getWeight()).thenReturn(weight);
-//        when(item.getBuyingPrice()).thenReturn(5);
         WearableAttributes wearableAttributes = new WearableAttributes();
         wearableAttributes.setWearableType(WearableType.VEST);
         wearableAttributes.setQuality(Quality.COMMON);
@@ -309,9 +297,8 @@ class InventoryServiceTest extends BaseServiceUnitTest {
             when(roomService.getRoomByIdAndChatId(CHAT_ID, CURRENT_ROOM_ID)).thenReturn(room);
             when(itemService.findItem(CHAT_ID, ITEM_ID)).thenReturn(item);
 
-            val actualResult = inventoryService.buyItem(CHAT_ID, ITEM_ID);
+            inventoryService.buyItem(CHAT_ID, ITEM_ID);
 
-            assertTrue(actualResult);
             ArgumentCaptor<Player> playerArgumentCaptor = ArgumentCaptor.forClass(Player.class);
             verify(playerService).updatePlayer(playerArgumentCaptor.capture());
             val actualPlayer = playerArgumentCaptor.getValue();
@@ -341,9 +328,8 @@ class InventoryServiceTest extends BaseServiceUnitTest {
 
         when(itemService.findItem(CHAT_ID, ITEM_ID)).thenReturn(item);
 
-        val actualResult = inventoryService.openInventoryItemInfo(CHAT_ID, ITEM_ID, CallbackType.INVENTORY, Optional.empty());
+        inventoryService.openInventoryItemInfo(CHAT_ID, ITEM_ID, CallbackType.INVENTORY, Optional.empty());
 
-        assertTrue(actualResult);
         verify(messageService).sendInventoryItemMessage(CHAT_ID, item, CallbackType.INVENTORY, Optional.empty());
     }
 }

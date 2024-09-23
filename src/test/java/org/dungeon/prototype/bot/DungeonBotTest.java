@@ -14,7 +14,6 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.User;
 
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
@@ -42,20 +41,17 @@ class DungeonBotTest {
     void onUpdateReceived_startCommand_newUser() {
         val update = mock(Update.class);
         val message = mock(Message.class);
-        val user = mock(User.class);
 
         when(update.hasMessage()).thenReturn(true);
         when(update.getMessage()).thenReturn(message);
-        when(message.getFrom()).thenReturn(user);
-        when(user.getUserName()).thenReturn("username");
         when(message.getChatId()).thenReturn(CHAT_ID);
         when(message.hasText()).thenReturn(true);
         when(message.getText()).thenReturn("/start");
-        doNothing().when(botCommandHandler).processStartAction(CHAT_ID, "username");
+        doNothing().when(botCommandHandler).processStartAction(CHAT_ID);
 
         dungeonBot.onUpdateReceived(update);
 
-        verify(botCommandHandler).processStartAction(CHAT_ID, "username");
+        verify(botCommandHandler).processStartAction(CHAT_ID);
     }
 
     @Test
@@ -70,7 +66,6 @@ class DungeonBotTest {
         when(message.getChatId()).thenReturn(CHAT_ID);
         when(message.hasText()).thenReturn(true);
         when(message.getText()).thenReturn("nickname");
-        when(playerService.addNewPlayer(CHAT_ID, "nickname")).thenReturn(player);
         doNothing().when(playerService).registerPlayerAndSendStartMessage(CHAT_ID, "nickname");
 
         dungeonBot.onUpdateReceived(update);

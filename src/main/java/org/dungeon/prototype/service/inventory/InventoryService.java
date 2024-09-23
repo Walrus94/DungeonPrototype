@@ -2,6 +2,7 @@ package org.dungeon.prototype.service.inventory;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.dungeon.prototype.exception.RestrictedOperationException;
 import org.dungeon.prototype.model.inventory.Inventory;
 import org.dungeon.prototype.model.inventory.attributes.wearable.WearableType;
 import org.dungeon.prototype.model.inventory.items.Weapon;
@@ -67,20 +68,17 @@ public class InventoryService {
     /**
      * Passes data required for inventory menu message
      * @param chatId id of chat where message sent
-     * @return true if message successfully sent
      */
-    public boolean sendOrUpdateInventoryMessage(Long chatId, Player player) {
+    public void sendOrUpdateInventoryMessage(Long chatId, Player player) {
         messageService.sendInventoryMessage(chatId, player.getInventory());
-        return true;
     }
 
     /**
      * Equips item from inventory
      * @param chatId id of player's chat
      * @param itemId id of equipped item
-     * @return true if item successfully equipped
      */
-    public boolean equipItem(Long chatId, String itemId) {
+    public void equipItem(Long chatId, String itemId) {
         var player = playerService.getPlayer(chatId);
         val item = itemService.findItem(chatId, itemId);
         val inventory = player.getInventory();
@@ -90,42 +88,36 @@ public class InventoryService {
             playerService.updatePlayer(player);
             saveOrUpdateInventory(inventory);
             messageService.sendInventoryMessage(chatId, inventory);
-            return true;
         }
-        return false;
     }
 
     /**
      * Un-equips item to inventory
      * @param chatId id of player's chat
      * @param itemId id of un-equipped item
-     * @return true if item successfully un-equipped
      */
-    public boolean unEquipItem(Long chatId, String itemId) {
+    public void unEquipItem(Long chatId, String itemId) {
         val player = playerService.getPlayer(chatId);
         val item= itemService.findItem(chatId, itemId);
         val inventory = player.getInventory();
         if ((inventory.isFull())) {
             //TODO implement prompt
             messageService.sendInventoryItemMessage(chatId, item, CallbackType.INVENTORY, Optional.empty());
-            return false;
+            return;
         }
         if (inventory.unEquip(item) && (item.getEffects().isEmpty() || player.removeEffects(item.getEffects()))) {
             effectService.updateArmorEffect(player);
             saveOrUpdateInventory(inventory);
             messageService.sendInventoryMessage(chatId, inventory);
-            return true;
         }
-        return false;
     }
 
     /**
      * Sells item from inventory to merchant
      * @param chatId id of player's chat
      * @param itemId id of sold item
-     * @return true if item successfully sold
      */
-    public boolean sellItem(Long chatId, String itemId) {
+    public void sellItem(Long chatId, String itemId) {
         var player = playerService.getPlayer(chatId);
         val item = itemService.findItem(chatId, itemId);
         val inventory = player.getInventory();
@@ -139,28 +131,23 @@ public class InventoryService {
             }
             playerService.updatePlayer(player);
             messageService.sendMerchantSellMenuMessage(chatId, player);
-            return true;
         }
-        return false;
     }
 
     /**
      * Buys item from merchant and adds to player inventory
      * @param chatId id of player's chat
      * @param itemId id of bought item
-     * @return true if item successfully bought
      */
-    public boolean buyItem(Long chatId, String itemId) {
+    public void buyItem(Long chatId, String itemId) {
         val player = playerService.getPlayer(chatId);
         val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
         if (player.getInventory().isFull()) {
-            log.warn("Inventory is full!");
-            return false;
+            throw new RestrictedOperationException(chatId, "buy item", "Inventory is full!", CallbackType.DEFAULT_ERROR_RETURN);
         }
         val item = itemService.findItem(chatId, itemId);
         if (player.getGold() < item.getBuyingPrice()) {
-            log.warn("Not enough money!");
-            return false;
+            throw new RestrictedOperationException(chatId, "buy item", "Not enough money!", CallbackType.DEFAULT_ERROR_RETURN);
         }
         player.getInventory().addItem(item);
         ((Merchant) currentRoom.getRoomContent()).getItems().remove(item);
@@ -170,7 +157,6 @@ public class InventoryService {
         saveOrUpdateInventory(player.getInventory());
         messageService.sendMerchantBuyMenuMessage(chatId, player.getGold(),
                 ((Merchant)currentRoom.getRoomContent()).getItems());
-        return true;
     }
 
     /**
@@ -182,13 +168,15 @@ public class InventoryService {
      * @param callbackType optional value, present if item equipped, permitted values:
      *                     {@link CallbackType.HEAD}, {@link CallbackType.VEST}, {@link CallbackType.GLOVES},
      *                     {@link CallbackType.BOOTS}, {@link CallbackType.LEFT_HAND}, {@link CallbackType.RIGHT_HAND}
-     * @return true if successfully opened inventory item information
      */
-    public boolean openInventoryItemInfo(Long chatId, String itemId, CallbackType inventoryType, Optional<CallbackType> callbackType) {
+    public void openInventoryItemInfo(Long chatId, String itemId, CallbackType inventoryType, Optional<CallbackType> callbackType) {
         val item = itemService.findItem(chatId, itemId);
         messageService.sendInventoryItemMessage(chatId, item, inventoryType,
                         Optional.ofNullable(MessageUtil.formatItemType(callbackType.orElse(null))));
-        return true;
+    }
+
+    public void sharpenWeapon(Long chatId) {
+        //TODO: implement
     }
 
     private Wearable getDefaultVest(Long chatId) {

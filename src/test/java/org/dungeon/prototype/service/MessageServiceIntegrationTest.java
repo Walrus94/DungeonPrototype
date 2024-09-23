@@ -37,7 +37,6 @@ import static org.dungeon.prototype.model.Direction.S;
 import static org.dungeon.prototype.model.Direction.W;
 import static org.dungeon.prototype.model.room.RoomType.NORMAL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -93,7 +92,7 @@ public class MessageServiceIntegrationTest {
         when(message.getMessageId()).thenReturn(MESSAGE_ID);
         when(message.getChatId()).thenReturn(CHAT_ID);
 
-        messageService.sendRegisterMessage(CHAT_ID, "username");
+        messageService.sendRegisterMessage(CHAT_ID);
 
         verify(dungeonBot).sendMessage(eq(CHAT_ID), messageCaptor.capture());
         SendMessage sentMessage = messageCaptor.getValue();
@@ -133,17 +132,15 @@ public class MessageServiceIntegrationTest {
             inputFile.setMedia(new ByteArrayInputStream(new byte[]{0, 1, 2, 4}), "filename");
             when(FileUtil.getImage(any())).thenReturn(inputFile);
 
-            val actualResult = messageService.sendRoomMessage(CHAT_ID, player, room);
+            messageService.sendRoomMessage(CHAT_ID, player, room);
 
             ArgumentCaptor<SendPhoto> messageCaptor = ArgumentCaptor.forClass(SendPhoto.class);
-            ArgumentCaptor<Room> roomCaptor = ArgumentCaptor.forClass(Room.class);
 
             verify(dungeonBot).sendMessage(eq(CHAT_ID), messageCaptor.capture());
 
             SendPhoto sentMessage = messageCaptor.getValue();
             assertEquals(CHAT_ID.toString(), sentMessage.getChatId());
             assertEquals(inputFile, sentMessage.getFile());
-            assertTrue(actualResult);
         }
     }
 

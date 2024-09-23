@@ -8,6 +8,7 @@ import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.content.MonsterRoom;
 import org.dungeon.prototype.properties.BattleProperties;
 import org.dungeon.prototype.properties.CallbackType;
+import org.dungeon.prototype.service.level.LevelService;
 import org.dungeon.prototype.service.message.MessageService;
 import org.dungeon.prototype.service.room.MonsterService;
 import org.dungeon.prototype.util.RandomUtil;
@@ -24,7 +25,8 @@ import static org.dungeon.prototype.TestData.getMonster;
 import static org.dungeon.prototype.TestData.getPlayer;
 import static org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttackType.SLASH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
@@ -36,6 +38,8 @@ class BattleServiceTest extends BaseServiceUnitTest {
     private BattleProperties battleProperties;
     @Mock
     private PlayerService playerService;
+    @Mock
+    private LevelService levelService;
     @Mock
     private MonsterService monsterService;
     @Mock
@@ -65,7 +69,7 @@ class BattleServiceTest extends BaseServiceUnitTest {
             val playerDefenseRatioMatrix = Map.of(MonsterAttackType.SLASH, playerDefenseRatioMap);
             when(battleProperties.getMonsterDefenseRatioMatrix()).thenReturn(monsterDefenseRatioMatrix);
             when(battleProperties.getPlayerDefenseRatioMatrix()).thenReturn(playerDefenseRatioMatrix);
-            when(messageService.sendRoomMessage(CHAT_ID, player, currentRoom)).thenReturn(true);
+            doNothing().when(messageService).sendRoomMessage(CHAT_ID, player, currentRoom);
 
             battleService.attack(CHAT_ID, player, currentRoom, CallbackType.ATTACK);
 
@@ -94,11 +98,13 @@ class BattleServiceTest extends BaseServiceUnitTest {
             when(monsterDefenseRatioMap.getMonsterDefenseRatioMap()).thenReturn(Map.of(MonsterClass.ZOMBIE, 0.9));
             val monsterDefenseRatioMatrix = Map.of(SLASH, monsterDefenseRatioMap);
             when(battleProperties.getMonsterDefenseRatioMatrix()).thenReturn(monsterDefenseRatioMatrix);
-            when(messageService.sendRoomMessage(CHAT_ID, player, currentRoom)).thenReturn(true);
+            doNothing().when(levelService).updateAfterMonsterKill(eq(currentRoom));
+            doNothing().when(messageService).sendRoomMessage(CHAT_ID, player, currentRoom);
 
             battleService.attack(CHAT_ID, player, currentRoom, CallbackType.ATTACK);
 
             verify(playerService).updatePlayer(player);
+            verify(levelService).updateAfterMonsterKill(eq(currentRoom));
             assertEquals(20, player.getHp());
             verify(messageService).sendRoomMessage(CHAT_ID, player, currentRoom);
         }
@@ -127,13 +133,12 @@ class BattleServiceTest extends BaseServiceUnitTest {
             when(battleProperties.getMonsterDefenseRatioMatrix()).thenReturn(monsterDefenseRatioMatrix);
             when(battleProperties.getPlayerDefenseRatioMatrix()).thenReturn(playerDefenseRatioMatrix);
 
-            when(messageService.sendRoomMessage(CHAT_ID, player, currentRoom)).thenReturn(true);
+            doNothing().when(messageService).sendRoomMessage(CHAT_ID, player, currentRoom);
 
-            val actualResult = battleService.attack(CHAT_ID, player, currentRoom, CallbackType.ATTACK);
+            battleService.attack(CHAT_ID, player, currentRoom, CallbackType.ATTACK);
 
             verify(playerService).updatePlayer(player);
             assertEquals(0, player.getHp());
-            assertTrue(actualResult);
             verify(messageService).sendRoomMessage(CHAT_ID, player, currentRoom);
         }
     }

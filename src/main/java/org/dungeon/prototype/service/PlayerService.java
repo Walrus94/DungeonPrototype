@@ -3,9 +3,11 @@ package org.dungeon.prototype.service;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.annotations.aspect.ChatStateUpdate;
+import org.dungeon.prototype.exception.EntityNotFoundException;
 import org.dungeon.prototype.model.inventory.Inventory;
 import org.dungeon.prototype.model.player.Player;
 import org.dungeon.prototype.model.player.PlayerAttribute;
+import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.properties.PlayerProperties;
 import org.dungeon.prototype.repository.PlayerRepository;
 import org.dungeon.prototype.repository.converters.mapstruct.PlayerMapper;
@@ -15,7 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -35,14 +36,25 @@ public class PlayerService {
     @Autowired
     MessageService messageService;
 
+    /**
+     * Finds player for given chat
+     * throws {@link EntityNotFoundException} if none found
+     * @param chatId current chat id
+     * @return found player
+     */
     public Player getPlayer(Long chatId) {
-        val playerDocument = playerRepository.findByChatId(chatId).orElseGet(() -> {
-            log.error("Unable to load player for chatId: {}", chatId);
-            return null;
-        });
+        val playerDocument = playerRepository.findByChatId(chatId)
+                .orElseThrow(() ->
+                        new EntityNotFoundException(chatId, "player", CallbackType.DEFAULT_ERROR_RETURN));
         return PlayerMapper.INSTANCE.mapToPlayer(playerDocument);
     }
 
+    /**
+     * Prepares player for new game
+     * @param chatId current chat id
+     * @param defaultInventory player's default inventory
+     * @return prepared player with default inventory
+     */
     public Player getPlayerPreparedForNewGame(Long chatId, Inventory defaultInventory) {
         Player player = getPlayer(chatId);
         player.setMaxHp(getDefaultMaxHp(player));
@@ -56,47 +68,85 @@ public class PlayerService {
         return updatePlayer(player);
     }
 
+    /**
+     * Registers and generates new player
+     * @param chatId current chat id
+     * @param nickname new player's nickname
+     */
     @ChatStateUpdate(from = AWAITING_NICKNAME, to = ACTIVE)
     public void registerPlayerAndSendStartMessage(Long chatId, String nickname) {
-        addNewPlayer(chatId, nickname);
-        messageService.sendStartMessage(chatId, nickname);
+        val player = addNewPlayer(chatId, nickname);
+        messageService.sendStartMessage(chatId, player.getNickname());
     }
 
+    /**
+     * Returns player's maximum amount of mana
+     * without applied effects
+     * @param player current player
+     * @return default max mana
+     */
     public int getDefaultMaxMana(Player player) {
         return playerProperties.getBaseMana() +
                 player.getAttributes().get(PlayerAttribute.MAGIC) * playerProperties.getAttributeManaFactor();
     }
 
+    /**
+     * Returns player's maximum amount of health points
+     * without applied effects
+     * @param player current player
+     * @return default max health points
+     */
     public int getDefaultMaxHp(Player player) {
         return 100 + player.getAttributes().get(PlayerAttribute.STAMINA);
     }
 
+    /**
+     * Updates given player
+     * @param player given player
+     * @return updated player
+     */
     public Player updatePlayer(Player player) {
         val playerDocument = PlayerMapper.INSTANCE.mapToDocument(player);
         val savedPlayer = playerRepository.save(playerDocument);
         return PlayerMapper.INSTANCE.mapToPlayer(savedPlayer);
     }
+
+    /**
+     * Checks if player exist for given chat id
+     * @param chatId current chat id
+     * @return true if player exists
+     */
     public Boolean hasPlayer(Long chatId) {
         return playerRepository.existsByChatId(chatId);
     }
 
-    public Player addNewPlayer(Long chatId, String nickname) {
+    /**
+     * Looks for player's nickname by chat id
+     * throws {@link EntityNotFoundException} if none found
+     * @param chatId current chat id
+     * @return found nickname
+     */
+    public String getNicknameByChatId(Long chatId) {
+        return playerRepository.getNicknameByChatId(chatId).map(NicknameProjection::getNickname).orElseThrow(() ->
+                new EntityNotFoundException(chatId, "player", CallbackType.DEFAULT_ERROR_RETURN));
+        }
+
+    /**
+     * Sends player's stats message to current chat
+     * @param chatId current chat id
+     */
+    public void sendPlayerStatsMessage(Long chatId) {
+        if (hasPlayer(chatId)) {
+            val player = getPlayer(chatId);
+            messageService.sendPlayerStatsMessage(chatId, player);
+        }
+    }
+    private Player addNewPlayer(Long chatId, String nickname) {
         val player = generatePlayer(chatId, nickname);
         val playerDocument = PlayerMapper.INSTANCE.mapToDocument(player);
         val savedPlayer = playerRepository.save(playerDocument);
         log.debug("Player generated: {}", player);
         return PlayerMapper.INSTANCE.mapToPlayer(savedPlayer);
-    }
-    public Optional<String> getNicknameByChatId(Long chatId) {
-        return playerRepository.getNicknameByChatId(chatId).map(NicknameProjection::getNickname);
-    }
-    public boolean sendPlayerStatsMessage(Long chatId) {
-        if (hasPlayer(chatId)) {
-            val player = getPlayer(chatId);
-            messageService.sendPlayerStatsMessage(chatId, player);
-            return true;
-        }
-        return false;
     }
 
     private Player generatePlayer(Long chatId, String nickname) {

@@ -32,18 +32,28 @@ public class TreasureService {
     @Autowired
     MessageService messageService;
 
-    public boolean openTreasure(Long chatId, Player player) {
+    /**
+     * Opens treasure if present
+     * @param chatId current chat id
+     * @param player current player
+     */
+    public void openTreasure(Long chatId, Player player) {
         val treasure = openTreasure(chatId, player.getCurrentRoomId());
         if (treasure.isPresent()) {
             messageService.sendTreasureMessage(chatId, treasure.get());
-            return true;
         } else {
             val room = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
-            return messageService.sendRoomMessage(chatId, player, room);
+            messageService.sendRoomMessage(chatId, player, room);
         }
     }
 
-    public boolean collectTreasureGold(Long chatId, Player player, Room currentRoom) {
+    /**
+     * Collects gold from treasure
+     * @param chatId current chat id
+     * @param player current player
+     * @param currentRoom treasure room
+     */
+    public void collectTreasureGold(Long chatId, Player player, Room currentRoom) {
         val treasure = (Treasure) currentRoom.getRoomContent();
 
         player.addGold(treasure.getGold());
@@ -51,14 +61,14 @@ public class TreasureService {
         playerService.updatePlayer(player);
         if (treasure.getGold() == 0 && treasure.getItems().isEmpty()) {
             levelService.updateAfterTreasureLooted(currentRoom);
-            return messageService.sendRoomMessage(chatId, player, currentRoom);
+            messageService.sendRoomMessage(chatId, player, currentRoom);
+        } else {
+            roomService.saveOrUpdateRoom(currentRoom);
+            messageService.sendTreasureMessage(chatId, treasure);
         }
-        roomService.saveOrUpdateRoom(currentRoom);
-        messageService.sendTreasureMessage(chatId, treasure);
-        return true;
     }
 
-    public boolean collectAllTreasure(Long chatId, Player player, Room currentRoom) {
+    public void collectAllTreasure(Long chatId, Player player, Room currentRoom) {
         val treasure = (Treasure) currentRoom.getRoomContent();
         log.debug("Treasure contents - gold: {}, items: {}", treasure.getGold(), treasure.getItems());
         val items = treasure.getItems();
@@ -71,7 +81,7 @@ public class TreasureService {
                 log.info("No room in the inventory!");
                 playerService.updatePlayer(player);
                 roomService.saveOrUpdateRoom(currentRoom);
-                return true;
+                return;
             } else {
                 treasure.setItems(Collections.emptySet());
             }
@@ -79,7 +89,7 @@ public class TreasureService {
         playerService.updatePlayer(player);
         levelService.updateAfterTreasureLooted(currentRoom);
         inventoryService.saveOrUpdateInventory(player.getInventory());
-        return messageService.sendRoomMessage(chatId, player, currentRoom);
+        messageService.sendRoomMessage(chatId, player, currentRoom);
     }
 
     public boolean collectTreasureItem(Long chatId, String itemId) {

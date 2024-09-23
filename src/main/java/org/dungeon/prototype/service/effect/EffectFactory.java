@@ -26,6 +26,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class EffectFactory {
 
+    /**
+     * Generates given attribute regeneration effect
+     * @param attribute to regenerate
+     * @param expectedWeightAbs resulting effect expected weight norm
+     * @return expirable accumulated addition effect
+     */
     public ExpirableAdditionEffect generateRegenerationEffect(EffectAttribute attribute, double expectedWeightAbs) {
         MultivariateFunction objective = point -> objectiveEffectGenerationFunction(
                 point,
@@ -55,6 +61,14 @@ public class EffectFactory {
                 .build();
     }
 
+    /**
+     * Generates item effect to change its weight by expected value
+     * @param item to add effect to
+     * @param attribute attribute to apply
+     * @param action {@link Action.ADD} or {@link Action.MULTIPLY}
+     * @param expectedWeightChange expected weight norm delta
+     * @return generated effect
+     */
     public Effect generateItemEffect(Item item, EffectAttribute attribute, Action action, double expectedWeightChange) {
         UnivariateFunction objective = point -> objectiveEffectWeightChangeFunction(
                 point,

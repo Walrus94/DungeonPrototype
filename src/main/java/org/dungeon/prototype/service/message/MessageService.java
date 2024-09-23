@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.annotations.aspect.ChatStateUpdate;
+import org.dungeon.prototype.exception.PlayerException;
 import org.dungeon.prototype.model.effect.Effect;
 import org.dungeon.prototype.model.effect.ExpirableEffect;
 import org.dungeon.prototype.model.inventory.Inventory;
@@ -42,7 +43,6 @@ import static org.dungeon.prototype.properties.CallbackType.MERCHANT_BUY_MENU;
 import static org.dungeon.prototype.properties.CallbackType.MERCHANT_SELL_DISPLAY_ITEM;
 import static org.dungeon.prototype.properties.CallbackType.MERCHANT_SELL_PRICE;
 import static org.dungeon.prototype.properties.CallbackType.PLAYER_STATS;
-import static org.dungeon.prototype.properties.Emoji.AXE;
 import static org.dungeon.prototype.properties.Emoji.BLACK_HEART;
 import static org.dungeon.prototype.properties.Emoji.BLUE_SQUARE;
 import static org.dungeon.prototype.properties.Emoji.BROWN_BLOCK;
@@ -83,10 +83,9 @@ public class MessageService {
     }
 
     @ChatStateUpdate(from = ACTIVE, to = AWAITING_NICKNAME)
-    public void sendRegisterMessage(Long chatId, String suggestedPrompt) {
+    public void sendRegisterMessage(Long chatId) {
         messageSender.sendPromptMessage(
                 chatId,
-                keyboardService.getPromptReplyKeyboardMarkup(suggestedPrompt),
         "Welcome to dungeon!\nPlease, enter nickname to register");
     }
 
@@ -97,7 +96,13 @@ public class MessageService {
                 keyboardService.getStartInlineKeyboardMarkup(hasSavedGame));
     }
 
-    public boolean sendRoomMessage(Long chatId, Player player, Room room) {
+    /**
+     * Sends room message
+     * @param chatId current chat id
+     * @param player current player
+     * @param room current room
+     */
+    public void sendRoomMessage(Long chatId, Player player, Room room) {
         String caption;
         if (room.getRoomContent() instanceof MonsterRoom monsterRoom) {
             caption = getRoomMessageCaption(player, monsterRoom.getMonster());
@@ -106,11 +111,7 @@ public class MessageService {
         }
         val keyboardMarkup = keyboardService.getRoomInlineKeyboardMarkup(room, player);
         val inputFile = getImage(room);
-        if (isNull(inputFile)) {
-            return false;
-        }
         messageSender.sendPhotoMessage(chatId, caption, keyboardMarkup, inputFile);
-        return true;
     }
 
     public void sendPlayerStatsMessage(Long chatId, Player player) {
@@ -191,9 +192,7 @@ public class MessageService {
         val emoji = messagingConstants.getEmoji();
         return emoji.get(HEART) + generateBar(player.getHp(), player.getMaxHp(), emoji.get(RED_SQUARE), barBlocks) +
                 " -> " + emoji.get(BLACK_HEART) + " " + generateBar(monster.getHp(), monster.getMaxHp(), emoji.get(RED_SQUARE), barBlocks) + "\n" +
-                emoji.get(DIAMOND) + ": " + generateBar(player.getMana(), player.getMaxMana(), emoji.get(BLUE_SQUARE), barBlocks) +
-                //TODO: consider moving to attack buttons
-                " -> " + emoji.get(AXE) + monster.getCurrentAttack().getAttack() + "\n" +
+                emoji.get(DIAMOND) + ": " + generateBar(player.getMana(), player.getMaxMana(), emoji.get(BLUE_SQUARE), barBlocks) + "\n" +
                 emoji.get(SHIELD) + ": " + player.getDefense() + "\n" +
                 "Gold: " + player.getGold() + " " + emoji.get(TREASURE) + "\n" +
                 emoji.get(STONKS) + ": " + generateXpBar(player.getXp(), player.getPlayerLevel(), player.getNextLevelXp());
@@ -227,6 +226,9 @@ public class MessageService {
     }
 
     private static <T extends Effect> String getEffectsDescription(List<T> effects) {
+        if (isNull(effects) || effects.isEmpty()) {
+            return "";
+        }
         return "Effects: \n" + effects.stream().map(Effect::toString).collect(Collectors.joining("\n"));
     }
 
@@ -269,6 +271,13 @@ public class MessageService {
                 chatId,
                 levelMap,
                 keyboardService.getMapInlineKeyboardMarkup());
+    }
+
+    public void sendErrorMessage(PlayerException e) {
+        messageSender.sendMessage(
+                e.getChatId(),
+                e.getMessage(),
+                keyboardService.getErrorKeyboardMarkup(e.getButtonData()));
     }
 
     private String getPlayerStatsMessageCaption(Player player) {

@@ -33,6 +33,13 @@ public class ItemNamingService {
     @Autowired
     RestTemplate restTemplate;
 
+    /**
+     * Generates and maps names by given item's attributes
+     * TODO: replace rest with kafka queue
+     * TODO: and replace LLM itself
+     * @param itemsAttributes set of item attributes sets
+     * @return item attributes mapped to generated name
+     */
     public Map<ItemAttributes, String> generateNames(Set<ItemAttributes> itemsAttributes) {
         val itemAttributesPromptMap = itemsAttributes.stream()
                 .collect(Collectors.toMap(this::generatePrompt, Function.identity()));
