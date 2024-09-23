@@ -12,9 +12,6 @@ import java.util.Map;
 @ConfigurationPropertiesScan
 @ConfigurationProperties("generation.items.wearables")
 public class WearableGenerationProperties {
-    private Integer wearablesPerGame;
-    private Integer wearableMinEffectsPlay;
-    private Integer wearableMaxEffectsPlay;
     private Map<WearableMaterial, Integer> armorBonus;
     private Map<Quality, Double> qualityAdjustmentRatio;
     private Map<WearableMaterial, Double> chanceToDodgeRatio;

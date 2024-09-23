@@ -8,14 +8,11 @@ import org.dungeon.prototype.model.room.RoomsSegment;
 import org.dungeon.prototype.model.room.content.EmptyRoom;
 import org.dungeon.prototype.model.ui.level.GridSection;
 import org.dungeon.prototype.model.ui.level.LevelMap;
-import org.dungeon.prototype.service.room.generation.WalkerDistributeIterator;
 
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Queue;
 import java.util.Set;
 
 import static org.dungeon.prototype.util.LevelUtil.getIcon;
@@ -35,8 +32,6 @@ public class Level {
     private int maxLength;
     private int minLength;
     private Map<Point, Room> roomsMap = new HashMap<>();
-
-    private final Queue<WalkerDistributeIterator> distributeIterators = new LinkedList<>();
 
     public Room getRoomByCoordinates(Point currentPoint) {
         return roomsMap.get(currentPoint);

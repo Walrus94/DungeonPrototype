@@ -3,22 +3,20 @@ package org.dungeon.prototype.model.player;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import lombok.val;
 import org.dungeon.prototype.model.Direction;
 import org.dungeon.prototype.model.Point;
-import org.dungeon.prototype.model.effect.DirectPlayerEffect;
-import org.dungeon.prototype.model.effect.ItemEffect;
-import org.dungeon.prototype.model.effect.PlayerEffect;
-import org.dungeon.prototype.model.effect.attributes.PlayerEffectAttribute;
+import org.dungeon.prototype.model.effect.Effect;
 import org.dungeon.prototype.model.inventory.Inventory;
+import org.dungeon.prototype.model.weight.Weight;
+import org.dungeon.prototype.service.PlayerLevelService;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 
 import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 import static org.apache.commons.math3.util.FastMath.max;
-import static org.dungeon.prototype.model.effect.Action.ADD;
-import static org.dungeon.prototype.model.effect.Action.MULTIPLY;
 
 @Data
 @Slf4j
@@ -40,16 +38,29 @@ public class Player {
     private Integer maxMana;
     private Integer defense;
     private Integer maxDefense;
-    private Integer primaryAttack;
-    private Integer secondaryAttack;
+    private PlayerAttack primaryAttack;
+    private PlayerAttack secondaryAttack;
+    private Double chanceToDodge;
+    private Double xpBonus = 1.0;
+    private Double goldBonus = 1.0;
     private Inventory inventory;
-    private List<PlayerEffect> effects;
+    private List<Effect> effects;
     private EnumMap<PlayerAttribute, Integer> attributes;
 
-    //TODO: move to service and use queries through repository
-    public void addXp(Integer xpReward) {
-        xp += xpReward;
+    public boolean addXp(Integer xpReward) {
+        double reward = xpReward * xpBonus;
+        xp = xp + (int) reward;
         log.debug("Rewarded xp: {}, total: {}", xpReward, xp);
+        if (xp > nextLevelXp) {
+            playerLevel++;
+            log.debug("Level {} achieved!", playerLevel);
+            refillHp();
+            refillMana();
+            nextLevelXp = PlayerLevelService.calculateXPForLevel(playerLevel);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     public void decreaseDefence(int amount) {
@@ -80,7 +91,7 @@ public class Player {
         defense = maxDefense;
     }
 
-    public void addEffects(List<PlayerEffect> effects) {
+    public void addEffects(List<Effect> effects) {
         if (isNull(this.effects)) {
             this.effects = effects;
         } else {
@@ -88,34 +99,36 @@ public class Player {
         }
     }
 
-    public void removeItemEffects(List<ItemEffect> effects) {
-        effects.forEach(effect -> {
-            if (this.effects.remove(effect)) {
-                switch (effect.getAction()) {
-                    case ADD -> addCounterEffect(effect.getAttribute(), effect.getAmount());
-                    case MULTIPLY -> addCounterEffect(effect.getAttribute(), effect.getMultiplier());
-                }
-            }
-        });
+    public <T extends Effect> void addEffect(T effect) {
+        if (isNull(this.effects)) {
+            this.effects = new ArrayList<>();
+        }
+        this.effects.add(effect);
     }
 
-    private boolean addCounterEffect(PlayerEffectAttribute attribute, Double multiplier) {
-        val counterEffect = new DirectPlayerEffect();
-        counterEffect.setAction(MULTIPLY);
-        counterEffect.setAttribute(attribute);
-        counterEffect.setMultiplier(1 / multiplier);
-        counterEffect.setTurnsLasts(1);
-        counterEffect.setIsAccumulated(true);
-        return this.effects.add(counterEffect);
+    public <T extends Effect> boolean removeEffects(List<T> effects) {
+        return this.effects.removeAll(effects);
     }
 
-    private boolean addCounterEffect(PlayerEffectAttribute attribute, Integer amount) {
-        val counterEffect = new DirectPlayerEffect();
-        counterEffect.setAction(ADD);
-        counterEffect.setAttribute(attribute);
-        counterEffect.setAmount(-amount);
-        counterEffect.setTurnsLasts(1);
-        counterEffect.setIsAccumulated(true);
-        return this.effects.add(counterEffect);
+    public Weight getWeight() {
+        return Weight.builder()
+                .hpToMaxHp((double) (hp / maxHp) * hp)
+                .hpDeficiencyToMaxHp((double) ((maxHp - hp ) / maxHp) * hp)
+                .manaToMaxMana((double) (mana / maxMana) * mana)
+                .manaDeficiencyToMaxMana((double) ((maxMana - mana)/ maxMana) * mana)
+                .armorToMaxArmor((double) (defense / maxDefense) * defense)
+                .armorDeficiencyToMaxArmor((double) ((maxDefense - defense) / maxDefense) * defense)
+                .chanceToDodge(chanceToDodge * defense)
+                .goldBonusToGold(goldBonus / gold)
+                .xpBonus(xpBonus)
+                .attack((1.0 - primaryAttack.getChanceToMiss()) * primaryAttack.getAttack() +
+                        (nonNull(secondaryAttack) ? (1.0 - secondaryAttack.getChanceToMiss()) * secondaryAttack.getAttack() : 0.0))
+                .criticalHitChance(primaryAttack.getCriticalHitChance() +
+                        (nonNull(secondaryAttack) ? secondaryAttack.getCriticalHitChance() : 0.0))
+                .criticalHitMultiplier(primaryAttack.getCriticalHitMultiplier() +
+                        (nonNull(secondaryAttack) ? secondaryAttack.getCriticalHitMultiplier() : 0.0))
+                .chanceToKnockout(primaryAttack.getChanceToKnockOut() +
+                        (nonNull(secondaryAttack) ? secondaryAttack.getChanceToKnockOut() : 0.0))
+                .build();
     }
 }

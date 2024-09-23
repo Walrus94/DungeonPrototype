@@ -1,0 +1,13 @@
+#spring:
+#  data:
+#    mongodb:
+#      uri: mongodb://localhost:27017/test
+spring:
+  aop:
+    proxy-target-class: false
+    auto: false
+  main:
+    allow-bean-definition-overriding: true
+bot:
+  username: test
+  token: token

@@ -11,6 +11,10 @@ import org.mapstruct.factory.Mappers;
 public interface LevelMapper {
     LevelMapper INSTANCE = Mappers.getMapper(LevelMapper.class);
 
+    static LevelMapper getInstance() {
+        return INSTANCE;
+    }
+
     LevelDocument mapToDocument(Level level);
 
     @Mappings({
@@ -18,7 +22,6 @@ public interface LevelMapper {
             @Mapping(target = "maxLength", ignore = true),
             @Mapping(target = "minLength", ignore = true),
             @Mapping(target = "deadEndToSegmentMap", ignore = true),
-            @Mapping(target = "distributeIterators", ignore = true),
     })
     Level mapToLevel(LevelDocument document);
 }

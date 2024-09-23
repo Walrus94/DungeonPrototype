@@ -5,6 +5,7 @@ import lombok.NoArgsConstructor;
 import org.dungeon.prototype.model.document.item.EffectDocument;
 import org.dungeon.prototype.model.document.item.ItemDocument;
 import org.dungeon.prototype.model.document.monster.MonsterDocument;
+import org.dungeon.prototype.model.document.weight.WeightDocument;
 import org.dungeon.prototype.model.room.RoomType;
 import org.dungeon.prototype.annotations.validation.MultiConditionalNotNull;
 import org.springframework.data.annotation.Id;
@@ -42,13 +43,12 @@ public class RoomContentDocument {
     @DBRef
     private List<ItemDocument> items;
 
-    @DBRef
     private EffectDocument effect;
 
     private Double chanceToBreakWeapon;
     private Integer attackBonus;
     private boolean armorRestored;
 
-    private Integer roomContentWeight;
+    private WeightDocument roomContentWeight;
     private RoomType roomType;
 }

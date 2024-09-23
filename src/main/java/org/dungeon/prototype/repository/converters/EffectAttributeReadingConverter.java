@@ -2,8 +2,6 @@ package org.dungeon.prototype.repository.converters;
 
 import jakarta.validation.constraints.NotNull;
 import org.dungeon.prototype.model.effect.attributes.EffectAttribute;
-import org.dungeon.prototype.model.effect.attributes.MonsterEffectAttribute;
-import org.dungeon.prototype.model.effect.attributes.PlayerEffectAttribute;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.convert.ReadingConverter;
 
@@ -11,10 +9,6 @@ import org.springframework.data.convert.ReadingConverter;
 public class EffectAttributeReadingConverter implements Converter<String, EffectAttribute> {
     @Override
     public EffectAttribute convert(@NotNull String source) {
-        try {
-            return MonsterEffectAttribute.fromValue(source);
-        } catch (IllegalArgumentException e) {
-            return PlayerEffectAttribute.fromValue(source);
-        }
+        return EffectAttribute.fromValue(source);
     }
 }

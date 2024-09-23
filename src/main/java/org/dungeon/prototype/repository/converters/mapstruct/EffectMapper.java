@@ -1,76 +1,70 @@
 package org.dungeon.prototype.repository.converters.mapstruct;
 
 import org.dungeon.prototype.model.document.item.EffectDocument;
-import org.dungeon.prototype.model.effect.DirectPlayerEffect;
+import org.dungeon.prototype.model.effect.AdditionEffect;
 import org.dungeon.prototype.model.effect.Effect;
-import org.dungeon.prototype.model.effect.Expirable;
-import org.dungeon.prototype.model.effect.ItemEffect;
-import org.dungeon.prototype.model.effect.MonsterEffect;
-import org.dungeon.prototype.model.effect.PlayerEffect;
-import org.dungeon.prototype.model.effect.attributes.EffectAttribute;
-import org.dungeon.prototype.model.effect.attributes.MonsterEffectAttribute;
-import org.dungeon.prototype.model.effect.attributes.PlayerEffectAttribute;
+import org.dungeon.prototype.model.effect.ExpirableAdditionEffect;
+import org.dungeon.prototype.model.effect.ExpirableEffect;
+import org.dungeon.prototype.model.effect.ExpirableMultiplicationEffect;
+import org.dungeon.prototype.model.effect.MultiplicationEffect;
+import org.dungeon.prototype.model.effect.PermanentAdditionEffect;
+import org.dungeon.prototype.model.effect.PermanentMultiplicationEffect;
+import org.dungeon.prototype.model.effect.attributes.Action;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Mappings;
 import org.mapstruct.Named;
 import org.mapstruct.factory.Mappers;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
-import static org.dungeon.prototype.model.effect.EffectApplicant.ITEM;
-import static org.dungeon.prototype.model.effect.EffectApplicant.PLAYER;
-
-@Mapper
+@Mapper(uses = WeightMapper.class)
 public interface EffectMapper {
     EffectMapper INSTANCE = Mappers.getMapper(EffectMapper.class);
 
     @Mappings({
-            @Mapping(target = "attribute", source = "effect", qualifiedByName = "mapAttributeToDocument"),
-            @Mapping(target = "turnsLasts", source = "effect", qualifiedByName = "mapTurnsLastsToDocument"),
+            @Mapping(target = "turnsLeft", source = "effect", qualifiedByName = "mapTurnsLeftToDocument"),
+            @Mapping(target = "amount", source = "effect", qualifiedByName = "mapAmountToDocument"),
+            @Mapping(target = "multiplier", source = "effect", qualifiedByName = "mapMultiplierToDocument"),
             @Mapping(target = "isAccumulated", source = "effect", qualifiedByName = "mapIsAccumulatedToDocument"),
-            @Mapping(target = "hasFirstTurnPassed", source = "effect", qualifiedByName = "mapHasFirstTurnPassedToDocument")
+            @Mapping(target = "isPermanent", expression = "java(effect instanceof PermanentMultiplicationEffect)"),
     })
     EffectDocument mapToDocument(Effect effect);
 
-    default List<EffectDocument> mapToDocuments(List<Effect> effects){
-        return effects.stream().map(this::mapToDocument).collect(Collectors.toList());
-    }
-
-    default PlayerEffect mapToPlayerEffect(EffectDocument document) {
-        if (document.getApplicableTo().equals(ITEM)) {
-            return mapToItemEffect(document);
-        } else if (document.getApplicableTo().equals(PLAYER)) {
-            return mapToDirectPlayerEffect(document);
+    default Effect mapToEffect(EffectDocument document) {
+        if (document.getAction().equals(Action.MULTIPLY)) {
+            return mapToMultiplicationEffect(document);
         } else {
-            return null;
+            return mapToAdditionEffect(document);
         }
     }
 
-    DirectPlayerEffect mapToDirectPlayerEffect(EffectDocument document);
-
-    ItemEffect mapToItemEffect(EffectDocument document);
-
-    List<ItemEffect> mapToItemEffects(List<EffectDocument> document);
-
-    MonsterEffect mapToMonsterEffect(EffectDocument document);
-
-    @Named("mapAttributeToDocument")
-    default EffectAttribute mapAttributeToDocument(Effect effect) {
-
-        if (effect instanceof MonsterEffect) {
-            return mapToMonsterAttribute(effect.getAttribute());
-        } else if (effect instanceof PlayerEffect) {
-            return mapToPlayerAttribute(effect.getAttribute());
+    default AdditionEffect mapToAdditionEffect(EffectDocument document) {
+        if (document.getIsPermanent()) {
+            return mapToPermanentAdditionEffect(document);
+        } else {
+            return mapToExpirableAdditionEffect(document);
         }
-        return null;
     }
 
-    @Named("mapTurnsLastsToDocument")
-    default Integer mapTurnsLastsToDocument(Effect effect) {
-        if (effect instanceof Expirable) {
-            return ((Expirable) effect).getTurnsLasts();
+    default MultiplicationEffect mapToMultiplicationEffect(EffectDocument document) {
+        if (document.getIsPermanent()) {
+            return mapToPermanentMultiplicationEffect(document);
+        } else {
+            return mapToExpirableMultiplicationEffect(document);
+        }
+    }
+
+    PermanentAdditionEffect mapToPermanentAdditionEffect(EffectDocument document);
+
+    ExpirableAdditionEffect mapToExpirableAdditionEffect(EffectDocument document);
+
+    PermanentMultiplicationEffect mapToPermanentMultiplicationEffect(EffectDocument document);
+
+    ExpirableMultiplicationEffect mapToExpirableMultiplicationEffect(EffectDocument document);
+
+    @Named("mapTurnsLeftToDocument")
+    default Integer mapTurnsLeftToDocument(Effect effect) {
+        if (effect instanceof ExpirableEffect) {
+            return ((ExpirableEffect) effect).getTurnsLeft();
         } else {
             return null;
         }
@@ -78,33 +72,26 @@ public interface EffectMapper {
 
     @Named("mapIsAccumulatedToDocument")
     default Boolean mapIsAccumulatedToDocument(Effect effect) {
-        if (effect instanceof Expirable) {
-            return ((Expirable) effect).getIsAccumulated();
+        if (effect instanceof ExpirableEffect) {
+            return ((ExpirableEffect) effect).isAccumulated();
         } else {
             return null;
         }
     }
 
-    @Named("mapHasFirstTurnPassedToDocument")
-    default Boolean mapHasFirstTurnPassedToDocument(Effect effect) {
-        if (effect instanceof Expirable) {
-            return ((Expirable) effect).getHasFirstTurnPassed();
+    @Named("mapAmountToDocument")
+    default Integer mapAmountToDocument(Effect effect) {
+        if (effect instanceof AdditionEffect) {
+            return ((AdditionEffect) effect).getAmount();
         } else {
             return null;
         }
     }
 
-    default MonsterEffectAttribute mapToMonsterAttribute(EffectAttribute effectAttribute) {
-        if (effectAttribute instanceof MonsterEffectAttribute) {
-            return (MonsterEffectAttribute) effectAttribute;
-        } else {
-            return null;
-        }
-    }
-
-    default PlayerEffectAttribute mapToPlayerAttribute(EffectAttribute effectAttribute) {
-        if (effectAttribute instanceof PlayerEffectAttribute) {
-            return (PlayerEffectAttribute) effectAttribute;
+    @Named("mapMultiplierToDocument")
+    default Double mapMultiplierToDocument(Effect effect) {
+        if (effect instanceof MultiplicationEffect) {
+            return ((MultiplicationEffect) effect).getMultiplier();
         } else {
             return null;
         }

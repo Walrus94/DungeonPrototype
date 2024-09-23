@@ -1,4 +1,0 @@
-package org.dungeon.prototype.model.document.item;
-
-public interface ItemSpecs {
-}

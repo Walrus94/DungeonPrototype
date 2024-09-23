@@ -2,47 +2,59 @@ package org.dungeon.prototype.service;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.dungeon.prototype.annotations.aspect.SendPlayerStatsMessage;
-import org.dungeon.prototype.annotations.aspect.SendRoomMessage;
-import org.dungeon.prototype.model.inventory.ArmorSet;
+import org.dungeon.prototype.annotations.aspect.ChatStateUpdate;
+import org.dungeon.prototype.exception.EntityNotFoundException;
 import org.dungeon.prototype.model.inventory.Inventory;
-import org.dungeon.prototype.model.inventory.items.Wearable;
 import org.dungeon.prototype.model.player.Player;
 import org.dungeon.prototype.model.player.PlayerAttribute;
+import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.properties.PlayerProperties;
 import org.dungeon.prototype.repository.PlayerRepository;
 import org.dungeon.prototype.repository.converters.mapstruct.PlayerMapper;
 import org.dungeon.prototype.repository.projections.NicknameProjection;
-import org.dungeon.prototype.service.effect.EffectService;
+import org.dungeon.prototype.service.message.MessageService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.Objects.nonNull;
+import static org.dungeon.prototype.bot.ChatState.ACTIVE;
+import static org.dungeon.prototype.bot.ChatState.AWAITING_NICKNAME;
+import static org.dungeon.prototype.util.PlayerUtil.getPrimaryAttack;
+import static org.dungeon.prototype.util.PlayerUtil.getSecondaryAttack;
 
 @Slf4j
-@Component
+@Service
 public class PlayerService {
-    @Autowired
-    EffectService effectService;
     @Autowired
     PlayerRepository playerRepository;
     @Autowired
     PlayerProperties playerProperties;
+    @Autowired
+    MessageService messageService;
 
+    /**
+     * Finds player for given chat
+     * throws {@link EntityNotFoundException} if none found
+     * @param chatId current chat id
+     * @return found player
+     */
     public Player getPlayer(Long chatId) {
-        val playerDocument = playerRepository.findByChatId(chatId).orElseGet(() -> {
-            log.error("Unable to load player for chatId: {}", chatId);
-            return null;
-        });
+        val playerDocument = playerRepository.findByChatId(chatId)
+                .orElseThrow(() ->
+                        new EntityNotFoundException(chatId, "player", CallbackType.DEFAULT_ERROR_RETURN));
         return PlayerMapper.INSTANCE.mapToPlayer(playerDocument);
     }
 
+    /**
+     * Prepares player for new game
+     * @param chatId current chat id
+     * @param defaultInventory player's default inventory
+     * @return prepared player with default inventory
+     */
     public Player getPlayerPreparedForNewGame(Long chatId, Inventory defaultInventory) {
         Player player = getPlayer(chatId);
         player.setMaxHp(getDefaultMaxHp(player));
@@ -53,54 +65,88 @@ public class PlayerService {
         player.setMaxMana(getDefaultMaxMana(player));
         player.setMana(player.getMaxMana());
         addDefaultInventory(player, defaultInventory);
-        return updatePlayer(effectService.updatePlayerEffects(player));
+        return updatePlayer(player);
     }
 
-    //TODO: extract magic numbers to properties (consider different formula)
-    public static int getDefaultMaxMana(Player player) {
-        return 6 + player.getAttributes().get(PlayerAttribute.MAGIC);
+    /**
+     * Registers and generates new player
+     * @param chatId current chat id
+     * @param nickname new player's nickname
+     */
+    @ChatStateUpdate(from = AWAITING_NICKNAME, to = ACTIVE)
+    public void registerPlayerAndSendStartMessage(Long chatId, String nickname) {
+        val player = addNewPlayer(chatId, nickname);
+        messageService.sendStartMessage(chatId, player.getNickname());
     }
 
-    public static int getDefaultMaxHp(Player player) {
-        return 90 + player.getAttributes().get(PlayerAttribute.STAMINA);
+    /**
+     * Returns player's maximum amount of mana
+     * without applied effects
+     * @param player current player
+     * @return default max mana
+     */
+    public int getDefaultMaxMana(Player player) {
+        return playerProperties.getBaseMana() +
+                player.getAttributes().get(PlayerAttribute.MAGIC) * playerProperties.getAttributeManaFactor();
     }
 
-    @SendRoomMessage
-    public boolean restoreArmor(Long chatId) {
-        val player = getPlayer(chatId);
-        player.restoreArmor();
-        updatePlayer(player);
-        return true;
+    /**
+     * Returns player's maximum amount of health points
+     * without applied effects
+     * @param player current player
+     * @return default max health points
+     */
+    public int getDefaultMaxHp(Player player) {
+        return 100 + player.getAttributes().get(PlayerAttribute.STAMINA);
     }
 
+    /**
+     * Updates given player
+     * @param player given player
+     * @return updated player
+     */
     public Player updatePlayer(Player player) {
         val playerDocument = PlayerMapper.INSTANCE.mapToDocument(player);
         val savedPlayer = playerRepository.save(playerDocument);
         return PlayerMapper.INSTANCE.mapToPlayer(savedPlayer);
     }
+
+    /**
+     * Checks if player exist for given chat id
+     * @param chatId current chat id
+     * @return true if player exists
+     */
     public Boolean hasPlayer(Long chatId) {
         return playerRepository.existsByChatId(chatId);
     }
-    public Player addNewPlayer(Long chatId, String nickname) {
+
+    /**
+     * Looks for player's nickname by chat id
+     * throws {@link EntityNotFoundException} if none found
+     * @param chatId current chat id
+     * @return found nickname
+     */
+    public String getNicknameByChatId(Long chatId) {
+        return playerRepository.getNicknameByChatId(chatId).map(NicknameProjection::getNickname).orElseThrow(() ->
+                new EntityNotFoundException(chatId, "player", CallbackType.DEFAULT_ERROR_RETURN));
+        }
+
+    /**
+     * Sends player's stats message to current chat
+     * @param chatId current chat id
+     */
+    public void sendPlayerStatsMessage(Long chatId) {
+        if (hasPlayer(chatId)) {
+            val player = getPlayer(chatId);
+            messageService.sendPlayerStatsMessage(chatId, player);
+        }
+    }
+    private Player addNewPlayer(Long chatId, String nickname) {
         val player = generatePlayer(chatId, nickname);
         val playerDocument = PlayerMapper.INSTANCE.mapToDocument(player);
         val savedPlayer = playerRepository.save(playerDocument);
+        log.debug("Player generated: {}", player);
         return PlayerMapper.INSTANCE.mapToPlayer(savedPlayer);
-    }
-    public Optional<String> getNicknameByChatId(Long chatId) {
-        return playerRepository.getNicknameByChatId(chatId).map(NicknameProjection::getNickname);
-    }
-
-    //TODO: refactor using repository directly
-    @SendRoomMessage
-    public boolean upgradePlayerAttribute(Long chatId, PlayerAttribute playerAttribute) {
-        val player = getPlayer(chatId);
-        player.getAttributes().put(playerAttribute, player.getAttributes().get(playerAttribute) + 1);
-        return nonNull(updatePlayer(player));
-    }
-    @SendPlayerStatsMessage
-    public boolean sendPlayerStatsMessage(Long chatId) {
-        return hasPlayer(chatId);
     }
 
     private Player generatePlayer(Long chatId, String nickname) {
@@ -114,20 +160,18 @@ public class PlayerService {
 
     private void addDefaultInventory(Player player, Inventory inventory) {
         player.setInventory(inventory);
-        player.addEffects(Stream.concat(inventory.getWeaponSet().getWeapons().stream(), inventory.getArmorSet().getArmorItems().stream())
+        player.addEffects(Stream.concat(inventory.getWeapons().stream(), inventory.getArmorItems().stream())
                 .flatMap(item -> item.getEffects().stream())
                 .collect(Collectors.toCollection(ArrayList::new)));
-        //TODO: consider moving to effect calculation
-        player.setMaxDefense(calculateMaxDefense(player.getInventory().getArmorSet()));
-        player.setDefense(player.getMaxDefense());
-        player.setPrimaryAttack(player.getAttributes().get(PlayerAttribute.POWER) + (nonNull(inventory.getWeaponSet().getPrimaryWeapon()) ? inventory.getWeaponSet().getPrimaryWeapon().getAttack() : 0));
-        player.setSecondaryAttack(nonNull(inventory.getWeaponSet().getSecondaryWeapon()) ? player.getAttributes().get(PlayerAttribute.POWER) + inventory.getWeaponSet().getSecondaryWeapon().getAttack() : 0);
+        player.setPrimaryAttack(getPrimaryAttack(player, inventory.getPrimaryWeapon()));
+        player.setSecondaryAttack(getSecondaryAttack(player, inventory.getSecondaryWeapon()));
+        if (nonNull(inventory.getBoots())) {
+            player.setChanceToDodge(inventory.getBoots().getChanceToDodge());
+        } else {
+            player.setChanceToDodge(0.0);
+        }
         log.debug("Player default inventory initialized: {}", player);
         val playerDocument = PlayerMapper.INSTANCE.mapToDocument(player);
         playerRepository.save(playerDocument);
-    }
-
-    private Integer calculateMaxDefense(ArmorSet armor) {
-        return armor.getArmorItems().stream().filter(Objects::nonNull).mapToInt(Wearable::getArmor).sum();
     }
 }

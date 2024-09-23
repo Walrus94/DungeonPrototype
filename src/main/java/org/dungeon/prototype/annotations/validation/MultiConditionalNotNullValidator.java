@@ -2,11 +2,13 @@ package org.dungeon.prototype.annotations.validation;
 
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
+import lombok.extern.slf4j.Slf4j;
 import org.dungeon.prototype.model.document.room.RoomContentDocument;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
 
+@Slf4j
 public class MultiConditionalNotNullValidator implements ConstraintValidator<MultiConditionalNotNull, RoomContentDocument> {
     private MultiConditionalNotNull.Condition[] conditions;
 
@@ -38,7 +40,7 @@ public class MultiConditionalNotNullValidator implements ConstraintValidator<Mul
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Validation error: {}", e.getMessage());
             return false;
         }
         return true;

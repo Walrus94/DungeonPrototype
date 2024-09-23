@@ -4,5 +4,6 @@ import lombok.Data;
 
 @Data
 public class ItemWeightProjection {
-    private Integer weight;
+    private String id;
+    private Double weightAbs;
 }

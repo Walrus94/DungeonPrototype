@@ -7,17 +7,20 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.room.RoomType;
+import org.dungeon.prototype.model.weight.Weight;
 
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = false)
-public class Treasure extends BonusRoom {
+public class Treasure extends ItemsRoom {
     @NotNull
     @Positive
     private Integer gold;
     @Override
-    public Integer getRoomContentWeight() {
-        return gold + items.stream().mapToInt(Item::getWeight).sum();
+    public Weight getRoomContentWeight() {
+        //TODO: verify formula
+        return items.stream().map(Item::getWeight).reduce(
+                Weight.builder().goldBonusToGold(gold.doubleValue()).build(), Weight::add);
     }
 
     @Override

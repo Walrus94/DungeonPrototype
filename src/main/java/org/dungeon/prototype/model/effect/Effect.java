@@ -1,10 +1,14 @@
 package org.dungeon.prototype.model.effect;
 
+import lombok.Builder;
 import lombok.Data;
-import org.dungeon.prototype.model.effect.attributes.EffectAttribute;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 import org.dungeon.prototype.annotations.validation.MultiConditionalNotNull;
-
-import static org.apache.commons.lang3.BooleanUtils.isTrue;
+import org.dungeon.prototype.model.effect.attributes.Action;
+import org.dungeon.prototype.model.effect.attributes.EffectApplicant;
+import org.dungeon.prototype.model.effect.attributes.EffectAttribute;
+import org.dungeon.prototype.model.weight.Weight;
 
 @Data
 @MultiConditionalNotNull(conditions = {
@@ -19,40 +23,24 @@ import static org.apache.commons.lang3.BooleanUtils.isTrue;
                 conditionalValues = {"ADD"}
         )
 })
+@SuperBuilder
+@NoArgsConstructor
 public abstract class Effect {
     protected String id;
     protected EffectApplicant applicableTo;
-
-    protected Action action;
-    protected Integer amount;
-    protected Double multiplier;
-
-    protected Integer weight;
-
-
+    protected Boolean isPermanent;
+    protected EffectAttribute attribute;
+    @Builder.Default
     protected Boolean hasFirstTurnPassed = false;
 
-    public abstract EffectAttribute getAttribute();
-    public abstract Boolean isPermanent();
-    public abstract Boolean isNegative();
+    public abstract Weight getWeight();
+    public abstract Action getAction();
 
-    public boolean isApplicable() {
-        if (!isTrue(getHasFirstTurnPassed())) {
-            return true;
-        }
-        return !isPermanent() && ((Expirable) this).getIsAccumulated();
+    public Boolean isPermanent() {
+        return isPermanent;
     }
 
-    @Override
-    public String toString() {
-        switch (action) {
-            case ADD -> {
-                return "Adds " + amount + " to " + getAttribute().toString();
-            }
-            case MULTIPLY -> {
-                return "Multiplies " + getAttribute().toString() + " by " + multiplier;
-            }
-        }
-        return super.toString();
+    public Boolean hasFirstTurnPassed() {
+        return hasFirstTurnPassed;
     }
 }

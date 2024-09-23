@@ -20,14 +20,7 @@ public class GenerationProperties {
     public static class MonsterClassGenerationAttributes {
         private MonsterAttackType primaryAttackType;
         private MonsterAttackType secondaryAttackType;
-        private Integer primaryAttackRatio;
-        private Integer primaryAttackBonus;
-        private Integer secondaryAttackRatio;
-        private Integer secondaryAttackBonus;
-        private Integer healthRatio;
-        private Integer healthBonus;
-        private Integer weightPrimaryAttackMultiplier;
-        private Integer weightSecondaryAttackMultiplier;
+        private Double primeToSecAttackWeights;
     }
 
     @Data
