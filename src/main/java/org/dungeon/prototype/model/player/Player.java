@@ -119,7 +119,7 @@ public class Player {
                 .armorToMaxArmor((double) (defense / maxDefense) * defense)
                 .armorDeficiencyToMaxArmor((double) ((maxDefense - defense) / maxDefense) * defense)
                 .chanceToDodge(chanceToDodge * defense)
-                .goldBonusToGold(goldBonus / gold)
+                .goldBonusToGold(goldBonus * gold)
                 .xpBonus(xpBonus)
                 .attack((1.0 - primaryAttack.getChanceToMiss()) * primaryAttack.getAttack() +
                         (nonNull(secondaryAttack) ? (1.0 - secondaryAttack.getChanceToMiss()) * secondaryAttack.getAttack() : 0.0))

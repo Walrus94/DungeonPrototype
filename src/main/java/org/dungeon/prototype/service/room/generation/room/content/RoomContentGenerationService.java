@@ -69,7 +69,7 @@ public class RoomContentGenerationService {
         log.debug("Total rooms: {}, rooms left: {}", totalRooms, roomsLeft);
         log.debug("Generating next room type...");
         log.debug("Generating random room type...");
-        val currentStep = totalRooms - roomsLeft;//TODO verify with debugger
+        val currentStep = totalRooms - roomsLeft;//TODO: verify with debugger
         val roomType = getRandomRoomType(expectedWeight, currentStep, totalRooms, clusters.getRoomTypePoints());
         log.debug("Random room type: {}", roomType);
         log.debug("Generating room content with type {}, expected weight: {}, used items ids: {}", roomType, expectedWeight, usedItemIds);

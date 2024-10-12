@@ -4,7 +4,6 @@ import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.math3.util.Pair;
-import org.dungeon.prototype.exception.ItemGenerationException;
 import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.inventory.attributes.MagicType;
 import org.dungeon.prototype.model.inventory.attributes.Quality;
@@ -20,7 +19,6 @@ import org.dungeon.prototype.model.inventory.attributes.wearable.WearableMateria
 import org.dungeon.prototype.model.inventory.attributes.wearable.WearableType;
 import org.dungeon.prototype.model.inventory.items.Weapon;
 import org.dungeon.prototype.model.inventory.items.Wearable;
-import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.properties.GenerationProperties;
 import org.dungeon.prototype.service.effect.ItemEffectsGenerator;
 import org.dungeon.prototype.service.item.ItemService;
@@ -42,7 +40,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -109,19 +106,13 @@ public class ItemGenerator {
      * @param chatId id of chat where game runs
      */
     @Transactional
-    public void generateItems(Long chatId) {
+    public CompletableFuture<Void> generateItems(Long chatId) {
         barriersByChat.put(chatId, new CyclicBarrier(2));
 
         CompletableFuture<Void> weaponsFuture = CompletableFuture.runAsync(() -> generateWeapons(chatId));
         CompletableFuture<Void> wearablesFuture = CompletableFuture.runAsync(() -> generateWearables(chatId));
 
-        CompletableFuture<Void> combinedFuture = CompletableFuture.allOf(weaponsFuture, wearablesFuture);
-
-        try {
-            combinedFuture.get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new ItemGenerationException(chatId, e.getMessage(), CallbackType.DEFAULT_ERROR_RETURN);
-        }
+        return CompletableFuture.allOf(weaponsFuture, wearablesFuture);
     }
 
     private void generateWeapons(Long chatId) {
@@ -273,11 +264,12 @@ public class ItemGenerator {
         addEffects(chatId, savedItems, wearablesPerGame);
     }
 
-    private void addEffects(Long chatId, List<Item> savedItems, Integer limit) {
+    private void addEffects(Long chatId, Set<Item> savedItems, Integer limit) {
         val weightScale = savedItems.stream()
                 .map(item -> Pair.create(item.getId(), item.getWeight().toVector().getNorm()))
                 .sorted(Comparator.comparing(Pair::getValue))
                 .collect(Collectors.toCollection(ArrayList::new));
+        log.debug("Adding effects to generated items, amount: {}", savedItems.size());
         double largestSegment = 0.0;
         int startSegmentIndex = 0;
         val vanillaItemsIds = weightScale.stream().map(Pair::getKey).toList();
@@ -290,7 +282,9 @@ public class ItemGenerator {
                     startSegmentIndex = i;
                 }
             }
-            val expectedWeightChange = startSegmentIndex > weightScale.size() / 2 ? largestSegment / 4 : -largestSegment / 4;
+            val expectedWeightChange = startSegmentIndex > weightScale.size() / 2 ?
+                    largestSegment / 4 :
+                    -largestSegment / 4;
             val point = expectedWeightChange > 0 ? startSegmentIndex : startSegmentIndex + 1;
             val itemId = weightScale.get(point).getKey();
             if (vanillaItemsIds.contains(itemId)) {
@@ -300,10 +294,12 @@ public class ItemGenerator {
                 }
             } else {
                 val updatedWeight = itemEffectsGenerator.addItemEffect(chatId, weightScale.get(point).getKey(), expectedWeightChange);
-                if (updatedWeight > 0.0) {
+                if (updatedWeight.isPresent()) {
                     val oldValue = weightScale.get(point);
                     weightScale.remove(point);
-                    insertNewItem(Pair.create(oldValue.getKey(), updatedWeight), weightScale);
+                    insertNewItem(Pair.create(oldValue.getKey(), updatedWeight.get()), weightScale);
+                } else {
+
                 }
             }
         }

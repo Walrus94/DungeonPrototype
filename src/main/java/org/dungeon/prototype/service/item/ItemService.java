@@ -1,6 +1,5 @@
 package org.dungeon.prototype.service.item;
 
-import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.math3.util.Pair;
@@ -22,14 +21,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static java.util.Objects.isNull;
 import static org.apache.commons.math3.util.FastMath.abs;
 
 @Slf4j
@@ -44,6 +42,7 @@ public class ItemService {
 
     /**
      * Saves item to repository
+     *
      * @param item to save
      * @return saved item
      */
@@ -61,21 +60,27 @@ public class ItemService {
     /**
      * Looks for wearable item of given type and minimum weight
      * throws {@link EntityNotFoundException} if fails to find any
-     * @param chatId current chat id
+     *
+     * @param chatId       current chat id
      * @param wearableType to look for
      * @return found item
      */
     @Transactional
     public Wearable getMostLightweightWearable(Long chatId, WearableType wearableType) {
         List<ItemDocument> documents = itemRepository.findWearablesByChatIdTypeAndMinWeight(chatId, wearableType, PageRequest.of(0, 1));
-        if (Objects.isNull(documents) || documents.isEmpty()) {
+        if (isNull(documents) || documents.isEmpty()) {
             log.error("Unable find most lightweight wearable of type {} for chat id {}!", wearableType, chatId);
             throw new EntityNotFoundException(chatId, wearableType.toString(), CallbackType.DEFAULT_ERROR_RETURN);
         }
-        val document = documents.getFirst();
-        if (Objects.isNull(document.getName())) {
-            document.setName(itemNamingService.generateNames(Set.of(document.getAttributes())).get(document.getAttributes()));
-            itemRepository.save(document);
+
+        //TODO: refactor
+        var document = documents.getFirst();
+        if (isNull(document.getName())) {
+            itemNamingService.requestNameGeneration(itemMapper.mapToWearable(document));
+            while (isNull(document.getName())) {
+                log.debug("Waiting for name generation of item {} for chat {}...", document.getId(), chatId);
+                document = itemRepository.findByChatIdAndId(document.getChatId(), document.getId()).orElse(null);
+            }
         }
         return itemMapper.mapToWearable(document);
     }
@@ -83,21 +88,26 @@ public class ItemService {
     /**
      * Looks for weapon of minimum weight
      * throws {@link EntityNotFoundException} if fails to find any
+     *
      * @param chatId current chat id
      * @return found item
      */
     @Transactional
     public Weapon getMostLightWeightMainWeapon(Long chatId) {
         val documents = itemRepository.findMainWeaponByChatIdAndMinWeight(chatId, PageRequest.of(0, 1));
-        if (Objects.isNull(documents) || documents.isEmpty()) {
+        if (isNull(documents) || documents.isEmpty()) {
             log.error("Unable to find most lightweight weapon for chat id {}!", chatId);
             throw new EntityNotFoundException(chatId, "weapon", CallbackType.DEFAULT_ERROR_RETURN);
         }
 
-        val document = documents.getFirst();
-        if (Objects.isNull(document.getName())) {
-            document.setName(itemNamingService.generateNames(Set.of(document.getAttributes())).get(document.getAttributes()));
-            itemRepository.save(document);
+        //TODO: refactor
+        var document = documents.getFirst();
+        if (isNull(document.getName())) {
+            itemNamingService.requestNameGeneration(itemMapper.mapToWeapon(document));
+            while (isNull(document.getName())) {
+                log.debug("Waiting for name generation of item {} for chat {}...", document.getId(), chatId);
+                document = itemRepository.findByChatIdAndId(document.getChatId(), document.getId()).orElse(null);
+            }
         }
         return itemMapper.mapToWeapon(document);
     }
@@ -105,10 +115,11 @@ public class ItemService {
     /**
      * Looks for batch of items which summary weight
      * is as close as possible to expected
-     * @param chatId current chat id
+     *
+     * @param chatId         current chat id
      * @param expectedWeight expected summary weight
-     * @param maxItems amount of items
-     * @param usedItemIds ids of items to exclude
+     * @param maxItems       amount of items
+     * @param usedItemIds    ids of items to exclude
      * @return found items
      */
     public Set<Item> getExpectedWeightItems(Long chatId, Weight expectedWeight, Integer maxItems, Set<String> usedItemIds) {
@@ -130,21 +141,21 @@ public class ItemService {
                     PageRequest.of(0, 1)).getFirst());
             weightsAbsSum = weightsAbs.stream().mapToDouble(ItemWeightProjection::getWeightAbs).sum();
         }
-        val items = findItems(chatId, weightsAbs.stream().map(ItemWeightProjection::getId).toList());
-        return items.isEmpty() ? Collections.emptySet() : generateItemsNamesAndUpdate(items);
+        return findItems(chatId, weightsAbs.stream().map(ItemWeightProjection::getId).toList());
     }
 
     /**
      * Looks for item by given id in repository
      * throws {@link EntityNotFoundException} if none found
+     *
      * @param chatId current chat id
      * @param itemId id of item to look for
      * @return found item
      */
     public Item findItem(Long chatId, String itemId) {
-        val itemDocument = itemRepository.findByChatIdAndId(chatId, itemId).orElseThrow(() -> {
-            throw new EntityNotFoundException(chatId, "item", CallbackType.DEFAULT_ERROR_RETURN, Pair.create("itemId", itemId));
-        });
+        val itemDocument = itemRepository.findByChatIdAndId(chatId, itemId).orElseThrow(() ->
+                new EntityNotFoundException(chatId, "item", CallbackType.DEFAULT_ERROR_RETURN, Pair.create("itemId", itemId))
+        );
         switch (itemDocument.getItemType()) {
             case WEAPON -> {
                 return ItemMapper.INSTANCE.mapToWeapon(itemDocument);
@@ -161,6 +172,7 @@ public class ItemService {
 
     /**
      * Removes all currents chat items from repository
+     *
      * @param chatId id of current chat
      */
     public void dropCollection(Long chatId) {
@@ -169,40 +181,53 @@ public class ItemService {
 
     /**
      * Saves list of items to repository
+     *
      * @param items to save
-     * @param <T> class, extending {@link Item}
+     * @param <T>   class, extending {@link Item}
      * @return saved items
      */
     @Transactional
-    public <T extends Item> List<Item> saveItems(List<T> items) {
+    public <T extends Item> Set<Item> saveItems(List<T> items) {
         val itemDocuments = items.stream().map(ItemMapper.INSTANCE::mapToDocument).toList();
         val savedItemDocuments = itemRepository.saveAll(itemDocuments);
         return savedItemDocuments.stream().map(itemDocument -> switch (itemDocument.getItemType()) {
             case WEAPON -> ItemMapper.INSTANCE.mapToWeapon(itemDocument);
             case WEARABLE -> ItemMapper.INSTANCE.mapToWearable(itemDocument);
             case USABLE -> ItemMapper.INSTANCE.mapToUsable(itemDocument);
-        }).toList();
+        }).collect(Collectors.toSet());
     }
+
     private Set<Item> findItems(Long chatId, List<String> itemIds) {
         val itemDocuments = itemRepository.findAllByChatIdAndIdIn(chatId, itemIds);
-        return itemDocuments.stream().map(itemDocument ->
+        val items= itemDocuments.stream()
+                .map(itemDocument ->
                         switch (itemDocument.getItemType()) {
                             case WEAPON -> ItemMapper.INSTANCE.mapToWeapon(itemDocument);
                             case WEARABLE -> ItemMapper.INSTANCE.mapToWearable(itemDocument);
                             case USABLE -> ItemMapper.INSTANCE.mapToUsable(itemDocument);
                         })
-                .collect(Collectors.toCollection(HashSet::new));
-    }
-
-    //TODO: parallel item naming
-    @NotNull
-    private Set<Item> generateItemsNamesAndUpdate(Set<Item> items) {
-        val attributesNamesMap = itemNamingService.generateNames(items.stream().filter(item -> Objects.isNull(item.getName())).map(Item::getAttributes).collect(Collectors.toSet()));
-        return items.stream().filter(item -> attributesNamesMap.containsKey(item.getAttributes()))
                 .peek(item -> {
-                    item.setName(attributesNamesMap.get(item.getAttributes()));
-                    saveItem(item);
+                    if (isNull(item.getName())) {
+                        itemNamingService.requestNameGeneration(item);
+                    }
                 })
-                .collect(Collectors.toSet());
+                .collect(Collectors.toCollection(HashSet::new));
+        //TODO refactor
+        return items.stream().map(item -> {
+                    while ((isNull(item.getName()))) {
+                        val updatedItemDocumentOptional = itemRepository.findByChatIdAndId(chatId, item.getId());
+                        if (updatedItemDocumentOptional.isEmpty()) {
+                            continue;
+                        }
+                        val updatedItemDocument = updatedItemDocumentOptional.get();
+                        item = switch (updatedItemDocument.getItemType()) {
+                            case WEAPON -> ItemMapper.INSTANCE.mapToWeapon(updatedItemDocument);
+                            case WEARABLE -> ItemMapper.INSTANCE.mapToWearable(updatedItemDocument);
+                            case USABLE -> ItemMapper.INSTANCE.mapToUsable(updatedItemDocument);
+                        };
+                    }
+                    return item;
+                })
+                .collect(Collectors.toCollection(HashSet::new));
     }
 }

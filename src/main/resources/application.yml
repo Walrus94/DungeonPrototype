@@ -1,12 +1,17 @@
 spring:
   data:
     mongodb:
-      uri: mongodb://localhost:27017/
+      uri: mongodb://mongo:27017/
       database: dungeon_proto_db
+  kafka:
+    bootstrap-servers: kafka:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
-huggingface:
-  api:
-    url: http://localhost:5000/generate
+
+kafka-topics:
+  item-naming-topic: item-naming-topic
 
 messaging:
   bar-blocks: 6
@@ -556,6 +561,8 @@ logging:
             room:
               Room: DEBUG
             Level: DEBUG
+          kafka:
+            KafkaProducer: DEBUG
           service:
             PlayerLevelService: DEBUG
             BattleService: DEBUG
@@ -565,16 +572,15 @@ logging:
                 RandomRoomTypeGenerator: DEBUG
                 room.content:
                   RoomContentGenerationService: DEBUG
+            item:
+              generation:
+                ItemGenerator: DEBUG
+                ItemNamingService: DEBUG
+              ItemService: DEBUG
             level:
               LevelService: DEBUG
               generation:
                 LevelGenerationService: DEBUG
-            item:
-              ItemService: DEBUG
-              generation:
-                ItemGenerator: DEBUG
-                ItemNamingService: DEBUG
-
           util:
             RoomGenerationUtils: DEBUG
             LevelUtil: DEBUG

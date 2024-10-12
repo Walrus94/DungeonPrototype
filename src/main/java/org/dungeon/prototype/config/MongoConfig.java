@@ -1,5 +1,9 @@
 package org.dungeon.prototype.config;
 
+import com.mongodb.MongoClientSettings;
+import com.mongodb.ServerAddress;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
 import jakarta.validation.constraints.NotNull;
 import org.dungeon.prototype.repository.converters.DirectionReadingConverter;
 import org.dungeon.prototype.repository.converters.DirectionWritingConverter;
@@ -31,6 +35,17 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
         return "dungeon_proto_db";
     }
 
+    @Bean
+    @Override
+    public MongoClient mongoClient() {
+        return MongoClients.create("mongodb://mongo:27017");
+    }
+
+    @Override
+    protected void configureClientSettings(MongoClientSettings.Builder builder) {
+        builder.applyToClusterSettings(settings ->
+                settings.hosts(List.of(new ServerAddress("mongo", 27017)))); // 'mongo' is the service name in Docker
+    }
     @Bean
     @NotNull
     @Override

@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Optional;
 
 import static java.util.Objects.nonNull;
 import static org.dungeon.prototype.model.effect.attributes.Action.MULTIPLY;
@@ -37,11 +38,12 @@ public class ItemEffectsGenerator {
      * @param expectedWeightChange expected weight norm delta
      * @return added effect's weight norm
      */
-    public double addItemEffect(Long chatId, String itemId, double expectedWeightChange) {
+    public Optional<Double> addItemEffect(Long chatId, String itemId, double expectedWeightChange) {
         val item = itemService.findItem(chatId, itemId);
         if (nonNull(item)) {
             if (item instanceof Usable) {
-                return 0.0;
+                //TODO: fix after implementing usable
+                return Optional.empty();
             }
             val minEffectsAmount = itemsGenerationProperties.getEffects().getMinimumAmountPerItemMap().get(item.getAttributes().getQuality());
             val maxEffectsAmount = itemsGenerationProperties.getEffects().getMaximumAmountPerItemMap().get(item.getAttributes().getQuality());
@@ -50,14 +52,14 @@ public class ItemEffectsGenerator {
                 val amount = minEffectsAmount - item.getEffects().size();
                 double sum = 0.0;
                 for (int i = 0; i < amount; i++) {
-                     sum += generateAndAddItemEffect(expectedWeightChange / amount, item);
+                     sum += generateAndAddItemEffect(expectedWeightChange / amount, item).orElse(0.0);
                 }
-                return sum;
+                return Optional.of(sum);
             } else if (item.getEffects().size() < maxEffectsAmount) {
                 return generateAndAddItemEffect(expectedWeightChange, item);
             }
         }
-        return 0.0;
+        return Optional.empty();
     }
 
     /**
@@ -74,19 +76,19 @@ public class ItemEffectsGenerator {
             switch (vanillaItem.getItemType()) {
                 case WEAPON -> {
                     val weapon = new Weapon((Weapon) vanillaItem);
-                    if (generateAndAddItemEffect(expectedWeightChange, weapon) > 0.0) {
+                    if (generateAndAddItemEffect(expectedWeightChange, weapon).isPresent()) {
                         return Pair.create(weapon.getId(), weapon.getWeight().toVector().getNorm());
                     }
                 }
                 case WEARABLE -> {
                     val wearable = new Wearable((Wearable) vanillaItem);
-                    if (generateAndAddItemEffect(expectedWeightChange, wearable) > 0.0) {
+                    if (generateAndAddItemEffect(expectedWeightChange, wearable).isPresent()) {
                         return Pair.create(wearable.getId(), wearable.getWeight().toVector().getNorm());
                     }
                 }
                 case USABLE -> {
                     val usable = new Usable((Usable) vanillaItem);
-                    if (generateAndAddItemEffect(expectedWeightChange, usable) > 0.0) {
+                    if (generateAndAddItemEffect(expectedWeightChange, usable).isPresent()) {
                         return Pair.create(usable.getId(), usable.getWeight().toVector().getNorm());
                     }
                 }
@@ -95,7 +97,7 @@ public class ItemEffectsGenerator {
         return null;
     }
 
-    private double generateAndAddItemEffect(double expectedWeightChange, Item item) {
+    private Optional<Double> generateAndAddItemEffect(double expectedWeightChange, Item item) {
         Effect effect;
         Action action;
         EffectAttribute attribute;
@@ -120,11 +122,12 @@ public class ItemEffectsGenerator {
                 action = Action.values()[getRandomInt(0, Action.values().length)];
             }
         } else {
-            return 0.0;
+            //TODO: add case for usable
+            return Optional.empty();
         }
         effect = effectFactory.generateItemEffect(item, attribute, action, expectedWeightChange);
         item.getEffects().add(effect);
         item = itemService.saveItem(item);
-        return item.getWeight().toVector().getNorm();
+        return Optional.of(item.getWeight().toVector().getNorm());
     }
 }

@@ -46,6 +46,7 @@ public class InventoryService {
      * @return inventory, containing primary weapon and vest
      */
     public Inventory getDefaultInventory(Long chatId) {
+        log.debug("Setting default inventory");
         Inventory inventory = new Inventory();
         inventory.setItems(new ArrayList<>());
         inventory.setVest(getDefaultVest(chatId));
@@ -101,7 +102,7 @@ public class InventoryService {
         val item= itemService.findItem(chatId, itemId);
         val inventory = player.getInventory();
         if ((inventory.isFull())) {
-            //TODO implement prompt
+            //TODO: implement prompt
             messageService.sendInventoryItemMessage(chatId, item, CallbackType.INVENTORY, Optional.empty());
             return;
         }

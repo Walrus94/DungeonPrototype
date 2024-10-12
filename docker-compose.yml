@@ -1,0 +1,77 @@
+services:
+
+  zookeeper:
+    image: 'confluentinc/cp-zookeeper:latest'
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - '2181:2181'
+    networks:
+      - dungeon-net
+
+  kafka:
+    image: 'confluentinc/cp-kafka:latest'
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - '9092:9092'
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_DEFAULT_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_LOG4J_LOGGERS: "kafka.consumer.logger=DEBUG"
+    networks:
+      - dungeon-net
+
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    networks:
+      - dungeon-net
+
+  dungeon-prototype-app:
+    image: dungeon-prototype-app:latest   # This is the name of the Docker image for your Spring Boot app
+    container_name: dungeon-prototype-app
+    build:
+      context: .  # Build context is the project root where the Dockerfile is located
+    depends_on:
+      - kafka
+      - mongo
+      - huggingface-api
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092  # Kafka address within Docker network
+      SPRING_DATA_MONGODB_URI: mongodb://mongo:27017/dungeon_proto_db  # MongoDB connection string
+    networks:
+      - dungeon-net
+
+  huggingface-api:
+    image: huggingface-api:latest  # Docker image for the Hugging Face Python service
+    container_name: huggingface-api
+    build:
+      context: ./huggingface-api  # Directory where the Python Dockerfile and script are located
+    depends_on:
+      - kafka
+      - mongo
+    environment:
+      HUGGINGFACE_MODEL_FILE: /app/model
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092  # Kafka connection for the Python service
+      MONGO_DB_CONNECTION: mongodb://mongo:27017/dungeon_proto_db
+    networks:
+      - dungeon-net
+    volumes:
+      - ./model:/app/model
+
+networks:
+  dungeon-net:
+    driver: bridge
