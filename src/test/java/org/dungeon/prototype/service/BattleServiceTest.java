@@ -69,14 +69,14 @@ class BattleServiceTest extends BaseServiceUnitTest {
             val playerDefenseRatioMatrix = Map.of(MonsterAttackType.SLASH, playerDefenseRatioMap);
             when(battleProperties.getMonsterDefenseRatioMatrix()).thenReturn(monsterDefenseRatioMatrix);
             when(battleProperties.getPlayerDefenseRatioMatrix()).thenReturn(playerDefenseRatioMatrix);
-            doNothing().when(messageService).sendRoomMessage(CHAT_ID, player, currentRoom);
+            doNothing().when(messageService).sendMonsterRoomMessage(CHAT_ID, player, currentRoom);
 
             battleService.attack(CHAT_ID, player, currentRoom, CallbackType.ATTACK);
 
             verify(playerService).updatePlayer(player);
             assertEquals(15, player.getHp());
             assertEquals(6, monster.getHp());
-            verify(messageService).sendRoomMessage(CHAT_ID, player, currentRoom);
+            verify(messageService).sendMonsterRoomMessage(CHAT_ID, player, currentRoom);
         }
     }
 
@@ -133,13 +133,13 @@ class BattleServiceTest extends BaseServiceUnitTest {
             when(battleProperties.getMonsterDefenseRatioMatrix()).thenReturn(monsterDefenseRatioMatrix);
             when(battleProperties.getPlayerDefenseRatioMatrix()).thenReturn(playerDefenseRatioMatrix);
 
-            doNothing().when(messageService).sendRoomMessage(CHAT_ID, player, currentRoom);
+            doNothing().when(messageService).sendMonsterRoomMessage(CHAT_ID, player, currentRoom);
 
             battleService.attack(CHAT_ID, player, currentRoom, CallbackType.ATTACK);
 
             verify(playerService).updatePlayer(player);
             assertEquals(0, player.getHp());
-            verify(messageService).sendRoomMessage(CHAT_ID, player, currentRoom);
+            verify(messageService).sendMonsterRoomMessage(CHAT_ID, player, currentRoom);
         }
     }
 }

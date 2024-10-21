@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.annotations.aspect.AnswerCallback;
 import org.dungeon.prototype.exception.CallbackParsingException;
+import org.dungeon.prototype.exception.ItemGenerationException;
 import org.dungeon.prototype.exception.RestrictedOperationException;
 import org.dungeon.prototype.model.player.PlayerAttribute;
 import org.dungeon.prototype.model.room.content.MonsterRoom;
@@ -23,16 +24,9 @@ import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 
-import static org.dungeon.prototype.properties.CallbackType.BOOTS;
-import static org.dungeon.prototype.properties.CallbackType.DEFAULT_ERROR_RETURN;
-import static org.dungeon.prototype.properties.CallbackType.GLOVES;
-import static org.dungeon.prototype.properties.CallbackType.HEAD;
-import static org.dungeon.prototype.properties.CallbackType.INVENTORY;
-import static org.dungeon.prototype.properties.CallbackType.LEFT_HAND;
-import static org.dungeon.prototype.properties.CallbackType.MERCHANT_SELL_MENU;
-import static org.dungeon.prototype.properties.CallbackType.RIGHT_HAND;
-import static org.dungeon.prototype.properties.CallbackType.VEST;
+import static org.dungeon.prototype.properties.CallbackType.*;
 import static org.dungeon.prototype.util.LevelUtil.getDirectionSwitchByCallBackData;
 import static org.dungeon.prototype.util.LevelUtil.getErrorMessageByCallBackData;
 import static org.dungeon.prototype.util.LevelUtil.getNextPointInDirection;
@@ -96,7 +90,7 @@ public class CallbackHandler {
                         handleOpenMerchantSellMenu(chatId);
                 case MAP ->
                         handleSendingMapMessage(chatId);
-                case INVENTORY ->
+                case INVENTORY, ITEM_INVENTORY_BACK ->
                         handleSendingInventoryMessage(chatId);
                 case PLAYER_STATS ->
                         playerService.sendPlayerStatsMessage(chatId);
@@ -106,7 +100,6 @@ public class CallbackHandler {
                         handleCollectingTreasure(chatId);
                 case RESTORE_ARMOR -> roomService.restoreArmor(chatId);
                 case SHARPEN_WEAPON -> inventoryService.sharpenWeapon(chatId);
-                case DEFAULT_ERROR_RETURN -> handleErrorReturn(chatId);
             }
         } catch (CallbackParsingException e) {
             log.warn("Processing composite callback, parsing failed: {}", e.getMessage());
@@ -216,15 +209,16 @@ public class CallbackHandler {
             val playerAttribute = PlayerAttribute.fromValue(callData.replaceFirst("^" + "btn_player_attribute_upgrade_", ""));
             roomService.upgradePlayerAttribute(chatId, playerAttribute);
         }
-        //TODO add parsing exception
-    }
-
-    private void handleErrorReturn(Long chatId) {
-        botCommandHandler.processStartAction(chatId);
+        //TODO: add parsing exception
     }
 
     private void handleStartingNewGame(Long chatId) {
-        itemGenerator.generateItems(chatId);
+        try {
+            itemGenerator.generateItems(chatId).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new ItemGenerationException(chatId, e.getMessage(), START_GAME);
+        }
+        log.debug("Item generation completed for chat {}!", chatId);
         val defaultInventory = inventoryService.getDefaultInventory(chatId);
         var player = playerService.getPlayerPreparedForNewGame(chatId, defaultInventory);
         player = effectService.updatePlayerEffects(player);
@@ -271,7 +265,7 @@ public class CallbackHandler {
         val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
         val newDirection = getDirectionSwitchByCallBackData(player.getDirection(), callBackData);
         if (!currentRoom.getAdjacentRooms().containsKey(newDirection) || !currentRoom.getAdjacentRooms().get((newDirection))) {
-            throw new RestrictedOperationException(chatId, "move to room", getErrorMessageByCallBackData(callBackData), DEFAULT_ERROR_RETURN);
+            throw new RestrictedOperationException(chatId, "move to room", getErrorMessageByCallBackData(callBackData), MENU_BACK);
         }
         val nextRoom = levelService.getRoomByChatIdAndCoordinates(chatId, getNextPointInDirection(currentRoom.getPoint(), newDirection));
         log.debug("Moving to {} door: {}", callBackData.toString().toLowerCase(), nextRoom.getPoint());
@@ -282,14 +276,14 @@ public class CallbackHandler {
         val player = playerService.getPlayer(chatId);
         val level = levelService.getLevel(chatId);
         val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
-        levelService.shrineRefill(chatId, player, currentRoom, level);
+        levelService.shrineUsage(chatId, player, currentRoom, level);
     }
 
     private void handleAttack(Long chatId, CallbackType callBackData) {
         var player = playerService.getPlayer(chatId);
         val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
         if (!(currentRoom.getRoomContent() instanceof MonsterRoom)) {
-            throw new RestrictedOperationException(chatId, "attack", "No monster to attack!", DEFAULT_ERROR_RETURN);
+            throw new RestrictedOperationException(chatId, "attack", "No monster to attack!", MENU_BACK);
         }
         battleService.attack(chatId, player, currentRoom, callBackData);
     }
@@ -313,7 +307,7 @@ public class CallbackHandler {
 
     private void handleSendingInventoryMessage(Long chatId) {
         val player = playerService.getPlayer(chatId);
-        inventoryService.sendOrUpdateInventoryMessage(chatId, player);
+        inventoryService.sendInventoryMessage(chatId, player);
     }
 
     private CallbackType getCallbackType(String callbackData) {

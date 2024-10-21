@@ -288,16 +288,13 @@ public class KeyboardService {
                 .build();
     }
 
-    public InlineKeyboardMarkup getErrorKeyboardMarkup(CallbackType buttonData) {
+    public InlineKeyboardMarkup getErrorKeyboardMarkup(CallbackType button) {
         return InlineKeyboardMarkup.builder()
                 .keyboard(List.of(
-                        List.of(
-                                InlineKeyboardButton.builder()
-                                        .text("Return")
-                                        .callbackData(buttonData.toString())
-                                        .build()
-                        )
-                ))
+                        List.of(InlineKeyboardButton.builder()
+                                .text(keyboardButtonProperties.getButtons().get(button).getName())
+                                .callbackData(keyboardButtonProperties.getButtons().get(button).getCallback())
+                                .build())))
                 .build();
 
     }

@@ -7,6 +7,7 @@ import org.dungeon.prototype.exception.EntityNotFoundException;
 import org.dungeon.prototype.model.player.Player;
 import org.dungeon.prototype.model.player.PlayerAttribute;
 import org.dungeon.prototype.model.room.Room;
+import org.dungeon.prototype.model.room.content.Anvil;
 import org.dungeon.prototype.model.room.content.Merchant;
 import org.dungeon.prototype.model.room.content.RoomContent;
 import org.dungeon.prototype.properties.CallbackType;
@@ -43,7 +44,7 @@ public class RoomService {
      * to build and send room message
      *
      * @param chatId id of chat where message sent
-     *               ]
+     *
      */
     public void sendOrUpdateRoomMessage(Long chatId, Player player) {
         val room = getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
@@ -59,7 +60,7 @@ public class RoomService {
      */
     public Room getRoomByIdAndChatId(Long chatId, String id) {
         val roomDocument = roomRepository.findByChatIdAndId(chatId, id).orElseThrow(() ->
-                    new EntityNotFoundException(chatId, "room", CallbackType.DEFAULT_ERROR_RETURN,
+                    new EntityNotFoundException(chatId, "room", CallbackType.CONTINUE_GAME,
                             Pair.create("roomId", id)));
         return RoomMapper.INSTANCE.mapToRoom(roomDocument);
     }
@@ -131,7 +132,7 @@ public class RoomService {
                     merchant.getItems().stream()
                             .filter(item -> itemId.equals(item.getId()))
                             .findFirst().orElseThrow(() ->
-                                    new EntityNotFoundException(chatId, "item", CallbackType.DEFAULT_ERROR_RETURN,
+                                    new EntityNotFoundException(chatId, "item", CallbackType.MERCHANT_BUY_MENU,
                                             Pair.create("itemId", itemId))));
         }
     }
@@ -143,10 +144,16 @@ public class RoomService {
      */
     public void restoreArmor(Long chatId) {
         var player = playerService.getPlayer(chatId);
-        player = effectService.updateArmorEffect(player);
-        player.restoreArmor();
-        playerService.updatePlayer(player);
         val currentRoom = getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+        if (currentRoom.getRoomContent() instanceof Anvil anvil) {
+            if (!anvil.isArmorRestored()) {
+                player = effectService.updateArmorEffect(player);
+                player.restoreArmor();
+                playerService.updatePlayer(player);
+                anvil.setArmorRestored(true);
+                saveOrUpdateRoomContent(anvil);
+            }
+        }
         messageService.sendRoomMessage(chatId, player, currentRoom);
     }
 

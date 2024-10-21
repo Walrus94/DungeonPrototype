@@ -10,13 +10,16 @@ import org.dungeon.prototype.model.inventory.attributes.wearable.WearableAttribu
 import org.dungeon.prototype.model.inventory.attributes.wearable.WearableType;
 import org.dungeon.prototype.model.inventory.items.Weapon;
 import org.dungeon.prototype.model.inventory.items.Wearable;
-import org.junit.Ignore;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Stream;
 
+import static org.dungeon.prototype.TestData.getInventory;
 import static org.junit.jupiter.api.Assertions.*;
 
 class InventoryTest extends BaseUnitTest {
@@ -393,27 +396,60 @@ class InventoryTest extends BaseUnitTest {
     }
 
     @Test
-    @Ignore
+    @DisplayName("Successfully retrieves inventory armor items")
     void getArmorItems() {
+        Inventory inventory = getInventory();
+        val armorItems = Stream.of(inventory.getBoots(), inventory.getVest(),
+                        inventory.getGloves(), inventory.getHelmet())
+                .filter(Objects::nonNull)
+                .toList();
+
+        assertTrue(armorItems.containsAll(inventory.getArmorItems()));
+        assertTrue(inventory.getArmorItems().containsAll(armorItems));
     }
 
     @Test
-    @Ignore
+    @DisplayName("Successfully retrieves inventory weapons")
     void getWeapons() {
+        Inventory inventory = getInventory();
+        val weapons = Stream.of(inventory.getPrimaryWeapon(), inventory.getSecondaryWeapon())
+                .filter(Objects::nonNull)
+                .toList();
+
+        assertTrue(weapons.containsAll(inventory.getWeapons()));
+        assertTrue(inventory.getWeapons().containsAll(weapons));
     }
 
     @Test
-    @Ignore
+    @DisplayName("Successfully calculates max defense of inventory")
     void calculateMaxDefense() {
+        Inventory inventory = getInventory();
+        val expectedMaxDefense = inventory.getArmorItems().stream().mapToInt(Wearable::getArmor).sum();
+
+        assertEquals(expectedMaxDefense, inventory.calculateMaxDefense());
     }
 
     @Test
-    @Ignore
+    @DisplayName("Successfully clears inventory")
     void clear() {
+        Inventory inventory = getInventory();
+
+        inventory.clear();
+
+        val items = Stream.of(inventory.getItems(),
+                        inventory.getArmorItems(), inventory.getWeapons())
+                .flatMap(Collection::stream)
+                .toList();
+
+        assertTrue(items.isEmpty());
     }
 
     @Test
-    @Ignore
+    @DisplayName("Successfully validates if inventory contains item")
     void isEquipped() {
+        Inventory inventory = getInventory();
+        Item item = inventory.getPrimaryWeapon();
+
+        assertTrue(inventory.isEquipped(item));
     }
 }

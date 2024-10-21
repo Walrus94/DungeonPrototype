@@ -5,7 +5,6 @@ import lombok.NoArgsConstructor;
 import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.RoomType;
 import org.dungeon.prototype.model.room.RoomsSegment;
-import org.dungeon.prototype.model.room.content.EmptyRoom;
 import org.dungeon.prototype.model.ui.level.GridSection;
 import org.dungeon.prototype.model.ui.level.LevelMap;
 
@@ -38,7 +37,6 @@ public class Level {
     }
 
     public void updateRoomType(Point point, RoomType type) {
-        getRoomByCoordinates(point).setRoomContent(new EmptyRoom(type));
         grid[point.getX()][point.getY()].setEmoji(getIcon(Optional.of(type)));
     }
 

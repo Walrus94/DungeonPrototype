@@ -14,6 +14,17 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 @Service
 public class MessageSender {
 
+    private static final String DEFAULT_PARSE_MODE = "Markdown";
+
+    @MessageSending
+    public SendMessage sendInfoMessage(Long chatId, String text) {
+        return SendMessage.builder()
+                .chatId(chatId)
+                .text(text)
+                .parseMode(DEFAULT_PARSE_MODE)
+                .build();
+    }
+
     /**
      * Sends text message using {@link org.dungeon.prototype.bot.DungeonBot}
      * via {@link MessageSending} aspect
@@ -27,7 +38,7 @@ public class MessageSender {
         return SendMessage.builder()
                 .chatId(chatId)
                 .text(text)
-                .parseMode("Markdown")
+                .parseMode(DEFAULT_PARSE_MODE)
                 .replyMarkup(keyboardMarkup)
                 .build();
     }
@@ -44,6 +55,7 @@ public class MessageSender {
         return SendMessage.builder()
                 .chatId(chatId)
                 .text(text)
+                .parseMode(DEFAULT_PARSE_MODE)
                 .build();
     }
 
@@ -62,7 +74,7 @@ public class MessageSender {
                 .chatId(chatId)
                 .caption(caption)
                 .photo(inputFile)
-                .parseMode("Markdown")
+                .parseMode(DEFAULT_PARSE_MODE)
                 .replyMarkup(keyboardMarkup)
                 .build();
     }

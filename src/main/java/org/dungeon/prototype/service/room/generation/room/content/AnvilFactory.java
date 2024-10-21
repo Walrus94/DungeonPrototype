@@ -35,8 +35,8 @@ public class AnvilFactory {
                 new ObjectiveFunction(objective),
                 GoalType.MINIMIZE,
                 new InitialGuess(new double[]{5.0, 0.001}),
-                new SimpleBounds(new double[]{0.0, Double.POSITIVE_INFINITY},
-                        new double[]{0.0, 1.0})
+                new SimpleBounds(new double[]{0.0, 0.0},
+                        new double[]{Double.POSITIVE_INFINITY, 1.0})
         );
 
         double[] optimizedAttributes = result.getPoint();

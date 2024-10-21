@@ -24,6 +24,8 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Optional;
 
+import static org.dungeon.prototype.properties.CallbackType.MERCHANT_BUY_MENU;
+
 @Slf4j
 @Service
 public class InventoryService {
@@ -46,6 +48,8 @@ public class InventoryService {
      * @return inventory, containing primary weapon and vest
      */
     public Inventory getDefaultInventory(Long chatId) {
+        log.debug("Setting default inventory");
+        messageService.sendPlayerGeneratingInfoMessage(chatId);
         Inventory inventory = new Inventory();
         inventory.setItems(new ArrayList<>());
         inventory.setVest(getDefaultVest(chatId));
@@ -69,7 +73,7 @@ public class InventoryService {
      * Passes data required for inventory menu message
      * @param chatId id of chat where message sent
      */
-    public void sendOrUpdateInventoryMessage(Long chatId, Player player) {
+    public void sendInventoryMessage(Long chatId, Player player) {
         messageService.sendInventoryMessage(chatId, player.getInventory());
     }
 
@@ -101,7 +105,7 @@ public class InventoryService {
         val item= itemService.findItem(chatId, itemId);
         val inventory = player.getInventory();
         if ((inventory.isFull())) {
-            //TODO implement prompt
+            //TODO: implement prompt
             messageService.sendInventoryItemMessage(chatId, item, CallbackType.INVENTORY, Optional.empty());
             return;
         }
@@ -143,11 +147,11 @@ public class InventoryService {
         val player = playerService.getPlayer(chatId);
         val currentRoom = roomService.getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
         if (player.getInventory().isFull()) {
-            throw new RestrictedOperationException(chatId, "buy item", "Inventory is full!", CallbackType.DEFAULT_ERROR_RETURN);
+            throw new RestrictedOperationException(chatId, "buy item", "Inventory is full!", MERCHANT_BUY_MENU);
         }
         val item = itemService.findItem(chatId, itemId);
         if (player.getGold() < item.getBuyingPrice()) {
-            throw new RestrictedOperationException(chatId, "buy item", "Not enough money!", CallbackType.DEFAULT_ERROR_RETURN);
+            throw new RestrictedOperationException(chatId, "buy item", "Not enough money!", MERCHANT_BUY_MENU);
         }
         player.getInventory().addItem(item);
         ((Merchant) currentRoom.getRoomContent()).getItems().remove(item);

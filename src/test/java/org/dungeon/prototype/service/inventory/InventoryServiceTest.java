@@ -147,7 +147,7 @@ class InventoryServiceTest extends BaseServiceUnitTest {
     void sendOrUpdateInventoryMessage() {
         val player = getPlayer(CHAT_ID);
 
-        inventoryService.sendOrUpdateInventoryMessage(CHAT_ID, player);
+        inventoryService.sendInventoryMessage(CHAT_ID, player);
 
         verify(messageService).sendInventoryMessage(CHAT_ID, player.getInventory());
     }

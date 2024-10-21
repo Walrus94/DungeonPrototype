@@ -21,8 +21,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.Objects.nonNull;
-import static org.dungeon.prototype.bot.ChatState.ACTIVE;
-import static org.dungeon.prototype.bot.ChatState.AWAITING_NICKNAME;
+import static org.dungeon.prototype.bot.state.ChatState.AWAITING_NICKNAME;
+import static org.dungeon.prototype.bot.state.ChatState.PRE_GAME_MENU;
 import static org.dungeon.prototype.util.PlayerUtil.getPrimaryAttack;
 import static org.dungeon.prototype.util.PlayerUtil.getSecondaryAttack;
 
@@ -45,7 +45,7 @@ public class PlayerService {
     public Player getPlayer(Long chatId) {
         val playerDocument = playerRepository.findByChatId(chatId)
                 .orElseThrow(() ->
-                        new EntityNotFoundException(chatId, "player", CallbackType.DEFAULT_ERROR_RETURN));
+                        new EntityNotFoundException(chatId, "player", CallbackType.BOT_START));
         return PlayerMapper.INSTANCE.mapToPlayer(playerDocument);
     }
 
@@ -73,7 +73,7 @@ public class PlayerService {
      * @param chatId current chat id
      * @param nickname new player's nickname
      */
-    @ChatStateUpdate(from = AWAITING_NICKNAME, to = ACTIVE)
+    @ChatStateUpdate(from = AWAITING_NICKNAME, to = PRE_GAME_MENU)
     public void registerPlayerAndSendStartMessage(Long chatId, String nickname) {
         val player = addNewPlayer(chatId, nickname);
         messageService.sendStartMessage(chatId, player.getNickname());
@@ -128,7 +128,7 @@ public class PlayerService {
      */
     public String getNicknameByChatId(Long chatId) {
         return playerRepository.getNicknameByChatId(chatId).map(NicknameProjection::getNickname).orElseThrow(() ->
-                new EntityNotFoundException(chatId, "player", CallbackType.DEFAULT_ERROR_RETURN));
+                new EntityNotFoundException(chatId, "player", CallbackType.CONTINUE_GAME));
         }
 
     /**
