@@ -60,12 +60,15 @@ public class BattleService {
             val newLevelAchieved = player.addXp(monster.getXpReward());
             if (newLevelAchieved) {
                 messageService.sendLevelUpgradeMessage(chatId, player);
+            } else {
+                playerService.updatePlayer(player);
+                messageService.sendRoomMessage(chatId, player, currentRoom);
             }
         } else {
             monsterAttacks(player, monster);
+            playerService.updatePlayer(player);
+            messageService.sendMonsterRoomMessage(chatId, player, currentRoom);
         }
-        playerService.updatePlayer(player);
-        messageService.sendRoomMessage(chatId, player, currentRoom);
     }
 
     private void monsterAttacks(Player player, Monster monster) {

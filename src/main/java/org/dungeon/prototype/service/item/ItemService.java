@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 import static org.apache.commons.math3.util.FastMath.abs;
 
 @Slf4j
@@ -70,12 +71,12 @@ public class ItemService {
         List<ItemDocument> documents = itemRepository.findWearablesByChatIdTypeAndMinWeight(chatId, wearableType, PageRequest.of(0, 1));
         if (isNull(documents) || documents.isEmpty()) {
             log.error("Unable find most lightweight wearable of type {} for chat id {}!", wearableType, chatId);
-            throw new EntityNotFoundException(chatId, wearableType.toString(), CallbackType.DEFAULT_ERROR_RETURN);
+            throw new EntityNotFoundException(chatId, wearableType.toString(), CallbackType.MENU_BACK);
         }
 
         //TODO: refactor
         var document = documents.getFirst();
-        if (isNull(document.getName())) {
+        if (nonNull(document) && isNull(document.getName())) {
             itemNamingService.requestNameGeneration(itemMapper.mapToWearable(document));
             while (isNull(document.getName())) {
                 log.debug("Waiting for name generation of item {} for chat {}...", document.getId(), chatId);
@@ -97,12 +98,12 @@ public class ItemService {
         val documents = itemRepository.findMainWeaponByChatIdAndMinWeight(chatId, PageRequest.of(0, 1));
         if (isNull(documents) || documents.isEmpty()) {
             log.error("Unable to find most lightweight weapon for chat id {}!", chatId);
-            throw new EntityNotFoundException(chatId, "weapon", CallbackType.DEFAULT_ERROR_RETURN);
+            throw new EntityNotFoundException(chatId, "weapon", CallbackType.MENU_BACK);
         }
 
         //TODO: refactor
         var document = documents.getFirst();
-        if (isNull(document.getName())) {
+        if (nonNull(document) && isNull(document.getName())) {
             itemNamingService.requestNameGeneration(itemMapper.mapToWeapon(document));
             while (isNull(document.getName())) {
                 log.debug("Waiting for name generation of item {} for chat {}...", document.getId(), chatId);
@@ -154,7 +155,7 @@ public class ItemService {
      */
     public Item findItem(Long chatId, String itemId) {
         val itemDocument = itemRepository.findByChatIdAndId(chatId, itemId).orElseThrow(() ->
-                new EntityNotFoundException(chatId, "item", CallbackType.DEFAULT_ERROR_RETURN, Pair.create("itemId", itemId))
+                new EntityNotFoundException(chatId, "item", CallbackType.MENU_BACK, Pair.create("itemId", itemId))
         );
         switch (itemDocument.getItemType()) {
             case WEAPON -> {

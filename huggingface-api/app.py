@@ -73,14 +73,14 @@ def process_kafka_message(message):
         messages = [
             { 
                 "role": "system", 
-                "content": "Generate short (1-3 words) name for item from fantasy dungeon crawler rpg by given description. Respond only with item name, without formatting, quotation marks, dots, or additional text" },
+                "content": "Generate short (1-3 words) name for item from fantasy dungeon crawler rpg by given description. Respond with one line of text containing item name, without formatting, quotation marks, dots, or additional text" },
             {
                 "role": "user",
                 "content": prompt
             }
         ],
         temperature = 0.8,
-        max_tokens = 10
+        max_tokens = 20
     )
     try:
         logging.debug(f"Raw response from LLM: {response}")

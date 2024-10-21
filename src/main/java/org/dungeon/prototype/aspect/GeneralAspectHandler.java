@@ -106,7 +106,7 @@ public class GeneralAspectHandler {
                             }
                             monster.setCurrentAttack(monster.getAttackPattern().poll());
                             monsterService.updateMonster(effectService.updateMonsterEffects(monsterRoom.getMonster()));
-                            messageService.sendRoomMessage(chatId, player, room);
+                            messageService.sendMonsterRoomMessage(chatId, player, room);
                         }
                     }
                 }

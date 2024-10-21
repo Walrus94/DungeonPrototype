@@ -4,7 +4,9 @@ import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.annotations.aspect.ChatStateUpdate;
+import org.dungeon.prototype.bot.state.ChatState;
 import org.dungeon.prototype.exception.PlayerException;
+import org.dungeon.prototype.model.Level;
 import org.dungeon.prototype.model.effect.Effect;
 import org.dungeon.prototype.model.effect.ExpirableEffect;
 import org.dungeon.prototype.model.inventory.Inventory;
@@ -33,8 +35,14 @@ import java.util.stream.Collectors;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.apache.commons.math3.util.FastMath.max;
-import static org.dungeon.prototype.bot.ChatState.ACTIVE;
-import static org.dungeon.prototype.bot.ChatState.AWAITING_NICKNAME;
+import static org.dungeon.prototype.bot.state.ChatState.AWAITING_NICKNAME;
+import static org.dungeon.prototype.bot.state.ChatState.BATTLE;
+import static org.dungeon.prototype.bot.state.ChatState.GAME;
+import static org.dungeon.prototype.bot.state.ChatState.GAME_MENU;
+import static org.dungeon.prototype.bot.state.ChatState.GENERATING_ITEMS;
+import static org.dungeon.prototype.bot.state.ChatState.GENERATING_LEVEL;
+import static org.dungeon.prototype.bot.state.ChatState.GENERATING_PLAYER;
+import static org.dungeon.prototype.bot.state.ChatState.PRE_GAME_MENU;
 import static org.dungeon.prototype.properties.CallbackType.ITEM_INVENTORY;
 import static org.dungeon.prototype.properties.CallbackType.ITEM_INVENTORY_EQUIP;
 import static org.dungeon.prototype.properties.CallbackType.ITEM_INVENTORY_UN_EQUIP;
@@ -82,7 +90,7 @@ public class MessageService {
                 keyboardService.getStartInlineKeyboardMarkup(false));
     }
 
-    @ChatStateUpdate(from = ACTIVE, to = AWAITING_NICKNAME)
+    @ChatStateUpdate(from = PRE_GAME_MENU, to = AWAITING_NICKNAME)
     public void sendRegisterMessage(Long chatId) {
         messageSender.sendPromptMessage(
                 chatId,
@@ -102,18 +110,22 @@ public class MessageService {
      * @param player current player
      * @param room current room
      */
+    @ChatStateUpdate(from = {PRE_GAME_MENU, GAME_MENU, GAME, BATTLE}, to = GAME)
     public void sendRoomMessage(Long chatId, Player player, Room room) {
-        String caption;
-        if (room.getRoomContent() instanceof MonsterRoom monsterRoom) {
-            caption = getRoomMessageCaption(player, monsterRoom.getMonster());
-        } else {
-            caption = getRoomMessageCaption(player);
-        }
+        val caption = getRoomMessageCaption(player);
+        val keyboardMarkup = keyboardService.getRoomInlineKeyboardMarkup(room, player);
+        val inputFile = getImage(room);
+        messageSender.sendPhotoMessage(chatId, caption, keyboardMarkup, inputFile);
+    }
+    @ChatStateUpdate(from = {PRE_GAME_MENU, GAME_MENU, GAME, BATTLE}, to = BATTLE)
+    public void sendMonsterRoomMessage(Long chatId, Player player, Room room) {
+        val caption = getRoomMessageCaption(player, ((MonsterRoom) room.getRoomContent()).getMonster());
         val keyboardMarkup = keyboardService.getRoomInlineKeyboardMarkup(room, player);
         val inputFile = getImage(room);
         messageSender.sendPhotoMessage(chatId, caption, keyboardMarkup, inputFile);
     }
 
+    @ChatStateUpdate(from = {GAME, GAME_MENU}, to = GAME_MENU)
     public void sendPlayerStatsMessage(Long chatId, Player player) {
         messageSender.sendMessage(
                 chatId,
@@ -121,6 +133,7 @@ public class MessageService {
                 keyboardService.getPlayerStatsReplyMarkup());
     }
 
+    @ChatStateUpdate(from = {GAME, GAME_MENU}, to = GAME_MENU)
     public void sendInventoryMessage(Long chatId, Inventory inventory) {
         messageSender.sendMessage(
                 chatId,
@@ -128,6 +141,7 @@ public class MessageService {
                 keyboardService.getInventoryReplyMarkup(inventory, ITEM_INVENTORY, ITEM_INVENTORY_UN_EQUIP, ITEM_INVENTORY_EQUIP, List.of(MAP, PLAYER_STATS)));
     }
 
+    @ChatStateUpdate(from = {GAME, GAME_MENU}, to = GAME_MENU)
     public void sendTreasureMessage(Long chatId, Treasure treasure) {
         messageSender.sendMessage(
                 chatId,
@@ -174,6 +188,38 @@ public class MessageService {
                         Collections.singletonList(MERCHANT_BUY_MENU)));
     }
 
+    @ChatStateUpdate(from = ChatState.PRE_GAME_MENU, to = ChatState.GENERATING_ITEMS)
+    public void sendItemsGeneratingInfoMessage(Long chatId) {
+        messageSender.sendInfoMessage(chatId, "Generating items...");
+    }
+
+    @ChatStateUpdate(from = {GAME, GENERATING_PLAYER}, to = GENERATING_LEVEL)
+    public void sendLevelGeneratingInfoMessage(long chatId, Integer levelNumber) {
+        messageSender.sendInfoMessage(chatId, String.format("Generating level %d...", levelNumber));
+    }
+
+    @ChatStateUpdate(from = GENERATING_ITEMS, to = GENERATING_PLAYER)
+    public void sendPlayerGeneratingInfoMessage(Long chatId) {
+        messageSender.sendInfoMessage(chatId, "Generating player and packing up inventory...");
+    }
+
+    @ChatStateUpdate(from = ChatState.GENERATING_LEVEL, to = GAME)
+    public void sendNewLevelMessage(Long chatId, Player player, Level level, int number) {
+        if (nonNull(level)) {
+            log.debug("Player started level {}, current point, {}\n\nPlayer: {}", number, level.getStart().getPoint(), player);
+            sendRoomMessage(chatId, player, level.getStart());
+        }
+    }
+
+    @ChatStateUpdate(from = {GAME, GAME_MENU}, to = GAME_MENU)
+    public void sendMapMenuMessage(Long chatId, String levelMap) {
+        messageSender.sendMessage(
+                chatId,
+                levelMap,
+                keyboardService.getMapInlineKeyboardMarkup());
+    }
+
+    @ChatStateUpdate(from = {BATTLE}, to = PRE_GAME_MENU)
     public void sendLevelUpgradeMessage(Long chatId, Player player) {
         messageSender.sendMessage(
                 chatId,
@@ -181,11 +227,23 @@ public class MessageService {
                 keyboardService.getNewLevelUpgradeReplyMarkup(player));
     }
 
+    @ChatStateUpdate(from = GAME, to = PRE_GAME_MENU)
     public void sendDeathMessage(Long chatId) {
         messageSender.sendMessage(
                 chatId,
                 "You are dead!",
                 keyboardService.getDeathMessageInlineKeyboardMarkup());
+    }
+
+    public void sendStopMessage(long chatId) {
+        messageSender.sendInfoMessage(chatId, "Bot stopped. to continue game, please send */start* command");
+    }
+
+    public void sendErrorMessage(PlayerException e) {
+        messageSender.sendMessage(
+                e.getChatId(),
+                e.getMessage(),
+                keyboardService.getErrorKeyboardMarkup(e.getButton()));
     }
 
     private String getRoomMessageCaption(Player player, Monster monster) {
@@ -266,20 +324,6 @@ public class MessageService {
         };
     }
 
-    public void sendMapMenuMessage(Long chatId, String levelMap) {
-       messageSender.sendMessage(
-                chatId,
-                levelMap,
-                keyboardService.getMapInlineKeyboardMarkup());
-    }
-
-    public void sendErrorMessage(PlayerException e) {
-        messageSender.sendMessage(
-                e.getChatId(),
-                e.getMessage(),
-                keyboardService.getErrorKeyboardMarkup(e.getButtonData()));
-    }
-
     private String getPlayerStatsMessageCaption(Player player) {
         val emoji = messagingConstants.getEmoji();
         val permanentEffects = player.getEffects().stream()
@@ -337,4 +381,5 @@ public class MessageService {
                 emojis.get(BROWN_BLOCK).repeat(max(0, emptyLength)) +
                 xpForNextLevel + " XP";
     }
+
 }

@@ -9,6 +9,11 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
+bot:
+  username: dungeon_prototype_bot
+  path: /webhook
+  webhook:
+  token:
 
 kafka-topics:
   item-naming-topic: item-naming-topic
@@ -585,7 +590,3 @@ logging:
             RoomGenerationUtils: DEBUG
             LevelUtil: DEBUG
             RandomUtil: DEBUG
-
-bot:
-  username: dungeon_prototype_bot
-  token:

@@ -48,5 +48,4 @@ public enum CallbackType {
     RESTORE_ARMOR,
     SHARPEN_WEAPON,
     PLAYER_ATTRIBUTE_UPGRADE,
-    DEFAULT_ERROR_RETURN
 }

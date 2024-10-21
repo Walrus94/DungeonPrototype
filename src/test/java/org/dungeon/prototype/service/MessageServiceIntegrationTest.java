@@ -37,12 +37,8 @@ import static org.dungeon.prototype.model.Direction.S;
 import static org.dungeon.prototype.model.Direction.W;
 import static org.dungeon.prototype.model.room.RoomType.NORMAL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @SpringBootTest(classes = {
         TestConfig.class,
@@ -70,7 +66,7 @@ public class MessageServiceIntegrationTest {
         val message = mock(Message.class);
         ArgumentCaptor<SendMessage> messageCaptor = ArgumentCaptor.forClass(SendMessage.class);
 
-        when(dungeonBot.execute(any(SendMessage.class))).thenReturn(message);
+        doNothing().when(dungeonBot).sendMessage(anyLong(), any(SendMessage.class));
         when(message.getMessageId()).thenReturn(MESSAGE_ID);
 
         messageService.sendStartMessage(CHAT_ID, "nickname");
@@ -88,7 +84,7 @@ public class MessageServiceIntegrationTest {
     public void sendsRegisterMessage() {
         val message = mock(Message.class);
         ArgumentCaptor<SendMessage> messageCaptor = ArgumentCaptor.forClass(SendMessage.class);
-        when(dungeonBot.execute(any(SendMessage.class))).thenReturn(message);
+        doNothing().when(dungeonBot).sendMessage(anyLong(), any(SendMessage.class));
         when(message.getMessageId()).thenReturn(MESSAGE_ID);
         when(message.getChatId()).thenReturn(CHAT_ID);
 

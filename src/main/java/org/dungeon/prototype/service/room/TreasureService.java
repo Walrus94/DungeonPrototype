@@ -2,10 +2,12 @@ package org.dungeon.prototype.service.room;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.dungeon.prototype.exception.RestrictedOperationException;
 import org.dungeon.prototype.model.player.Player;
 import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.RoomType;
 import org.dungeon.prototype.model.room.content.Treasure;
+import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.service.PlayerService;
 import org.dungeon.prototype.service.inventory.InventoryService;
 import org.dungeon.prototype.service.level.LevelService;
@@ -76,19 +78,18 @@ public class TreasureService {
 
         player.addGold(gold);
         treasure.setGold(0);
+        playerService.updatePlayer(player);
+        roomService.saveOrUpdateRoom(currentRoom);
         if (!items.isEmpty()) {
             if (!player.getInventory().addItems(items)) {
-                log.info("No room in the inventory!");
-                playerService.updatePlayer(player);
-                roomService.saveOrUpdateRoom(currentRoom);
-                return;
+                throw new RestrictedOperationException(chatId, "collect treasure", "No room in the inventory!", CallbackType.MENU_BACK);
             } else {
                 treasure.setItems(Collections.emptySet());
+                playerService.updatePlayer(player);
+                inventoryService.saveOrUpdateInventory(player.getInventory());
             }
         }
-        playerService.updatePlayer(player);
         levelService.updateAfterTreasureLooted(currentRoom);
-        inventoryService.saveOrUpdateInventory(player.getInventory());
         messageService.sendRoomMessage(chatId, player, currentRoom);
     }
 

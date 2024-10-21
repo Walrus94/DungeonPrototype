@@ -1,14 +1,17 @@
 package org.dungeon.prototype.aspect;
 
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.After;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.dungeon.prototype.annotations.aspect.ChatStateUpdate;
-import org.dungeon.prototype.bot.ChatState;
+import org.dungeon.prototype.bot.state.ChatState;
+import org.dungeon.prototype.service.state.ChatStateService;
 import org.dungeon.prototype.bot.DungeonBot;
 import org.dungeon.prototype.exception.ChatStateUpdateException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +25,8 @@ import java.lang.reflect.Method;
 public class ChatStateAspectProcessor {
     @Autowired
     private DungeonBot dungeonBot;
+    @Autowired
+    private ChatStateService chatStateService;
 
     @Before(value = "@annotation(org.dungeon.prototype.annotations.aspect.InitializeChatContext)")
     public void initializeChatContext(JoinPoint joinPoint) {
@@ -37,7 +42,7 @@ public class ChatStateAspectProcessor {
         ChatStateUpdate chatStateUpdate = method.getAnnotation(ChatStateUpdate.class);
         if (chatStateUpdate != null) {
             // Access the annotation values
-            ChatState from = chatStateUpdate.from();
+            ChatState[] from = chatStateUpdate.from();
             ChatState to = chatStateUpdate.to();
 
             return handleChatStateUpdate(joinPoint, from, to);
@@ -45,24 +50,37 @@ public class ChatStateAspectProcessor {
         return null;
     }
 
+    @After(value = "@annotation(org.dungeon.prototype.annotations.aspect.ClearChatContext)")
+    public void clearChatContext(JoinPoint joinPoint) {
+        handleClearChatContext(joinPoint);
+    }
+
     private void handleChatContextInitialization(JoinPoint joinPoint) {
         Object[] args = joinPoint.getArgs();
         if (args.length > 0 && args[0] instanceof Long chatId) {
-            dungeonBot.initializeChatContext(chatId);
+            chatStateService.initializeChatContext(chatId);
         }
     }
 
-    private Object handleChatStateUpdate(ProceedingJoinPoint joinPoint, ChatState from, ChatState to) {
+    private Object handleChatStateUpdate(ProceedingJoinPoint joinPoint, ChatState[] from, ChatState to) throws ChatStateUpdateException {
         Object[] args = joinPoint.getArgs();
         if (args.length > 0 && args[0] instanceof Long chatId) {
             try {
-                dungeonBot.updateChatState(chatId, from, to);
+                chatStateService.updateChatState(chatId, to, from);
                 // Proceed with the original method call
                 return joinPoint.proceed();
             } catch (Throwable e) {
-                throw new ChatStateUpdateException(chatId, from, to);
+                return null;
             }
         }
         return null;
+    }
+
+    private void handleClearChatContext(JoinPoint joinPoint) {
+        Object[] args = joinPoint.getArgs();
+        if (args.length > 0 && args[0] instanceof Long chatId) {
+            val lastMessageId = chatStateService.removeChatState(chatId);
+            lastMessageId.ifPresent(integer -> dungeonBot.deleteMessage(chatId, integer));
+        }
     }
 }

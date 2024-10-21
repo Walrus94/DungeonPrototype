@@ -28,7 +28,7 @@ services:
       KAFKA_DEFAULT_REPLICATION_FACTOR: 1
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_LOG4J_LOGGERS: "kafka.consumer.logger=DEBUG"
+      KAFKA_LOG4J_LOGGERS: "kafka.consumer.logger=INFO"
     networks:
       - dungeon-net
 
@@ -49,7 +49,11 @@ services:
       - kafka
       - mongo
       - huggingface-api
+    ports:
+      - "8080:8080"
+      - "5005:5005"
     environment:
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092  # Kafka address within Docker network
       SPRING_DATA_MONGODB_URI: mongodb://mongo:27017/dungeon_proto_db  # MongoDB connection string
     networks:

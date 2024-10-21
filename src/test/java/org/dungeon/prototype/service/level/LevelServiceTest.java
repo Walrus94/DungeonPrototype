@@ -6,11 +6,14 @@ import org.dungeon.prototype.exception.EntityNotFoundException;
 import org.dungeon.prototype.model.Level;
 import org.dungeon.prototype.model.Point;
 import org.dungeon.prototype.model.document.level.LevelDocument;
+import org.dungeon.prototype.model.document.monster.MonsterDocument;
 import org.dungeon.prototype.model.document.room.RoomContentDocument;
 import org.dungeon.prototype.model.document.room.RoomDocument;
 import org.dungeon.prototype.model.effect.attributes.EffectAttribute;
 import org.dungeon.prototype.model.effect.ExpirableAdditionEffect;
 import org.dungeon.prototype.model.monster.Monster;
+import org.dungeon.prototype.model.monster.MonsterAttack;
+import org.dungeon.prototype.model.monster.MonsterAttackType;
 import org.dungeon.prototype.model.monster.MonsterClass;
 import org.dungeon.prototype.model.player.Player;
 import org.dungeon.prototype.model.room.Room;
@@ -40,6 +43,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 
+import static java.util.Collections.emptyList;
 import static org.dungeon.prototype.TestData.getPlayer;
 import static org.dungeon.prototype.model.Direction.E;
 import static org.dungeon.prototype.model.Direction.N;
@@ -93,12 +97,12 @@ class LevelServiceTest extends BaseServiceUnitTest {
 
         when(levelRepository.existsByChatId(CHAT_ID)).thenReturn(false);
         when(levelRepository.save(any(LevelDocument.class))).thenReturn(document);
-        doNothing().when(messageService).sendRoomMessage(CHAT_ID, player, level.getStart());
+        doNothing().when(messageService).sendLevelGeneratingInfoMessage(CHAT_ID, 1);
 
         levelService.startNewGame(CHAT_ID, player);
 
         verify(levelGenerationService).generateLevel(CHAT_ID, player, 1);
-        verify(messageService).sendRoomMessage(CHAT_ID, player, level.getStart());
+        verify(messageService).sendLevelGeneratingInfoMessage(CHAT_ID, 1);
     }
 
     @Test
@@ -122,11 +126,11 @@ class LevelServiceTest extends BaseServiceUnitTest {
         document.setStart(start);
         when(levelRepository.save(any(LevelDocument.class))).thenReturn(document);
         when(effectService.updateArmorEffect(player)).thenReturn(player);
-        doNothing().when(messageService).sendRoomMessage(CHAT_ID, player, level.getStart());
+        doNothing().when(messageService).sendLevelGeneratingInfoMessage(CHAT_ID, 2);
 
         levelService.nextLevel(CHAT_ID, player);
 
-        verify(messageService).sendRoomMessage(CHAT_ID, player, level.getStart());
+        verify(messageService).sendLevelGeneratingInfoMessage(CHAT_ID, 2);
     }
 
     @Test
@@ -183,7 +187,7 @@ class LevelServiceTest extends BaseServiceUnitTest {
         doNothing().when(messageService).sendRoomMessage(eq(CHAT_ID), eq(player), roomArgumentCaptor.capture());
 
         Room newRoom = new Room();
-        newRoom.setPoint(new Point(5,6));
+        newRoom.setPoint(new Point(5, 6));
         newRoom.setChatId(CHAT_ID);
         levelService.moveToRoom(CHAT_ID, player, newRoom, S);
         val actualRoomValue = roomArgumentCaptor.getValue();
@@ -195,49 +199,79 @@ class LevelServiceTest extends BaseServiceUnitTest {
     @Test
     @DisplayName("Successfully performs updates required after monster kill")
     void updateAfterMonsterKill() {
-        val room = new Room();
         GridSection[][] levelGrid = new GridSection[7][7];
         levelGrid[5][5] = new GridSection(5, 5);
+
+        val room = new Room();
         room.setChatId(CHAT_ID);
         room.setPoint(new Point(5, 5));
         val roomContent = new MonsterRoom();
         val monster = Monster.builder()
                 .monsterClass(MonsterClass.VAMPIRE)
                 .hp(0)
+                .maxHp(15)
                 .build();
         roomContent.setMonster(monster);
         room.setRoomContent(roomContent);
+
         LevelDocument document = new LevelDocument();
         RoomDocument roomDocument = new RoomDocument();
         RoomContentDocument roomContentDocument = new RoomContentDocument();
         roomContentDocument.setRoomType(RoomType.VAMPIRE);
+        val monsterDocument = new MonsterDocument();
+        monsterDocument.setMonsterClass(MonsterClass.VAMPIRE);
+        monsterDocument.setEffects(emptyList());
+        monsterDocument.setHp(0);
+        monsterDocument.setMaxHp(15);
+        monsterDocument.setPrimaryAttack(MonsterAttack.builder()
+                .attackType(MonsterAttackType.BITE)
+                .attack(2)
+                .criticalHitChance(0.0)
+                .criticalHitMultiplier(1.0)
+                .chanceToMiss(0.0)
+                .chanceToKnockOut(0.0)
+                .causingEffectProbability(0.0)
+                .build());
+        monsterDocument.setSecondaryAttack(MonsterAttack.builder()
+                .attackType(MonsterAttackType.BITE)
+                .attack(2)
+                .criticalHitChance(0.0)
+                .criticalHitMultiplier(1.0)
+                .chanceToMiss(0.0)
+                .chanceToKnockOut(0.0)
+                .causingEffectProbability(0.0)
+                .build());
+        roomContentDocument.setMonster(monsterDocument);
         roomDocument.setRoomContent(roomContentDocument);
         val roomsMap = Map.of("{\"x\":5,\"y\":5}", roomDocument);
         document.setChatId(CHAT_ID);
         document.setGrid(levelGrid);
         document.setRoomsMap(roomsMap);
+
         val updatedLevel = new LevelDocument();
         val updatedRoomDocument = new RoomDocument();
-        val updatedRoomContent = new RoomContentDocument();
-        updatedRoomContent.setRoomType(RoomType.VAMPIRE_KILLED);
-        updatedRoomDocument.setRoomContent(updatedRoomContent);
-        val updatedRoomsMap =  Map.of("{\"x\":5,\"y\":5}", updatedRoomDocument);
+        val updatedRoomContentDoc = new RoomContentDocument();
+        updatedRoomContentDoc.setRoomType(RoomType.VAMPIRE_KILLED);
+        updatedRoomDocument.setRoomContent(updatedRoomContentDoc);
+        val updatedRoomsMap = Map.of("{\"x\":5,\"y\":5}", updatedRoomDocument);
         updatedLevel.setRoomsMap(updatedRoomsMap);
+
         val updatedRoom = new Room();
         updatedRoom.setId(CURRENT_ROOM_ID);
-        updatedRoom.setRoomContent(new EmptyRoom(RoomType.VAMPIRE_KILLED));
-        when(roomService.saveOrUpdateRoomContent(any(RoomContent.class))).thenReturn(new EmptyRoom(RoomType.VAMPIRE_KILLED));
+        val updatedRoomContent = new EmptyRoom(RoomType.VAMPIRE_KILLED);
+        updatedRoom.setRoomContent(updatedRoomContent);
+
+        when(roomService.saveOrUpdateRoomContent(any(RoomContent.class))).thenReturn(updatedRoomContent);
         when(roomService.saveOrUpdateRoom(any(Room.class))).thenReturn(updatedRoom);
         when(levelRepository.findByChatId(CHAT_ID)).thenReturn(Optional.of(document));
         when(levelRepository.save(any())).thenReturn(updatedLevel);
 
         levelService.updateAfterMonsterKill(room);
 
-        ArgumentCaptor<LevelDocument> updatedLevelCaptor = ArgumentCaptor.forClass(LevelDocument.class);
-        verify(levelRepository).save(updatedLevelCaptor.capture());
-        val actualValue = updatedLevelCaptor.getValue();
-        assertEquals(document.getChatId(), actualValue.getChatId());
-        assertEquals(RoomType.VAMPIRE_KILLED, actualValue.getRoomsMap().get("{\"x\":5,\"y\":5}").getRoomContent().getRoomType());
+        ArgumentCaptor<RoomContent> updatedRoomContentCaptor = ArgumentCaptor.forClass(RoomContent.class);
+        verify(roomService).saveOrUpdateRoomContent(updatedRoomContentCaptor.capture());
+        val actualValue = updatedRoomContentCaptor.getValue();
+        assertEquals(RoomType.VAMPIRE_KILLED, actualValue.getRoomType());
     }
 
     @Test
@@ -301,7 +335,7 @@ class LevelServiceTest extends BaseServiceUnitTest {
         room.setPoint(new Point(5, 5));
         level.setRoomsMap(Map.of(new Point(5, 5), room));
 
-        levelService.shrineRefill(CHAT_ID, player, room, level);
+        levelService.shrineUsage(CHAT_ID, player, room, level);
 
         verify(messageService).sendRoomMessage(CHAT_ID, player, room);
         assertTrue(player.getEffects().contains(effect));
@@ -329,10 +363,10 @@ class LevelServiceTest extends BaseServiceUnitTest {
         LevelMap levelMap = new LevelMap();
         level.setLevelMap(levelMap);
 
-        try (MockedStatic<LevelUtil> levelUtilMockedStatic = mockStatic(LevelUtil.class)){
+        try (MockedStatic<LevelUtil> levelUtilMockedStatic = mockStatic(LevelUtil.class)) {
             levelUtilMockedStatic.when(() -> LevelUtil.printMap(grid, levelMap, position, N)).thenReturn("mapString");
             when(levelRepository.findByChatId(CHAT_ID)).thenReturn(Optional.of(level));
-            levelService.sendMapMessage(CHAT_ID , player);
+            levelService.sendMapMessage(CHAT_ID, player);
 
             verify(messageService).sendMapMenuMessage(CHAT_ID, "mapString");
         }

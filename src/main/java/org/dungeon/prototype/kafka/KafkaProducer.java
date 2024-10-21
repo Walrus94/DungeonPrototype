@@ -23,7 +23,7 @@ public class KafkaProducer {
         try {
             message = objectMapper.writeValueAsString(dto);
         } catch (JsonProcessingException e) {
-            throw new KafkaMessageException(dto, CallbackType.DEFAULT_ERROR_RETURN);
+            throw new KafkaMessageException(dto, CallbackType.MENU_BACK);
         }
         log.debug("Sending message to kafka stream, topic: {}, message: {}", topic, message);
         kafkaTemplate.send(topic, message);

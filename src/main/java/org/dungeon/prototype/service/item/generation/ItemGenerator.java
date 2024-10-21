@@ -22,6 +22,7 @@ import org.dungeon.prototype.model.inventory.items.Wearable;
 import org.dungeon.prototype.properties.GenerationProperties;
 import org.dungeon.prototype.service.effect.ItemEffectsGenerator;
 import org.dungeon.prototype.service.item.ItemService;
+import org.dungeon.prototype.service.message.MessageService;
 import org.dungeon.prototype.util.RandomUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -92,6 +93,8 @@ public class ItemGenerator {
     @Autowired
     private ItemService itemService;
     @Autowired
+    private MessageService messageService;
+    @Autowired
     private ItemEffectsGenerator itemEffectsGenerator;
     @Autowired
     private GenerationProperties generationProperties;
@@ -107,7 +110,9 @@ public class ItemGenerator {
      */
     @Transactional
     public CompletableFuture<Void> generateItems(Long chatId) {
+        messageService.sendItemsGeneratingInfoMessage(chatId);
         barriersByChat.put(chatId, new CyclicBarrier(2));
+        itemService.dropCollection(chatId);
 
         CompletableFuture<Void> weaponsFuture = CompletableFuture.runAsync(() -> generateWeapons(chatId));
         CompletableFuture<Void> wearablesFuture = CompletableFuture.runAsync(() -> generateWearables(chatId));
