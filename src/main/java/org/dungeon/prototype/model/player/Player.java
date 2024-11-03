@@ -112,14 +112,14 @@ public class Player {
 
     public Weight getWeight() {
         return Weight.builder()
-                .hpToMaxHp((double) (hp / maxHp) * hp)
-                .hpDeficiencyToMaxHp((double) ((maxHp - hp ) / maxHp) * hp)
-                .manaToMaxMana((double) (mana / maxMana) * mana)
-                .manaDeficiencyToMaxMana((double) ((maxMana - mana)/ maxMana) * mana)
-                .armorToMaxArmor((double) (defense / maxDefense) * defense)
-                .armorDeficiencyToMaxArmor((double) ((maxDefense - defense) / maxDefense) * defense)
-                .chanceToDodge(chanceToDodge * defense)
-                .goldBonusToGold(goldBonus * gold)
+                .hp((double) hp)
+                .maxHp((double) maxHp)
+                .mana((double) mana)
+                .maxMana((double) maxMana)
+                .armor((double) defense)
+                .maxArmor((double) maxDefense)
+                .chanceToDodge(chanceToDodge)
+                .goldBonus(goldBonus)
                 .xpBonus(xpBonus)
                 .attack((1.0 - primaryAttack.getChanceToMiss()) * primaryAttack.getAttack() +
                         (nonNull(secondaryAttack) ? (1.0 - secondaryAttack.getChanceToMiss()) * secondaryAttack.getAttack() : 0.0))

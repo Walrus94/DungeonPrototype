@@ -1,6 +1,6 @@
 package org.dungeon.prototype.repository.converters.mapstruct;
 
-import org.dungeon.prototype.model.Level;
+import org.dungeon.prototype.model.level.Level;
 import org.dungeon.prototype.model.document.level.LevelDocument;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -18,10 +18,8 @@ public interface LevelMapper {
     LevelDocument mapToDocument(Level level);
 
     @Mappings({
-            @Mapping(target = "deadEnds", ignore = true),
             @Mapping(target = "maxLength", ignore = true),
             @Mapping(target = "minLength", ignore = true),
-            @Mapping(target = "deadEndToSegmentMap", ignore = true),
     })
     Level mapToLevel(LevelDocument document);
 }

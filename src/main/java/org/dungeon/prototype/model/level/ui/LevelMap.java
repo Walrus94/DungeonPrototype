@@ -1,4 +1,4 @@
-package org.dungeon.prototype.model.ui.level;
+package org.dungeon.prototype.model.level.ui;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;

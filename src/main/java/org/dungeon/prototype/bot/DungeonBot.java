@@ -35,7 +35,7 @@ public class DungeonBot extends SpringWebhookBot {
     private final String botUsername;
     private final  String botPath;
 
-    public DungeonBot(String botUsername, String botToken, String botPath,  SetWebhook setWebhook) {
+    public DungeonBot(String botUsername, String botToken, String botPath, SetWebhook setWebhook) {
         super(setWebhook, botToken);
         this.botUsername = botUsername;
         this.botPath = botPath;

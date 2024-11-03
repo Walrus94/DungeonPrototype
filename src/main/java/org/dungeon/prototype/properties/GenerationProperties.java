@@ -25,11 +25,8 @@ public class GenerationProperties {
 
     @Data
     public static class LevelGenerationAttributes {
-        private Integer levelOneGridSize;
-        private Integer gridSizeIncrement;
-        private Integer incrementStep;
-        private Double maxLengthRatio;
-        private Double minLengthRatio;
-        private Integer minLength;
+        private int levelOneGridSize;
+        private int gridSizeIncrement;
+        private int incrementStep;
     }
 }

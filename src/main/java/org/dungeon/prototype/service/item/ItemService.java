@@ -78,10 +78,11 @@ public class ItemService {
         var document = documents.getFirst();
         if (nonNull(document) && isNull(document.getName())) {
             itemNamingService.requestNameGeneration(itemMapper.mapToWearable(document));
+            log.debug("Waiting for name generation of item {} for chat {}...", document.getId(), chatId);
             while (isNull(document.getName())) {
-                log.debug("Waiting for name generation of item {} for chat {}...", document.getId(), chatId);
                 document = itemRepository.findByChatIdAndId(document.getChatId(), document.getId()).orElse(null);
             }
+            log.debug("Name for item id:{} acquired: {}", document.getId(), document.getName());
         }
         return itemMapper.mapToWearable(document);
     }
@@ -105,12 +106,46 @@ public class ItemService {
         var document = documents.getFirst();
         if (nonNull(document) && isNull(document.getName())) {
             itemNamingService.requestNameGeneration(itemMapper.mapToWeapon(document));
+            log.debug("Waiting for name generation of item {} for chat {}...", document.getId(), chatId);
             while (isNull(document.getName())) {
-                log.debug("Waiting for name generation of item {} for chat {}...", document.getId(), chatId);
                 document = itemRepository.findByChatIdAndId(document.getChatId(), document.getId()).orElse(null);
             }
+            log.debug("Name for item id:{} acquired: {}", document.getId(), document.getName());
         }
         return itemMapper.mapToWeapon(document);
+    }
+
+    public Item getHighQualityItem(long chatId, int playerLuck, Set<String> usedItemIds) {
+        //TODO: make player luck affect rarity/expectedWeight
+        List<ItemWeightProjection> itemWeights = itemRepository.getHighQualityItemWeights(chatId, usedItemIds);
+        if (itemWeights.isEmpty()) {
+            val optionalItem = itemRepository.findByChatIdAndMaxWeight(chatId, usedItemIds);
+            if (optionalItem.isPresent()) {
+                return switch (optionalItem.get().getItemType()) {
+                    case WEAPON -> ItemMapper.INSTANCE.mapToWeapon(optionalItem.get());
+                    case WEARABLE -> ItemMapper.INSTANCE.mapToWearable(optionalItem.get());
+                    case USABLE -> ItemMapper.INSTANCE.mapToUsable(optionalItem.get());
+                };
+            } else {
+                throw new EntityNotFoundException(chatId, "item", CallbackType.MENU_BACK);
+            }
+        }
+
+        val weightLimit = getLimitWeightForSpecialItem(playerLuck, itemWeights.stream().map(ItemWeightProjection::getWeightAbs).collect(Collectors.toList()));
+        val itemId = itemWeights.stream()
+                .filter(itemWeight -> itemWeight.getWeightAbs() < weightLimit)
+                .findFirst().map(ItemWeightProjection::getId)
+                .orElseThrow(() -> new EntityNotFoundException(chatId, "item", CallbackType.MENU_BACK));
+        return findItem(chatId, itemId);
+    }
+
+    private double getLimitWeightForSpecialItem(int playerLuck, List<Double> weights) {
+        double max = weights.stream().mapToDouble(weight -> weight).max().getAsDouble();
+        double min = weights.stream().mapToDouble(weight -> weight).min().getAsDouble();
+
+        return (max - min) * playerLuck / 10.0;
+
+
     }
 
     /**
@@ -123,7 +158,7 @@ public class ItemService {
      * @param usedItemIds    ids of items to exclude
      * @return found items
      */
-    public Set<Item> getExpectedWeightItems(Long chatId, Weight expectedWeight, Integer maxItems, Set<String> usedItemIds) {
+    public Set<Item> getExpectedWeightItems(long chatId, Weight expectedWeight, Integer maxItems, Set<String> usedItemIds) {
         log.debug("Collecting items...");
         log.debug("Expected weight: {}, max items amount: {}", expectedWeight, maxItems);
 
@@ -200,7 +235,7 @@ public class ItemService {
 
     private Set<Item> findItems(Long chatId, List<String> itemIds) {
         val itemDocuments = itemRepository.findAllByChatIdAndIdIn(chatId, itemIds);
-        val items= itemDocuments.stream()
+        val items = itemDocuments.stream()
                 .map(itemDocument ->
                         switch (itemDocument.getItemType()) {
                             case WEAPON -> ItemMapper.INSTANCE.mapToWeapon(itemDocument);

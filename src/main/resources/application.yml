@@ -168,9 +168,6 @@ generation:
     level-one-grid-size: 10
     grid-size-increment: 1
     increment-step: 10
-    max-length-ratio: 0.4
-    min-length-ratio: 0.2
-    min-length: 2
   monsters:
     zombie:
       primary-attack-type: slash
@@ -573,10 +570,8 @@ logging:
             BattleService: DEBUG
             room:
               TreasureService: DEBUG
-              generation:
-                RandomRoomTypeGenerator: DEBUG
-                room.content:
-                  RoomContentGenerationService: DEBUG
+              generation.room.content:
+                RoomContentGenerationService: DEBUG
             item:
               generation:
                 ItemGenerator: DEBUG
@@ -586,6 +581,8 @@ logging:
               LevelService: DEBUG
               generation:
                 LevelGenerationService: DEBUG
+                WalkerBuilder: DEBUG
+                WalkerDistributor: DEBUG
           util:
             RoomGenerationUtils: DEBUG
             LevelUtil: DEBUG

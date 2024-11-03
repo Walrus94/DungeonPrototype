@@ -2,7 +2,7 @@ package org.dungeon.prototype;
 
 import lombok.experimental.UtilityClass;
 import lombok.val;
-import org.dungeon.prototype.model.Level;
+import org.dungeon.prototype.model.level.Level;
 import org.dungeon.prototype.model.Point;
 import org.dungeon.prototype.model.effect.Effect;
 import org.dungeon.prototype.model.effect.ExpirableMultiplicationEffect;
@@ -32,7 +32,7 @@ import org.dungeon.prototype.model.player.Player;
 import org.dungeon.prototype.model.player.PlayerAttack;
 import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.content.Merchant;
-import org.dungeon.prototype.model.ui.level.LevelMap;
+import org.dungeon.prototype.model.level.ui.LevelMap;
 
 import java.util.ArrayList;
 import java.util.EnumMap;

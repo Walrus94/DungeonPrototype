@@ -2,32 +2,31 @@ package org.dungeon.prototype.util;
 
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
-import lombok.val;
 import org.apache.commons.math3.util.Pair;
 import org.dungeon.prototype.model.Direction;
-import org.dungeon.prototype.model.Level;
 import org.dungeon.prototype.model.Point;
+import org.dungeon.prototype.model.level.generation.LevelGridCluster;
+import org.dungeon.prototype.model.level.ui.GridSection;
+import org.dungeon.prototype.model.level.ui.LevelMap;
+import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.RoomType;
-import org.dungeon.prototype.model.room.RoomsSegment;
-import org.dungeon.prototype.model.ui.level.GridSection;
-import org.dungeon.prototype.model.ui.level.LevelMap;
 import org.dungeon.prototype.properties.CallbackType;
-import org.dungeon.prototype.service.level.generation.WalkerBuilderIterator;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import static java.util.Objects.nonNull;
 import static org.apache.commons.math3.util.FastMath.toIntExact;
 import static org.dungeon.prototype.model.Direction.E;
 import static org.dungeon.prototype.model.Direction.N;
 import static org.dungeon.prototype.model.Direction.S;
 import static org.dungeon.prototype.model.Direction.W;
-import static org.dungeon.prototype.util.RandomUtil.flipAdjustedCoin;
 
 @Slf4j
 @UtilityClass
@@ -44,26 +43,30 @@ public class LevelUtil {
         };
     }
 
-    /**
-     * Filters out valid directions (in which it is possible to continue building corridor)
-     * and selects random one
-     * @param walkerBuilderIterator current iterator
-     * @param level being generated
-     * @return present, if random direction successfully selected,
-     * empty if there are no valid directions
-     */
-    public static Optional<Direction> getRandomValidDirection(WalkerBuilderIterator walkerBuilderIterator, Level level) {
-        val grid = level.getGrid();
-        val visitedRooms = level.getRoomsMap().keySet();
-        val gridSize = grid.length;
-        val oldDirection = walkerBuilderIterator.getDirection();
-        val currentPoint = walkerBuilderIterator.getCurrentPoint();
-        val gridSections = getGridSections(grid, visitedRooms);
-        val validDirections = Arrays.stream(Direction.values())
-                .filter(dir -> !dir.equals(oldDirection) && ! dir.equals(getOppositeDirection(oldDirection)))
-                .filter(direction -> calculateMaxLengthInDirection(grid, currentPoint, direction) >= level.getMinLength())
-                .collect(Collectors.toList());
-        return getRandomDirection(validDirections, currentPoint.getPoint(), gridSections, gridSize);
+    public static Direction getDirection(Room room, Room previousRoom) {
+        Point point = room.getPoint();
+        Point previousPoint = previousRoom.getPoint();
+
+        int x = point.getX().compareTo(previousPoint.getX());
+        int y = point.getY().compareTo(previousPoint.getY());
+
+        if (x == 0) {
+            if (y > 0) {
+                return N;
+            }
+            if (y < 0) {
+                return S;
+            }
+            return null;
+        } else {
+            if (y != 0) {
+                return null;
+            }
+            if (x > 0) {
+                return E;
+            }
+            return W;
+        }
     }
 
     public static Direction getOppositeDirection(Direction direction) {
@@ -125,28 +128,6 @@ public class LevelUtil {
     }
 
     /**
-     * Determines if possible to split path with crossroad in current walker position
-     * and randomly if it will
-     * @param walkerBuilderIterator current walker
-     * @param level being generated
-     * @param waitingWalkerBuilders count of idle walkers
-     * @return true if current point will be crossroad
-     */
-    public static boolean isCrossroad(WalkerBuilderIterator walkerBuilderIterator, Level level, int waitingWalkerBuilders) {
-        val currentPoint = walkerBuilderIterator.getCurrentPoint();
-        val oldDirection = walkerBuilderIterator.getDirection();
-        val pathFromStart = walkerBuilderIterator.getPathFromStart();
-        val grid = level.getGrid();
-        val levelSize = level.getRoomsMap().size();
-        val minLength = level.getMinLength();
-        val isCrossroad = flipAdjustedCoin(((double) (pathFromStart - waitingWalkerBuilders)) / (double) levelSize);
-        return isCrossroad && Arrays.stream(Direction.values())
-                .filter(direction -> !direction.equals(oldDirection) && !direction.equals(getOppositeDirection(oldDirection)))
-                .filter(direction -> calculateMaxLengthInDirection(grid, currentPoint, direction) > minLength)
-                .count() > 1;
-    }
-
-    /**
      * Selects random direction with probability depending on
      * already filled sections or, if none present, by length from grid border
      * @param directions available directions
@@ -202,67 +183,35 @@ public class LevelUtil {
         }
     }
 
-    private static Set<GridSection> getGridSections(GridSection[][] grid, Set<Point> points) {
-        return points.stream().map(point -> grid[point.getX()][point.getY()]).collect(Collectors.toSet());
+    public static boolean isPointOnGrid(Point point, int gridSize) {
+        return point.getY() < gridSize && point.getY() > -1 &&
+                point.getX() < gridSize && point.getX() > -1;
     }
 
-    /**
-     * Calculates maximum length in selected direction, incrementing steps
-     * until grid border or section, already visited by walker, reached
-     * @param grid level grid
-     * @param startSection start point
-     * @param direction selected direction
-     * @return maximum permitted length
-     */
-    public static Integer calculateMaxLengthInDirection(GridSection[][] grid, GridSection startSection, Direction direction) {
-        log.debug("Calculating max length in {} direction...", direction);
-        GridSection currentSection = null;
-        var path = 0;
-        while (currentSection == null || !currentSection.getVisited()) {
-            if (currentSection == null) {
-                currentSection = startSection;
-            }
-            val nextPoint = getNextPointInDirection(currentSection.getPoint(), direction);
-            if (isPointOnGrid(nextPoint, grid.length)) {
-                val nextSection = grid[nextPoint.getX()][nextPoint.getY()];
-                if (nextSection.getVisited()) {
-                    log.debug("Visited room reached, returning max length of {}", path);
-                    return path;
-                }
-                val nextNextPoint = getNextPointInDirection(nextPoint, direction);
-                if (isPointOnGrid(nextNextPoint, grid.length)) {
-                    val nextNextSection = grid[nextNextPoint.getX()][nextNextPoint.getY()];
-                    if (nextNextSection.getVisited()) {
-                        log.debug("Visited room is one step away, returning max length of {}", path);
-                        return path;
-                    }
-                    currentSection = nextSection;
-                    log.debug("Adding {} step...", currentSection.getPoint());
-                    path++;
-                    log.debug("Current path length: {}", path);
-                } else {
-                    log.debug("Edge of map is one step away, returning max length of {}", path);
-                    return path;
-                }
-            } else {
-                log.debug("Edge of map reached, returning max length of {}", path);
-                return path;
-            }
-        }
-        return path;
+    public static Set<GridSection> getAdjacentSections(Point currentPoint, GridSection[][] grid) {
+        return Stream.of(new Point(currentPoint.getX() + 1, currentPoint.getY()),
+                        new Point(currentPoint.getX() - 1, currentPoint.getY()),
+                        new Point(currentPoint.getX(), currentPoint.getY() + 1),
+                        new Point(currentPoint.getX(), currentPoint.getY() - 1))
+                .unordered()
+                .filter(point -> isPointOnGrid(point, grid.length))
+                .map(point -> grid[point.getX()][point.getY()])
+                .collect(Collectors.toSet());
     }
 
-    private static boolean isPointOnGrid(Point nextPoint, int gridSize) {
-        return nextPoint.getY() < gridSize && nextPoint.getY() > -1 &&
-                nextPoint.getX() < gridSize && nextPoint.getX() > -1;
+    public static Set<GridSection> getAdjacentSectionsInCluster(Point currentPoint, GridSection[][] grid, LevelGridCluster cluster) {
+        log.debug("Getting adjacent sections for {} in cluster {}", currentPoint, cluster);
+        return getAdjacentSections(currentPoint, grid).stream()
+                .filter(section -> isPointInCluster(section.getPoint(), cluster))
+                .collect(Collectors.toSet());
     }
 
-    public static RoomsSegment getMainSegment(Level level) {
-        val startSection = level.getGrid()[level.getStart().getPoint().getX()][level.getStart().getPoint().getY()];
-        val endSection = level.getGrid()[level.getEnd().getPoint().getX()][level.getEnd().getPoint().getY()];
-        return new RoomsSegment(startSection, endSection);
+    public static boolean isPointInCluster(Point point, LevelGridCluster cluster) {
+        return cluster.getStartConnectionPoint().getX() <= point.getX() &&
+                cluster.getStartConnectionPoint().getY() <= point.getY() &&
+                cluster.getEndConnectionPoint().getX() >= point.getX() &&
+                cluster.getEndConnectionPoint().getY() >= point.getY();
     }
-
 
     public static String printMap(GridSection[][] grid, LevelMap levelMap, Point position, Direction direction) {
         StringBuilder result = new StringBuilder();
@@ -329,25 +278,32 @@ public class LevelUtil {
 
     //FOR DEBUGGING
 
-    public static String printMap(GridSection[][] map) {
+    public static String printMapGridToLogs(GridSection[][] map) {
         StringBuilder result = new StringBuilder();
         for (int y = map.length - 1; y >= 0; y--) {
-            for (int x = 0; x < map.length; x++) {
-                if (map[x][y].getDeadEnd() || map[x][y].getCrossroad()) {
-                    if (map[x][y].getDeadEnd() && !map[x][y].getCrossroad()) {
-                        result.append(getIcon(Optional.of(RoomType.END)).equals(map[x][y].getEmoji()) ?
-                                map[x][y].getEmoji() :
-                                getDeadEndIcon());
-                    }
-                    if (!map[x][y].getDeadEnd() && map[x][y].getCrossroad()) {
-                        result.append(getCrossroadIcon());
-                    }
-                    if (map[x][y].getDeadEnd() && map[x][y].getCrossroad()) {
-                        log.warn("Warning! Point (x:{}, y:{}) marked as BOTH crossroad and dead end!", x, y);
-                        result.append(getCrossroadAndDeadEndWarningIcon());
+            for (GridSection[] gridSections : map) {
+                if (gridSections[y].isConnectionPoint()) {
+                    result.append(getCrossroadIcon());
+                } else if (gridSections[y].isDeadEnd()) {
+                    if (gridSections[y].getStepsFromStart() > 9) {
+                        result.append("{").append(gridSections[y].getStepsFromStart()).append("}");
+                    } else {
+                        result.append("{0").append(gridSections[y].getStepsFromStart()).append("}");
                     }
                 } else {
-                    result.append(map[x][y].getEmoji());
+                    if (gridSections[y].getStepsFromStart() < 0) {
+                        result.append("[").append(gridSections[y].getStepsFromStart()).append("]");
+                    } else {
+                        if (gridSections[y].getStepsFromStart() > 0) {
+                            if (gridSections[y].getStepsFromStart() > 9) {
+                                result.append("[").append(gridSections[y].getStepsFromStart()).append("]");
+                            } else {
+                                result.append("[0").append(gridSections[y].getStepsFromStart()).append("]");
+                            }
+                        } else {
+                            result.append("[00]");
+                        }
+                    }
                 }
             }
             result.append("\n");
@@ -355,12 +311,64 @@ public class LevelUtil {
         return result.toString();
     }
 
+    public static String printMapToLogs(GridSection[][] grid, Map<Point, Room> roomsMap) {
+        StringBuilder result = new StringBuilder();
+        for (int y = grid.length - 1; y >= 0; y--) {
+            for (GridSection[] gridSections : grid) {
+                if (roomsMap.containsKey(gridSections[y].getPoint())) {
+                    if (nonNull(roomsMap.get(gridSections[y].getPoint()).getRoomContent())) {
+                        result.append("[")
+                                .append(getLogsIcon(roomsMap.get(gridSections[y].getPoint()).getRoomContent().getRoomType()))
+                                .append("]");
+                    } else {
+                        result.append("[")
+                                .append("EM")
+                                .append("]");
+                    }
+                } else {
+                    if (gridSections[y].getStepsFromStart() > 0) {
+                        if (gridSections[y].getStepsFromStart() > 9) {
+                            result.append("[").append(gridSections[y].getStepsFromStart()).append("]");
+                        } else {
+                            result.append("[0").append(gridSections[y].getStepsFromStart()).append("]");
+                        }
+                    } else {
+                        result.append("[").append("XX").append("]");
+                    }
+                }
+            }
+            result.append("\n");
+        }
+        return result.toString();
+    }
+
+    private static String getLogsIcon(RoomType roomType) {
+        return switch (roomType) {
+            case NORMAL -> "NO";
+            case START -> "ST";
+            case END -> "EN";
+            case TREASURE -> "TR";
+            case TREASURE_LOOTED -> "TL";
+            case WEREWOLF, VAMPIRE, SWAMP_BEAST, DRAGON, ZOMBIE -> "MO";
+            case WEREWOLF_KILLED, VAMPIRE_KILLED, SWAMP_BEAST_KILLED, DRAGON_KILLED, ZOMBIE_KILLED -> "MK";
+            case HEALTH_SHRINE -> "HS";
+            case MANA_SHRINE -> "MS";
+            case ANVIL -> "AN";
+            case SHRINE_DRAINED -> "SD";
+            case MERCHANT -> "ME";
+        };
+    }
+
+    private static String getEmptyIcon() {
+        return "⬛";
+    }
+
     public static String getDeadEndIcon() {
-        return "\uD83D\uDED1";
+        return "[XX]";//"\uD83D\uDED1";
     }
 
     public static String getCrossroadIcon() {
-        return "\uD83D\uDD04";
+        return "[##]";//"\uD83D\uDD04";
     }
 
     public static String getCrossroadAndDeadEndWarningIcon() {

@@ -76,7 +76,7 @@ public class GenerationUtil {
 
     public static Weight calculateWearableWeight(Integer armor, Double chanceToDodge, MagicType magicType) {
         return Weight.builder()
-                .armorToMaxArmor(Double.valueOf(armor))
+                .armor(Double.valueOf(armor))
                 .chanceToDodge(chanceToDodge * armor)
                 .divineMagic(magicType.getDivineMagic())
                 .arcaneMagic(magicType.getArcaneMagic())

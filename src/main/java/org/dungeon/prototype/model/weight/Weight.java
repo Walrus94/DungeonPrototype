@@ -14,21 +14,21 @@ import org.dungeon.prototype.model.effect.attributes.EffectAttribute;
 @AllArgsConstructor
 public class Weight {
     @Builder.Default
-    Double hpToMaxHp = 0.0;
+    Double hp = 0.0;
     @Builder.Default
-    Double hpDeficiencyToMaxHp  = 0.0;
+    Double maxHp = 0.0;
     @Builder.Default
-    Double manaToMaxMana = 0.0;
+    Double mana = 0.0;
     @Builder.Default
-    Double manaDeficiencyToMaxMana = 0.0;
+    Double maxMana = 0.0;
     @Builder.Default
-    Double armorToMaxArmor = 0.0;
+    Double armor = 0.0;
     @Builder.Default
-    Double armorDeficiencyToMaxArmor = 0.0;
+    Double maxArmor = 0.0;
     @Builder.Default
     Double chanceToDodge = 0.0;
     @Builder.Default
-    Double goldBonusToGold = 0.0;
+    Double goldBonus = 0.0;
     @Builder.Default
     Double xpBonus = 0.0;
     @Builder.Default
@@ -46,23 +46,42 @@ public class Weight {
 
     public ArrayRealVector toVector() {
         return new ArrayRealVector(new double[] {
-                hpToMaxHp, hpDeficiencyToMaxHp, manaToMaxMana, manaDeficiencyToMaxMana, armorToMaxArmor,
-                armorDeficiencyToMaxArmor, chanceToDodge, goldBonusToGold, xpBonus,
+                hp, maxHp, mana, maxMana, armor,
+                maxArmor, chanceToDodge, goldBonus, xpBonus,
                 attack, criticalHitChance, chanceToKnockout,
                 arcaneMagic, divineMagic
         });
     }
 
+    public ArrayRealVector getHealthSubVector() {
+        return new ArrayRealVector(new double[] {hp, maxHp});
+    }
+
+    public ArrayRealVector getMagicSubVector() {
+        return new ArrayRealVector(new double[] {mana, maxMana, arcaneMagic, divineMagic});
+    }
+
+    public ArrayRealVector getDefenseSubVector() {
+        return new ArrayRealVector(new double[] {armor, maxArmor, chanceToDodge});
+    }
+
+    public ArrayRealVector getAttackSubVector() {
+        return new ArrayRealVector(new double[] {attack, criticalHitChance, criticalHitMultiplier, chanceToKnockout});
+    }
+
+    public ArrayRealVector getBonusSubVector() {
+        return new ArrayRealVector(new double[] {goldBonus, xpBonus});
+    }
     public static Weight fromVector(ArrayRealVector vector) {
         return Weight.builder()
-                .hpToMaxHp(vector.getDataRef()[0])
-                .hpDeficiencyToMaxHp(vector.getDataRef()[1])
-                .manaToMaxMana(vector.getDataRef()[2])
-                .manaDeficiencyToMaxMana(vector.getDataRef()[3])
-                .armorToMaxArmor(vector.getDataRef()[4])
-                .armorDeficiencyToMaxArmor(vector.getDataRef()[5])
+                .hp(vector.getDataRef()[0])
+                .maxHp(vector.getDataRef()[1])
+                .mana(vector.getDataRef()[2])
+                .maxMana(vector.getDataRef()[3])
+                .armor(vector.getDataRef()[4])
+                .maxArmor(vector.getDataRef()[5])
                 .chanceToDodge(vector.getDataRef()[6])
-                .goldBonusToGold(vector.getDataRef()[7])
+                .goldBonus(vector.getDataRef()[7])
                 .xpBonus(vector.getDataRef()[8])
                 .attack(vector.getDataRef()[9])
                 .criticalHitChance(vector.getDataRef()[10])
@@ -73,26 +92,25 @@ public class Weight {
     }
     public static Weight buildWeightVectorForAttribute(EffectAttribute attribute, double value) {
         return switch (attribute) {
-            case HEALTH -> Weight.builder().hpToMaxHp(value).hpDeficiencyToMaxHp(-1/value).build();
-            case HEALTH_MAX -> Weight.builder().hpDeficiencyToMaxHp(1/value).build();
-            case HEALTH_MAX_ONLY -> Weight.builder().hpToMaxHp(-value).hpDeficiencyToMaxHp(1/value).build();
+            case HEALTH -> Weight.builder().hp(value).build();
+            case HEALTH_MAX -> Weight.builder().maxHp(value).build();
+            case HEALTH_MAX_ONLY -> Weight.builder().hp(1/value).maxHp(value).build();
 
-            case MANA -> Weight.builder().manaToMaxMana(value).manaDeficiencyToMaxMana(-1/value).build();
-            case MANA_MAX -> Weight.builder().manaToMaxMana(1/value).build();
-            case MANA_MAX_ONLY -> Weight.builder().manaToMaxMana(-value).manaDeficiencyToMaxMana(1/value).build();
+            case MANA -> Weight.builder().mana(value).build();
+            case MANA_MAX -> Weight.builder().maxMana(value).build();
+            case MANA_MAX_ONLY -> Weight.builder().mana(1/value).maxMana(value).build();
 
-            case MAX_ARMOR -> Weight.builder().armorToMaxArmor(value).armorDeficiencyToMaxArmor(-1/value).build();
+            case MAX_ARMOR -> Weight.builder().armor(1/value).maxArmor(value).build();
             case CHANCE_TO_DODGE -> Weight.builder().chanceToDodge(value).build();
 
-            case GOLD_BONUS -> Weight.builder().goldBonusToGold(value).build();
+            case GOLD_BONUS -> Weight.builder().goldBonus(value).build();
             case XP_BONUS -> Weight.builder().xpBonus(value).build();
 
-            //TODO: verify
             case ATTACK -> Weight.builder()
                     .attack(value)
                     .chanceToKnockout(value)
                     .criticalHitChance(value)
-                    .chanceToKnockout(value)
+                    .criticalHitMultiplier(value)
                     .build();
             case CRITICAL_HIT_CHANCE -> Weight.builder().criticalHitChance(value).build();
             case CRITICAL_HIT_MULTIPLIER -> Weight.builder().criticalHitMultiplier(value).build();

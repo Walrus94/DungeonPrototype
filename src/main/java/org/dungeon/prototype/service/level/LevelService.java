@@ -9,7 +9,7 @@ import org.dungeon.prototype.annotations.aspect.TurnUpdate;
 import org.dungeon.prototype.bot.state.ChatState;
 import org.dungeon.prototype.exception.EntityNotFoundException;
 import org.dungeon.prototype.model.Direction;
-import org.dungeon.prototype.model.Level;
+import org.dungeon.prototype.model.level.Level;
 import org.dungeon.prototype.model.Point;
 import org.dungeon.prototype.model.player.Player;
 import org.dungeon.prototype.model.room.Room;

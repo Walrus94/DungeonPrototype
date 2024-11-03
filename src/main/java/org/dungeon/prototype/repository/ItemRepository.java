@@ -16,14 +16,21 @@ import java.util.Set;
 public interface ItemRepository extends MongoRepository<ItemDocument, String> {
 
     @Query(value = "{'chatId': ?0, 'itemType': 'WEARABLE', 'attributes.wearableType': ?1}", sort = "{'weight':  1}")
-    List<ItemDocument> findWearablesByChatIdTypeAndMinWeight(Long chatId, WearableType wearableType, Pageable pageable);
+    List<ItemDocument> findWearablesByChatIdTypeAndMinWeight(long chatId, WearableType wearableType, Pageable pageable);
 
     @Query(value = "{'chatId': ?0, 'itemType' : 'WEAPON' }", sort = "{'weight':  1}")
-    List<ItemDocument> findMainWeaponByChatIdAndMinWeight(Long chatId, Pageable pageable);
+    List<ItemDocument> findMainWeaponByChatIdAndMinWeight(long chatId, Pageable pageable);
 
+    @Query(value = "{'chatId':  ?0, 'attributes.quality' : { '$in': ['LEGENDARY', 'MYTHIC']}, '_id' : {'$nin' : ?1}}")
+    List<ItemWeightProjection> getHighQualityItemWeights(long chatId, Set<String> usedItemIds);
+    @Query(value = "{'chatId': ?0, '_id' : {'$nin' : ?1}}", sort = "{'weight':  -1}")
+    Optional<ItemDocument> findByChatIdAndMaxWeight(long chatId, Set<String> usedItemIds);
     @Query(value = "{ 'chatId':  ?0, 'weightAbs':  {$lt: ?1}, '_id' : {'$nin' : ?2}}", sort = "{ 'weightAbs': -1}")
-    List<ItemWeightProjection> findClosestLesserWeight(Long chatId, double value, Set<String> usedItemIds, Pageable pageable);
-    Optional<ItemDocument> findByChatIdAndId(Long chatId, String id);
-    List<ItemDocument> findAllByChatIdAndIdIn(Long chatId, List<String> ids);
+    List<ItemWeightProjection> findClosestLesserWeight(long chatId, double value, Set<String> usedItemIds, Pageable pageable);
+
+    Optional<ItemDocument> findByChatIdAndId(long chatId, String id);
+
+    List<ItemDocument> findAllByChatIdAndIdIn(long chatId, List<String> ids);
+
     void deleteAllByChatId(Long chatId);
 }

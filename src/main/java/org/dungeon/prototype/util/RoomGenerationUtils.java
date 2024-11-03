@@ -45,8 +45,8 @@ public class RoomGenerationUtils {
             Integer hp, Integer maxHp, MonsterAttack primaryAttack,
             MonsterAttack secondaryAttack) {
         return Weight.builder()
-                .hpToMaxHp((double) ((hp / maxHp) * hp))
-                .hpDeficiencyToMaxHp((double) (((maxHp - hp) / maxHp) * hp))
+                .hp((double) hp)
+                .maxHp((double) maxHp)
                 .criticalHitChance(primaryAttack.getCriticalHitChance() * primaryAttack.getCriticalHitMultiplier() * primaryAttack.getAttack() +
                         secondaryAttack.getCriticalHitChance() * secondaryAttack.getCriticalHitMultiplier())
                 .chanceToKnockout(primaryAttack.getChanceToKnockOut() * secondaryAttack.getChanceToKnockOut())
