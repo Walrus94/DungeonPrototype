@@ -20,12 +20,10 @@ public class Level {
 
     private Long chatId;
     private Integer number;
-    private Room start;
-    private Room end;
+    private Point start;
+    private Point end;
     private GridSection[][] grid;
     private LevelMap levelMap;
-    private int maxLength;
-    private int minLength;
     private Map<Point, Room> roomsMap = new HashMap<>();
 
     public Room getRoomByCoordinates(Point currentPoint) {

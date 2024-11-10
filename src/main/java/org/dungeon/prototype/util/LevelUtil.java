@@ -69,6 +69,20 @@ public class LevelUtil {
         }
     }
 
+    public static void setMutualAdjacency(Room room, Room previousRoom) {
+        log.debug("Setting mutual adjacency of {} and {}", room, previousRoom);
+        if (room.getPoint().equals(previousRoom.getPoint())) {
+            log.debug("Same rooms passed as arguments. unable to set adjacency");
+            return;
+        }
+        var direction = getDirection(room, previousRoom);
+        log.debug("Direction: {}", direction);
+        if (nonNull(direction)) {//TODO: investigate NPE
+            previousRoom.addAdjacentRoom(direction);
+            room.addAdjacentRoom(getOppositeDirection(direction));
+        }
+    }
+
     public static Direction getOppositeDirection(Direction direction) {
         if (Objects.isNull(direction)) {
             return null;

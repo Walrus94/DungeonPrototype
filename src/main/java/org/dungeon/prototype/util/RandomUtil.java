@@ -15,18 +15,23 @@ import org.dungeon.prototype.model.room.RoomType;
 import org.dungeon.prototype.model.weight.Weight;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import static org.apache.commons.math3.util.FastMath.PI;
-import static org.apache.commons.math3.util.FastMath.abs;
 import static org.apache.commons.math3.util.FastMath.cos;
 import static org.apache.commons.math3.util.FastMath.exp;
 import static org.apache.commons.math3.util.FastMath.max;
 import static org.apache.commons.math3.util.FastMath.min;
 import static org.apache.commons.math3.util.FastMath.sin;
 import static org.apache.commons.math3.util.FastMath.sqrt;
-import static org.dungeon.prototype.model.room.RoomType.*;
+import static org.dungeon.prototype.model.room.RoomType.ANVIL;
+import static org.dungeon.prototype.model.room.RoomType.DRAGON;
+import static org.dungeon.prototype.model.room.RoomType.NORMAL;
+import static org.dungeon.prototype.model.room.RoomType.SWAMP_BEAST;
+import static org.dungeon.prototype.model.room.RoomType.TREASURE;
+import static org.dungeon.prototype.model.room.RoomType.VAMPIRE;
+import static org.dungeon.prototype.model.room.RoomType.WEREWOLF;
+import static org.dungeon.prototype.model.room.RoomType.ZOMBIE;
 import static org.dungeon.prototype.model.weight.Sign.NEGATIVE;
 import static org.dungeon.prototype.model.weight.Sign.POSITIVE;
 import static org.dungeon.prototype.model.weight.Sign.ZERO;
@@ -93,11 +98,16 @@ public class RandomUtil {
             case ZERO -> NORMAL;
             case POSITIVE -> {
                 List<Pair<RoomType, Double>> probabilities = new ArrayList<>();
-                val hpToMaxHp =  expectedWeight.getHp() / expectedWeight.getMaxHp();
-                val hpDeficiencyToMaxHp = (expectedWeight.getMaxHp() - expectedWeight.getHp()) / expectedWeight.getMaxHp();
-                val manaToMaxMana = expectedWeight.getMana() / expectedWeight.getMaxMana();
-                val manaDeficiencyToMaxMana = (expectedWeight.getMaxMana() - expectedWeight.getMana() / expectedWeight.getMaxMana());
-                val armorToMaxArmor = expectedWeight.getArmor() / expectedWeight.getMaxArmor();
+                val hpToMaxHp = expectedWeight.getMaxHp() == 0 ? expectedWeight.getHp() :
+                        expectedWeight.getHp() / expectedWeight.getMaxHp();
+                val hpDeficiencyToMaxHp = expectedWeight.getMaxHp() == 0 ? expectedWeight.getHp() :
+                        (expectedWeight.getMaxHp() - expectedWeight.getHp()) / expectedWeight.getMaxHp();
+                val manaToMaxMana = expectedWeight.getMaxMana() == 0 ? expectedWeight.getMana() :
+                        expectedWeight.getMana() / expectedWeight.getMaxMana();
+                val manaDeficiencyToMaxMana = expectedWeight.getMaxMana() == 0 ? expectedWeight.getMana() :
+                        (expectedWeight.getMaxMana() - expectedWeight.getMana()) / expectedWeight.getMaxMana();
+                val armorToMaxArmor = expectedWeight.getMaxArmor() == 0 ? expectedWeight.getArmor() :
+                        expectedWeight.getArmor() / expectedWeight.getMaxArmor();
                 val goldBonus = expectedWeight.getGoldBonus();
                 val specialRoomDistribution = getExponentialDistribution(currentStep, 0.0);
                 log.debug("Special room distribution: {}", specialRoomDistribution);
@@ -215,72 +225,120 @@ public class RandomUtil {
         return (cos(PI * currentStep / 2) + 1) / 2;
     }
 
-    public static RoomType getRandomClusterConnectionRoomType(Weight expectedWeight) {
-        List<Pair<RoomType, Double>> probabilities = new ArrayList<>();
+    public static RoomType getRandomClusterConnectionRoomType(Weight expectedWeight,
+                                                              Integer currentStep,
+                                                              Integer totalRooms) {
+        log.debug("Current step: {} / {}", currentStep, totalRooms);
+        Double positiveRoomDistribution = getPeriodicBinaryDistributionStartingFromZero(currentStep);
+        log.debug("Positive weight treasure room distribution: {}", positiveRoomDistribution);
+        Double negativeRoomDistribution = getPeriodicBinaryDistributionStartingFromOne(currentStep);
+        log.debug("Negative weight room distribution: {}", negativeRoomDistribution);
+        Double normalRoomDistribution = (double) (currentStep / totalRooms);
+        log.debug("Current normal room distribution: {}", normalRoomDistribution);
 
-        val arcaneMagic = expectedWeight.getArcaneMagic();
-        val divineMagic = expectedWeight.getDivineMagic();
+        return switch (getEnumeratedDistribution(List.of(Pair.create(NEGATIVE, negativeRoomDistribution),
+                Pair.create(ZERO, normalRoomDistribution), Pair.create(POSITIVE, positiveRoomDistribution))).sample()) {
+            case ZERO -> NORMAL;
+            case POSITIVE -> {
+                List<Pair<RoomType, Double>> probabilities = new ArrayList<>();
+                val armorToMaxArmor = expectedWeight.getMaxArmor() == 0 ? expectedWeight.getArmor() :
+                        expectedWeight.getArmor() / expectedWeight.getMaxArmor();
+                val goldBonus = expectedWeight.getGoldBonus();
+                val specialRoomDistribution = getExponentialDistribution(currentStep, 0.0);
+                log.debug("Special room distribution: {}", specialRoomDistribution);
+                val treasureRoomDistribution =  sqrt(1.0 - (double) (currentStep / totalRooms));
+                log.debug("Treasure room distribution: {}", treasureRoomDistribution);
 
-        if (arcaneMagic == 0 && divineMagic == 0) {
-            return getEnumeratedDistribution(List.of(
-                    Pair.create(WEREWOLF, 0.2),
-                    Pair.create(DRAGON, 0.2),
-                    Pair.create(VAMPIRE, 0.2),
-                    Pair.create(ZOMBIE, 0.2),
-                    Pair.create(SWAMP_BEAST, 0.2))).sample();
-        }
 
-        val expectedMagicWeightVector = MagicType.of(divineMagic, arcaneMagic);
+                val merchantProbability = specialRoomDistribution * goldBonus; //TODO: add potential (unequipped items) weight
+                log.debug("Merchant probability: {}", merchantProbability);
+                val anvilProbability = specialRoomDistribution * armorToMaxArmor;
+                val treasureProbability = treasureRoomDistribution * goldBonus; //TODO: add potential (unequipped items) weight
+                log.debug("Treasure probability: {}", treasureProbability);
 
-        val werewolfMagicDiffAbs = expectedMagicWeightVector.toVector()
-                .subtract(getMagicByMonsterType(WEREWOLF).toVector()).getNorm();
-        val swampBeastMagicDiffAbs = expectedMagicWeightVector.toVector()
-                .subtract(getMagicByMonsterType(SWAMP_BEAST).toVector()).getNorm();
-        val vampireMagicDiffAbs = expectedMagicWeightVector.toVector()
-                .subtract(getMagicByMonsterType(VAMPIRE).toVector()).getNorm();
-        val dragonMagicDiffAbs = expectedMagicWeightVector.toVector()
-                .subtract(getMagicByMonsterType(DRAGON).toVector()).getNorm();
-        val zombieMagicDiffAbs = expectedMagicWeightVector.toVector()
-                .subtract(getMagicByMonsterType(ZOMBIE).toVector()).getNorm();
+                val sumProb =  merchantProbability + treasureProbability + anvilProbability;
 
-        val werewolfRawProbability = werewolfMagicDiffAbs == 0.0 ? 1.0 :  1 / werewolfMagicDiffAbs;
-        val swampBeastRawProbability = swampBeastMagicDiffAbs == 0.0 ? 1.0 : 1 / swampBeastMagicDiffAbs;
-        val vampireRawProbability = vampireMagicDiffAbs == 0.0 ? 1.0 : 1 / vampireMagicDiffAbs;
-        val dragonRawProbability = dragonMagicDiffAbs == 0.0 ? 1.0 : 1/ dragonMagicDiffAbs;
-        val zombieRawProbability = zombieMagicDiffAbs == 0.0 ? 1.0 : 1 / zombieMagicDiffAbs;
+                if (sumProb == 0.0) {
+                    yield  NORMAL;
+                }
 
-        val sumProb = werewolfRawProbability + swampBeastRawProbability +
-                vampireRawProbability + dragonRawProbability + zombieRawProbability;
+                val positiveProbabilitiesNormalizingFactor =
+                        1 / sumProb;
 
-        if (sumProb == 0.0) {
-            return getEnumeratedDistribution(List.of(
-                    Pair.create(WEREWOLF, 0.2),
-                    Pair.create(DRAGON, 0.2),
-                    Pair.create(VAMPIRE, 0.2),
-                    Pair.create(ZOMBIE, 0.2),
-                    Pair.create(SWAMP_BEAST, 0.2))).sample();
-        }
+                probabilities.add(Pair.create(RoomType.TREASURE, max(0.0, min(1.0, treasureProbability * positiveProbabilitiesNormalizingFactor))));
+                probabilities.add(Pair.create(RoomType.MERCHANT, max(0.0, min(1.0, merchantProbability * positiveProbabilitiesNormalizingFactor))));
+                probabilities.add(Pair.create(ANVIL, max(0.0, min(1.0, anvilProbability * positiveProbabilitiesNormalizingFactor))));
 
-        val monsterNormalizingFactor = 1 / (sumProb);
+                yield getEnumeratedDistribution(probabilities).sample();
+            }
+            case NEGATIVE -> {
+                List<Pair<RoomType, Double>> probabilities = new ArrayList<>();
 
-        val werewolfProbability = werewolfRawProbability * monsterNormalizingFactor;
-        log.debug("Werewolf probability: {}", werewolfProbability);
-        val swampBeastProbability =  swampBeastRawProbability * monsterNormalizingFactor;
-        log.debug("Swamp beast probability: {}", swampBeastProbability);
-        val vampireProbability =  vampireRawProbability * monsterNormalizingFactor;
-        log.debug("Vampire probability: {}", vampireProbability);
-        val dragonProbability =  dragonRawProbability * monsterNormalizingFactor;
-        log.debug("Dragon probability: {}", dragonProbability);
-        val zombieProbability =  zombieRawProbability * monsterNormalizingFactor;
-        log.debug("Zombie probability: {}", zombieProbability);
+                val arcaneMagic = expectedWeight.getArcaneMagic();
+                val divineMagic = expectedWeight.getDivineMagic();
 
-        probabilities.add(Pair.create(RoomType.WEREWOLF, werewolfProbability));
-        probabilities.add(Pair.create(RoomType.SWAMP_BEAST, swampBeastProbability));
-        probabilities.add(Pair.create(RoomType.VAMPIRE, vampireProbability));
-        probabilities.add(Pair.create(RoomType.DRAGON, dragonProbability));
-        probabilities.add(Pair.create(RoomType.ZOMBIE, zombieProbability));
+                if (arcaneMagic == 0 && divineMagic == 0) {
+                    yield getEnumeratedDistribution(List.of(
+                            Pair.create(WEREWOLF, 0.2),
+                            Pair.create(DRAGON, 0.2),
+                            Pair.create(VAMPIRE, 0.2),
+                            Pair.create(ZOMBIE, 0.2),
+                            Pair.create(SWAMP_BEAST, 0.2))).sample();
+                }
 
-        return getEnumeratedDistribution(probabilities).sample();
+                val expectedMagicWeightVector = MagicType.of(divineMagic, arcaneMagic);
+
+                val werewolfMagicDiffAbs = expectedMagicWeightVector.toVector()
+                        .subtract(getMagicByMonsterType(WEREWOLF).toVector()).getNorm();
+                val swampBeastMagicDiffAbs = expectedMagicWeightVector.toVector()
+                        .subtract(getMagicByMonsterType(SWAMP_BEAST).toVector()).getNorm();
+                val vampireMagicDiffAbs = expectedMagicWeightVector.toVector()
+                        .subtract(getMagicByMonsterType(VAMPIRE).toVector()).getNorm();
+                val dragonMagicDiffAbs = expectedMagicWeightVector.toVector()
+                        .subtract(getMagicByMonsterType(DRAGON).toVector()).getNorm();
+                val zombieMagicDiffAbs = expectedMagicWeightVector.toVector()
+                        .subtract(getMagicByMonsterType(ZOMBIE).toVector()).getNorm();
+
+                val werewolfRawProbability = werewolfMagicDiffAbs == 0.0 ? 1.0 :  1 / werewolfMagicDiffAbs;
+                val swampBeastRawProbability = swampBeastMagicDiffAbs == 0.0 ? 1.0 : 1 / swampBeastMagicDiffAbs;
+                val vampireRawProbability = vampireMagicDiffAbs == 0.0 ? 1.0 : 1 / vampireMagicDiffAbs;
+                val dragonRawProbability = dragonMagicDiffAbs == 0.0 ? 1.0 : 1/ dragonMagicDiffAbs;
+                val zombieRawProbability = zombieMagicDiffAbs == 0.0 ? 1.0 : 1 / zombieMagicDiffAbs;
+
+                val sumProb = werewolfRawProbability + swampBeastRawProbability +
+                        vampireRawProbability + dragonRawProbability + zombieRawProbability;
+
+                if (sumProb == 0.0) {
+                    yield getEnumeratedDistribution(List.of(
+                            Pair.create(WEREWOLF, 0.2),
+                            Pair.create(DRAGON, 0.2),
+                            Pair.create(VAMPIRE, 0.2),
+                            Pair.create(ZOMBIE, 0.2),
+                            Pair.create(SWAMP_BEAST, 0.2))).sample();
+                }
+
+                val monsterNormalizingFactor = 1 / (sumProb);
+
+                val werewolfProbability = werewolfRawProbability * monsterNormalizingFactor;
+                log.debug("Werewolf probability: {}", werewolfProbability);
+                val swampBeastProbability =  swampBeastRawProbability * monsterNormalizingFactor;
+                log.debug("Swamp beast probability: {}", swampBeastProbability);
+                val vampireProbability =  vampireRawProbability * monsterNormalizingFactor;
+                log.debug("Vampire probability: {}", vampireProbability);
+                val dragonProbability =  dragonRawProbability * monsterNormalizingFactor;
+                log.debug("Dragon probability: {}", dragonProbability);
+                val zombieProbability =  zombieRawProbability * monsterNormalizingFactor;
+                log.debug("Zombie probability: {}", zombieProbability);
+
+                probabilities.add(Pair.create(RoomType.WEREWOLF, werewolfProbability));
+                probabilities.add(Pair.create(RoomType.SWAMP_BEAST, swampBeastProbability));
+                probabilities.add(Pair.create(RoomType.VAMPIRE, vampireProbability));
+                probabilities.add(Pair.create(RoomType.DRAGON, dragonProbability));
+                probabilities.add(Pair.create(RoomType.ZOMBIE, zombieProbability));
+
+                yield getEnumeratedDistribution(probabilities).sample();
+            }
+        };
     }
 
     public static RoomType getDeadEndRouteRoomType(Weight expectedWeight, int currentStep, double clusterDensity) {
@@ -299,12 +357,12 @@ public class RandomUtil {
                     val hpToMaxHp =  expectedWeight.getHp() / expectedWeight.getMaxHp();
                     val hpDeficiencyToMaxHp = (expectedWeight.getMaxHp() - expectedWeight.getHp()) / expectedWeight.getMaxHp();
                     val manaToMaxMana = expectedWeight.getMana() / expectedWeight.getMaxMana();
-                    val manaDeficiencyToMaxMana = (expectedWeight.getMaxMana() - expectedWeight.getMana() / expectedWeight.getMaxMana());
+                    val manaDeficiencyToMaxMana = (expectedWeight.getMaxMana() - expectedWeight.getMana()) / expectedWeight.getMaxMana();
                     val armorToMaxArmor = expectedWeight.getArmor() / expectedWeight.getMaxArmor();
                     val goldBonus = expectedWeight.getGoldBonus();
                     val specialRoomDistribution = getExponentialDistribution(currentStep, 0.0);
                     log.debug("Special room distribution: {}", specialRoomDistribution);
-                    val treasureRoomDistribution =  sqrt(1.0 - (double) (currentStep / clusterDensity));
+                    val treasureRoomDistribution =  sqrt(1.0 - (currentStep / clusterDensity));
                     log.debug("Treasure room distribution: {}", treasureRoomDistribution);
                     val healthShrineDistribution =
                             getExponentialDistribution(currentStep, clusterDensity * hpDeficiencyToMaxHp);
@@ -411,15 +469,11 @@ public class RandomUtil {
         }
     }
 
-    private static Double getExponentialDistribution(Integer a, Double infPoint, double... penaltyPoints) {
-        val penalty = Arrays.stream(penaltyPoints)
-                .map(point ->
-                        exp(abs(a - point)) / exp(abs(infPoint - point)))
-                .sum();
+    private static Double getExponentialDistribution(Integer a, Double infPoint) {
         return switch (a.compareTo(infPoint.intValue())) {
-                case 0 -> 1.0 - penalty ;
-                case 1 -> exp(a - infPoint) - penalty;
-                case -1 -> exp(infPoint - a) - penalty;
+                case 0 -> 1.0 ;
+                case 1 -> exp(a - infPoint);
+                case -1 -> exp(infPoint - a);
             default -> 0.0;
         };
     }

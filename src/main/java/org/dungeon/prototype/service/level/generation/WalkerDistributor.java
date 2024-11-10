@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.dungeon.prototype.model.Point;
 import org.dungeon.prototype.model.level.generation.LevelGridCluster;
 import org.dungeon.prototype.model.level.generation.NextRoomDto;
 import org.dungeon.prototype.model.level.ui.GridSection;
@@ -13,9 +14,11 @@ import org.dungeon.prototype.service.WalkerUniqueIdFactory;
 import java.util.*;
 
 import static java.util.Objects.nonNull;
+import static org.dungeon.prototype.service.level.generation.WalkerDistributor.Status.FINISHED;
+import static org.dungeon.prototype.service.level.generation.WalkerDistributor.Status.RUNNING;
+import static org.dungeon.prototype.service.level.generation.WalkerDistributor.Status.WAITING;
 import static org.dungeon.prototype.util.LevelUtil.getAdjacentSectionsInCluster;
-import static org.dungeon.prototype.util.LevelUtil.getDirection;
-import static org.dungeon.prototype.util.LevelUtil.getOppositeDirection;
+import static org.dungeon.prototype.util.LevelUtil.setMutualAdjacency;
 
 @Data
 @Slf4j
@@ -36,115 +39,110 @@ public class WalkerDistributor {
     private int mainPathLength;
     private Status status;
 
-    public NextRoomDto nextStep(GridSection[][] grid) {
+    public NextRoomDto nextStep(GridSection[][] grid, Map<Point, Room> roomsMap) {
         log.debug("Distribute walker id{}, status:{} next step...", id, status);
         log.debug("Current step: {}, total steps: {}, main path length:{}", currentStep, totalSteps, mainPathLength);
-        if (status == Status.WAITING) {
-            if (subWalkers.isEmpty()) {
-                log.debug("No sub-walkers present, finishing walker...");
-                status = Status.FINISHED;
-            }
-            return null;
-        }
+        log.debug("Current section: {}, cluster: {}", currentSection, cluster);
         val adjacentSections = getAdjacentSectionsInCluster(currentSection.getPoint(), grid, cluster);
         if (nonNull(previousRoom)) {
             adjacentSections.removeIf(section -> section.getPoint().equals(previousRoom.getPoint()));
         }
+        adjacentSections.removeIf(section -> roomsMap.containsKey(section.getPoint()) || section.getStepsFromStart() == 0);
         GridSection nextSection = null;
         if (adjacentSections.size() > 1 && !runSubWalkerOnRouteFork) {
             log.debug("Running sub-walker on route fork disabled...");
+            log.debug("Finishing walker. Running sub-walkers remaining: {}", subWalkers.size());
             if (subWalkers.isEmpty()) {
-                log.debug("Finishing walker...");
+                log.debug("No sub-walkers present, finishing walker...");
                 status = Status.FINISHED;
-                return null;
+            } else {
+                status = Status.WAITING;
+                log.debug("Sub-walkers left: {}", subWalkers.size());
             }
         } else {
             log.debug("Assigning next section...");
-            Optional<GridSection> nextSectionOptional = adjacentSections.stream().max(Comparator.comparing(GridSection::getStepsFromStart));
+            Optional<GridSection> nextSectionOptional = adjacentSections.stream()
+                    .filter(section -> section.getStepsFromStart() == currentStep)
+                    .min(Comparator.comparing(section -> getAdjacentSectionsInCluster(section.getPoint(), grid, cluster).size()));
             if (nextSectionOptional.isPresent()) {
                 nextSection = nextSectionOptional.get();
                 log.debug("Next section: {}", nextSection);
             } else {
+                log.debug("Finishing walker...");
                 if (subWalkers.isEmpty()) {
-                    log.debug("Finishing walker...");
+                    log.debug("No sub-walkers present, finishing walker...");
                     status = Status.FINISHED;
                 } else {
-                    log.debug("Running sub-walkers remaining: {}, switching to waiting mode...", subWalkers.size());
                     status = Status.WAITING;
+                    log.debug("Sub-walkers left: {}", subWalkers.size());
                 }
                 return null;
             }
         }
-
 
         if (nonNull(nextSection)) {
-            currentStep--;
             var room = buildRoom(nextSection, chatId);
-            if (nonNull(previousRoom)) {
-                setMutualAdjacency(room, previousRoom);
-            }
             if (runSubWalkerOnRouteFork && adjacentSections.size() > 1) {
-                log.debug("Processing route fork...");
                 log.debug("Running sub-walker on route fork...");
-                adjacentSections.stream().filter(section -> section.getStepsFromStart() == currentStep - 1).forEach(section -> subWalkers
-                        .add(WalkerDistributor.builder()
+                for (GridSection section : adjacentSections) {
+                    if (!section.getPoint().equals(nextSection.getPoint()) && !roomsMap.containsKey(nextSection.getPoint())) {
+                        subWalkers.add(WalkerDistributor.builder()
                                 .chatId(chatId)
                                 .cluster(cluster)
-                                .runSubWalkerOnRouteFork(false)
-                                .status(WalkerDistributor.Status.RUNNING)
-                                .currentSection(section)
-                                .previousRoom(room)
-                                .currentStep(totalSteps - mainPathLength)
-                                .totalSteps(totalSteps - mainPathLength)
-                                .build()));
-                log.debug("Sub-walkers: {}", subWalkers);
-
-                if (currentStep == 0) {
-                    if (!subWalkers.isEmpty()) {
-                        status = Status.WAITING;
-                    } else {
-                        status = Status.FINISHED;
+                                .runSubWalkerOnRouteFork(true)
+                                .status(RUNNING)
+                                .currentSection(currentSection)
+                                .previousRoom(roomsMap.get(currentSection.getPoint()))
+                                .currentStep(section.getStepsFromStart())
+                                .totalSteps(currentStep)
+                                .build());
                     }
-                    return null;
                 }
-                currentSection = nextSection;
-                previousRoom = room;
-                return NextRoomDto.builder()
-                        .room(room)
-                        .section(nextSection)
-                        .currentStep(currentStep + 1)
-                        .totalSteps(runSubWalkerOnRouteFork ? totalSteps++ : totalSteps)
-                        .build();
-            } else {
+                log.debug("Sub-walkers: {}", subWalkers);
+            }
+            setMutualAdjacency(room, previousRoom);
+            currentSection = nextSection;
+            previousRoom = room;
+            currentStep--;
+            if (currentStep == 0) {
+                log.debug("Current step equals 0, finishing walker");
                 if (subWalkers.isEmpty()) {
+                    log.debug("No sub-walkers present, finishing walker...");
                     status = Status.FINISHED;
                 } else {
                     status = Status.WAITING;
+                    log.debug("Sub-walkers left: {}", subWalkers.size());
                 }
-                return null;
             }
-        }
-        if (subWalkers.isEmpty()) {
-            status = Status.FINISHED;
+            return NextRoomDto.builder()
+                    .room(room)
+                    .section(nextSection)
+                    .currentStep(currentStep)
+                    .totalSteps(totalSteps)
+                    .build();
         } else {
-            status = Status.WAITING;
+            return null;
         }
-        return null;
     }
 
     private Room buildRoom(GridSection section, Long chatId) {
+        log.debug("Building room on {}", section.getPoint());
         val room = new Room();
         room.setChatId(chatId);
         room.setPoint(section.getPoint());
         return room;
     }
 
-    private void setMutualAdjacency(Room room, Room previousRoom) {
-        var direction = getDirection(room, previousRoom);
-        if (nonNull(direction)) {//TODO: investigate NPE
-            previousRoom.getAdjacentRooms().put(direction, true);
-            room.getAdjacentRooms().put(getOppositeDirection(direction), true);
-        }
+    public boolean isRunning() {
+        return RUNNING.equals(status);
+    }
+
+    public boolean isWaiting() {
+        return WAITING.equals(status);
+    }
+
+    public boolean finished() {
+        return FINISHED.equals(status);
     }
 
     public enum Status {

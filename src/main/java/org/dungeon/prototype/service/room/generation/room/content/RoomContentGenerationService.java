@@ -127,6 +127,7 @@ public class RoomContentGenerationService {
 
     public Treasure getSpecialTreasure(long chatId, int playerLuck, Set<String> usedItemIds) {
         Treasure treasure = new Treasure();
+        treasure.setGold(0);
         treasure.setItems(Set.of(itemService.getHighQualityItem(chatId, playerLuck, usedItemIds)));
         return treasure;
     }

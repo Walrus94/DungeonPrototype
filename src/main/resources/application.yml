@@ -583,6 +583,9 @@ logging:
                 LevelGenerationService: DEBUG
                 WalkerBuilder: DEBUG
                 WalkerDistributor: DEBUG
+            message:
+              MessageService: DEBUG
+              MessageSender: DEBUG
           util:
             RoomGenerationUtils: DEBUG
             LevelUtil: DEBUG

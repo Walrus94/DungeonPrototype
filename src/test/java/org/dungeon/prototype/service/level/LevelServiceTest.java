@@ -49,7 +49,10 @@ import static org.dungeon.prototype.model.Direction.E;
 import static org.dungeon.prototype.model.Direction.N;
 import static org.dungeon.prototype.model.Direction.S;
 import static org.dungeon.prototype.model.Direction.W;
+import static org.dungeon.prototype.model.room.RoomType.SHRINE_DRAINED;
+import static org.dungeon.prototype.model.room.RoomType.START;
 import static org.dungeon.prototype.model.room.RoomType.TREASURE_LOOTED;
+import static org.dungeon.prototype.util.LevelUtil.generateEmptyMapGrid;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -82,18 +85,22 @@ class LevelServiceTest extends BaseServiceUnitTest {
     @DisplayName("Successfully starts new game")
     void startNewGame() {
         val player = getPlayer(CHAT_ID);
-        val level = TestData.getLevel();
+        val level = TestData.getLevel(1);
         when(levelGenerationService.generateLevel(CHAT_ID, player, 1)).thenReturn(level);
 
         val document = new LevelDocument();
         val start = new RoomDocument();
-        start.setPoint(new Point(5, 6));
+        start.setId(CURRENT_ROOM_ID);
+        start.setPoint(new Point(0, 0));
         start.setAdjacentRooms(new EnumMap<>(Map.of(
                 N, true,
                 E, false,
                 S, false,
                 W, false)));
-        document.setStart(start);
+        document.setStart(start.getPoint());
+        document.setEnd(new Point(5, 5));
+
+        document.setRoomsMap(Map.of("{\"x\":0, \"y\":0}", start));
 
         when(levelRepository.existsByChatId(CHAT_ID)).thenReturn(false);
         when(levelRepository.save(any(LevelDocument.class))).thenReturn(document);
@@ -109,7 +116,7 @@ class LevelServiceTest extends BaseServiceUnitTest {
     @DisplayName("Successfully proceeds to next level")
     void nextLevel() {
         val player = getPlayer(CHAT_ID);
-        val level = TestData.getLevel();
+        val level = TestData.getLevel(2);
         val levelNumber = new LevelNumberProjection();
         levelNumber.setNumber(1);
         when(levelRepository.findNumberByChatId(CHAT_ID)).thenReturn(Optional.of(levelNumber));
@@ -117,13 +124,25 @@ class LevelServiceTest extends BaseServiceUnitTest {
 
         val document = new LevelDocument();
         val start = new RoomDocument();
-        start.setPoint(new Point(5, 6));
+        start.setId(CURRENT_ROOM_ID);
+        start.setPoint(new Point(0, 0));
         start.setAdjacentRooms(new EnumMap<>(Map.of(
                 N, true,
                 E, false,
                 S, false,
                 W, false)));
-        document.setStart(start);
+        document.setStart(new Point(0, 0));
+        val end = new RoomDocument();
+        end.setPoint(new Point(5,5));
+        end.setId("endId");
+        end.setAdjacentRooms(new EnumMap<>(Map.of(
+                N, true,
+                E, false,
+                S, false,
+                W, false)));
+        document.setEnd(end.getPoint());
+        document.setRoomsMap(Map.of("{\"x\":0, \"y\":0}", start,
+                "{\"x\":5, \"y\":5}", end));
         when(levelRepository.save(any(LevelDocument.class))).thenReturn(document);
         when(effectService.updateArmorEffect(player)).thenReturn(player);
         doNothing().when(messageService).sendLevelGeneratingInfoMessage(CHAT_ID, 2);
@@ -163,9 +182,17 @@ class LevelServiceTest extends BaseServiceUnitTest {
         when(levelMap.isContainsRoom(5, 6)).thenReturn(false);
         when(levelMap.addRoom(levelGrid[5][6])).thenReturn(true);
         val document = new LevelDocument();
+        val start = new RoomDocument();
+        start.setId("startId");
+        val startRoomDocument = new RoomContentDocument();
+        startRoomDocument.setRoomType(START);
+        start.setRoomContent(startRoomDocument);
+        document.setStart(start.getPoint());
         val newRoomDocument = new RoomDocument();
+        newRoomDocument.setId(CURRENT_ROOM_ID);
         newRoomDocument.setPoint(new Point(5, 6));
         val oldRoom = new RoomDocument();
+        oldRoom.setId("oldId");
         oldRoom.setPoint(new Point(6, 6));
         newRoomDocument.setAdjacentRooms(new EnumMap<>(Map.of(
                 N, false,
@@ -176,6 +203,7 @@ class LevelServiceTest extends BaseServiceUnitTest {
         document.setRoomsMap(Map.of("{\"x\":5, \"y\":6}", newRoomDocument,
                 "{\"x\":6, \"y\":6}", oldRoom));
         document.setLevelMap(levelMap);
+        document.setChatId(CHAT_ID);
         document.setGrid(levelGrid);
 
         when(levelRepository.findByChatId(CHAT_ID)).thenReturn(Optional.of(document));
@@ -290,11 +318,14 @@ class LevelServiceTest extends BaseServiceUnitTest {
         GridSection[][] grid = new GridSection[6][6];
         grid[5][5] = new GridSection(5, 5);
         level.setGrid(grid);
+        level.setChatId(CHAT_ID);
         val roomDocument = new RoomDocument();
         roomDocument.setId(CURRENT_ROOM_ID);
         val roomsMap = Map.of("{\"x\":5,\"y\":5}", roomDocument);
         level.setRoomsMap(roomsMap);
 
+        when(roomService.saveOrUpdateRoomContent(any())).thenReturn(new EmptyRoom(TREASURE_LOOTED));
+        when(roomService.saveOrUpdateRoom(any(Room.class))).thenReturn(room);
         when(levelRepository.findByChatId(CHAT_ID)).thenReturn(Optional.of(level));
 
         levelService.updateAfterTreasureLooted(room);
@@ -317,9 +348,12 @@ class LevelServiceTest extends BaseServiceUnitTest {
     @DisplayName("Successfully performs shrine usage")
     void shrineRefill() {
         val player = getPlayer(CHAT_ID, CURRENT_ROOM_ID, 5, 20);
-        val level = new Level();
-        GridSection[][] grid = new GridSection[6][6];
-        grid[5][5] = new GridSection(5, 5);
+        var level = new Level();
+        level.setStart(new Point(0, 0));
+        level.setEnd(new Point(5, 5));
+        level.setChatId(CHAT_ID);
+        GridSection[][] grid = generateEmptyMapGrid(6);
+        grid[4][5] = new GridSection(4, 5);
         level.setGrid(grid);
         val room = new Room();
         val roomContent = new HealthShrine();
@@ -330,10 +364,14 @@ class LevelServiceTest extends BaseServiceUnitTest {
                 .amount(10)
                 .build();
         roomContent.setEffect(effect);
+        roomContent.setId("1234567");
         room.setRoomContent(roomContent);
         room.setId(CURRENT_ROOM_ID);
-        room.setPoint(new Point(5, 5));
-        level.setRoomsMap(Map.of(new Point(5, 5), room));
+        room.setPoint(new Point(4, 5));
+        level.setRoomsMap(Map.of(new Point(4, 5), room));
+
+        when(roomService.saveOrUpdateRoom(room)).thenReturn(room);
+        when(roomService.saveOrUpdateRoomContent(any(RoomContent.class))).thenReturn(new EmptyRoom(SHRINE_DRAINED));
 
         levelService.shrineUsage(CHAT_ID, player, room, level);
 

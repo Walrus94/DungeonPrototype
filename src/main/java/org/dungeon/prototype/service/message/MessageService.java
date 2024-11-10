@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.annotations.aspect.ChatStateUpdate;
 import org.dungeon.prototype.bot.state.ChatState;
+import org.dungeon.prototype.exception.EntityNotFoundException;
 import org.dungeon.prototype.exception.PlayerException;
 import org.dungeon.prototype.model.effect.Effect;
 import org.dungeon.prototype.model.effect.ExpirableEffect;
@@ -47,6 +48,7 @@ import static org.dungeon.prototype.properties.CallbackType.ITEM_INVENTORY;
 import static org.dungeon.prototype.properties.CallbackType.ITEM_INVENTORY_EQUIP;
 import static org.dungeon.prototype.properties.CallbackType.ITEM_INVENTORY_UN_EQUIP;
 import static org.dungeon.prototype.properties.CallbackType.MAP;
+import static org.dungeon.prototype.properties.CallbackType.MENU_BACK;
 import static org.dungeon.prototype.properties.CallbackType.MERCHANT_BUY_MENU;
 import static org.dungeon.prototype.properties.CallbackType.MERCHANT_SELL_DISPLAY_ITEM;
 import static org.dungeon.prototype.properties.CallbackType.MERCHANT_SELL_PRICE;
@@ -206,8 +208,10 @@ public class MessageService {
     @ChatStateUpdate(from = ChatState.GENERATING_LEVEL, to = GAME)
     public void sendNewLevelMessage(Long chatId, Player player, Level level, int number) {
         if (nonNull(level)) {
-            log.debug("Player started level {}, current point, {}\n\nPlayer: {}", number, level.getStart().getPoint(), player);
-            sendRoomMessage(chatId, player, level.getStart());
+            log.debug("Player started level {}, current point: {}\n\nPlayer: {}", number, level.getStart(), player);
+            sendRoomMessage(chatId, player, level.getRoomsMap().get(level.getStart()));
+        } else {
+            throw new EntityNotFoundException(chatId, "level", MENU_BACK);
         }
     }
 

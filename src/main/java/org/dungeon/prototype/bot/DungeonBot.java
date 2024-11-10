@@ -122,9 +122,6 @@ public class DungeonBot extends SpringWebhookBot {
     public void sendMessage(Long chatId, SendPhoto message) {
         try {
             val messageId = execute(message).getMessageId();
-            if (messageId == -1) {
-                throw new SendMessageException(chatId, CallbackType.CONTINUE_GAME);
-            }
             val lastMessageId = chatStateService.updateLastMessage(chatId, messageId);
             lastMessageId.ifPresent(id -> deleteMessage(chatId, id));
         } catch (TelegramApiException e) {

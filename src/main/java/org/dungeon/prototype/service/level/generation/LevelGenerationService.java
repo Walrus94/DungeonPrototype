@@ -7,22 +7,33 @@ import org.dungeon.prototype.model.level.Level;
 import org.dungeon.prototype.model.Point;
 import org.dungeon.prototype.model.level.generation.LevelGridCluster;
 import org.dungeon.prototype.model.level.generation.NextRoomDto;
+import org.dungeon.prototype.model.level.ui.LevelMap;
 import org.dungeon.prototype.model.player.Player;
 import org.dungeon.prototype.model.player.PlayerAttribute;
 import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.RoomType;
-import org.dungeon.prototype.model.room.content.*;
 import org.dungeon.prototype.model.level.ui.GridSection;
+import org.dungeon.prototype.model.room.content.EndRoom;
+import org.dungeon.prototype.model.room.content.ItemsRoom;
+import org.dungeon.prototype.model.room.content.RoomContent;
+import org.dungeon.prototype.model.room.content.StartRoom;
 import org.dungeon.prototype.model.weight.Weight;
 import org.dungeon.prototype.properties.GenerationProperties;
-import org.dungeon.prototype.service.room.RoomService;
 import org.dungeon.prototype.service.room.generation.room.content.RoomContentGenerationService;
 import org.dungeon.prototype.service.weight.WeightCalculationService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -30,18 +41,22 @@ import java.util.stream.Stream;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
-import static org.apache.commons.math3.util.FastMath.*;
-import static org.dungeon.prototype.util.LevelUtil.*;
-import static org.dungeon.prototype.util.RandomUtil.*;
+import static org.apache.commons.math3.util.FastMath.abs;
+import static org.apache.commons.math3.util.FastMath.max;
+import static org.dungeon.prototype.util.LevelUtil.generateEmptyMapGrid;
+import static org.dungeon.prototype.util.LevelUtil.getAdjacentSectionsInCluster;
+import static org.dungeon.prototype.util.LevelUtil.getIcon;
+import static org.dungeon.prototype.util.LevelUtil.printMapGridToLogs;
+import static org.dungeon.prototype.util.LevelUtil.printMapToLogs;
+import static org.dungeon.prototype.util.LevelUtil.setMutualAdjacency;
+import static org.dungeon.prototype.util.RandomUtil.getDeadEndRouteRoomType;
+import static org.dungeon.prototype.util.RandomUtil.getRandomClusterConnectionRoomType;
+import static org.dungeon.prototype.util.RandomUtil.getRandomInt;
+import static org.dungeon.prototype.util.RandomUtil.getRandomRoomType;
 
 @Slf4j
 @Service
 public class LevelGenerationService {
-
-    @Value("${generation.level.dead-end-length-threshold}")
-    private int deadEndLengthThreshold;
-    @Autowired
-    private RoomService roomService;
     @Autowired
     private RoomContentGenerationService roomContentGenerationService;
     @Autowired
@@ -81,10 +96,9 @@ public class LevelGenerationService {
 
         //empty level grid will be filled with rooms during generation
         GridSection[][] grid = generateEmptyMapGrid(gridSize);
-        val startSection = setStartSection(grid, clusterConnectionPoints.getFirst());
-        val endSection = setEndSection(grid, clusterConnectionPoints.getLast());
-        //TODO:consider removing after debug
-        initConnectionSections(grid, clusterConnectionPoints);
+        initConnectionSections(grid, clusterConnectionPoints);//TODO:consider removing after debug
+        val levelStartSection = setStartSection(grid, clusterConnectionPoints.getFirst());
+        val levelEndSection = setEndSection(grid, clusterConnectionPoints.getLast());
 
         while (!walkers.isEmpty()) {
             for (WalkerBuilder walker : walkers) {
@@ -105,15 +119,15 @@ public class LevelGenerationService {
         log.debug("Populating connection point rooms with content...");
         for (int i = 0; i < clusterConnectionPoints.size(); i++) {
             if (i == 0) {
-                Room start = buildStartRoom(clusterConnectionPoints.get(i), chatId);
-                level.setStart(start);
+                Room start = new Room(clusterConnectionPoints.get(i), chatId, new StartRoom());
+                level.setStart(start.getPoint());
                 roomsMap.put(start.getPoint(), start);
                 log.debug("Current map state\n{}", printMapToLogs(grid, roomsMap));
                 continue;
             }
             if (i == clusterConnectionPoints.size() - 1) {
-                Room end = buildEndRoom(clusterConnectionPoints.get(i), chatId);
-                level.setEnd(end);
+                Room end = new Room(clusterConnectionPoints.get(i), chatId, new EndRoom());
+                level.setEnd(end.getPoint());
                 roomsMap.put(end.getPoint(), end);
                 Weight expectedWeight = weightCalculationService.getExpectedClusterConnectionPointWeight(player.getWeight(),
                         player.getWeight().toVector().getNorm() / levelDensity,
@@ -127,7 +141,7 @@ public class LevelGenerationService {
                     player.getWeight().toVector().getNorm() / levelDensity,
                     i, clusterConnectionPoints.size());
             log.debug("Expected weight norm: {}, expected weight: {}", expectedWeight.toVector().getNorm(), expectedWeight);
-            val roomType = getRandomClusterConnectionRoomType(expectedWeight);
+            val roomType = getRandomClusterConnectionRoomType(expectedWeight, i, clusterConnectionPoints.size());
             val roomContent = roomContentGenerationService.getNextRoomContent(expectedWeight, chatId, roomType, usedItemIds);
             if (roomContent instanceof ItemsRoom itemsRoom) {
                 usedItemIds.addAll(itemsRoom.getItems().stream().map(Item::getId).collect(Collectors.toSet()));
@@ -139,52 +153,77 @@ public class LevelGenerationService {
         }
 
         for (LevelGridCluster cluster : clusters.values()) {
-            Point endPoint = cluster.getEndConnectionPoint();
-            val endAdjacentSectionsStream = getAdjacentSectionsInCluster(endPoint, grid, cluster).stream()
-                    .filter(section -> section.getStepsFromStart() > 0);
-            log.debug("Processing endSection: {}", endSection);
+            Point clusterEndPoint = cluster.getEndConnectionPoint();
+            log.debug("Processing cluster endSection: {}", clusterEndPoint);
             int deadEndsRouteStepsCount = 0;
             if (cluster.hasDeadEnds()) {
-                deadEndsRouteStepsCount = populateDeadEnds(chatId, player, grid, cluster, usedItemIds);
+                deadEndsRouteStepsCount = populateDeadEnds(chatId, player, grid, cluster, roomsMap, usedItemIds);
             }
-            int mainPathLength = endAdjacentSectionsStream.max(Comparator.comparing(GridSection::getStepsFromStart))
-                    .map(GridSection::getStepsFromStart).orElse(0);
+            var adjacentSections = getAdjacentSectionsInCluster(clusterEndPoint, grid, cluster).stream()
+                    .filter(section -> section.getStepsFromStart() > 0)
+                    .collect(Collectors.toCollection(HashSet::new));
+            var mainPathStart = adjacentSections.stream()
+                    .max(Comparator.comparing(GridSection::getStepsFromStart))
+                    .orElseGet(GridSection::new);
+            log.debug("Main path start: {}", mainPathStart);
             val mainPathWalker = WalkerDistributor.builder()
                     .chatId(chatId)
                     .cluster(cluster)
-                    .currentSection(endSection)
+                    .currentSection(grid[clusterEndPoint.getX()][clusterEndPoint.getY()])
                     .runSubWalkerOnRouteFork(true)
-                    .previousRoom(level.getEnd())
-                    .currentStep(mainPathLength)
+                    .previousRoom(roomsMap.get(level.getEnd()))
+                    .currentStep(mainPathStart.getStepsFromStart())
                     .status(WalkerDistributor.Status.RUNNING)
-                    .mainPathLength(mainPathLength)
+                    .mainPathLength(mainPathStart.getStepsFromStart())
                     .totalSteps(cluster.getSize() - deadEndsRouteStepsCount)
                     .build();
-            while (!WalkerDistributor.Status.FINISHED.equals(mainPathWalker.getStatus())) {
-                if (!WalkerDistributor.Status.WAITING.equals(mainPathWalker.getStatus())) {
-                    log.debug("Main path walker next step...");
-                    val nextRoom = mainPathWalker.nextStep(grid);
-                    if (nonNull(nextRoom)) {
-                        populateRoom(chatId, player, grid, usedItemIds, roomsMap, cluster, nextRoom);
-                    }
+            while (mainPathWalker.isRunning()) {
+                log.debug("Main cluster walker - id: {}, status: {}, current step: {}, current point: {}",
+                        mainPathWalker.getId(), mainPathWalker.getStatus(), mainPathWalker.getCurrentStep(),
+                        mainPathWalker.getCurrentSection().getPoint());
+                log.debug("Main path walker next step...");
+                val nextRoom = mainPathWalker.nextStep(grid, roomsMap);
+                if (nonNull(nextRoom)) {
+                    populateRoom(chatId, player, grid, usedItemIds, roomsMap, cluster, nextRoom);
                 }
-                log.debug("Removing finished sub-walkers");
-                mainPathWalker.getSubWalkers().removeIf(walker -> WalkerDistributor.Status.FINISHED.equals(walker.getStatus()));
+            }
+
+            while (!mainPathWalker.getSubWalkers().isEmpty()) {
                 log.debug("Processing running sub-walkers...");
                 for (WalkerDistributor walker : mainPathWalker.getSubWalkers()) {
-                    if (!WalkerDistributor.Status.WAITING.equals(walker.getStatus())) {
-                        val nextRoom = walker.nextStep(grid);
+                    log.debug("Sub-walker - id: {}, running: {}, current step: {}, current point: {}",
+                            walker.getId(), walker.isRunning(), walker.getCurrentStep(),
+                            walker.getCurrentSection().getPoint());
+                    NextRoomDto nextRoom;
+                    if (walker.isRunning()) {
+                        nextRoom = walker.nextStep(grid, roomsMap);
                         if (nonNull(nextRoom)) {
                             populateRoom(chatId, player, grid, usedItemIds, roomsMap, cluster, nextRoom);
                         }
+                    } else {
+                        if (walker.isWaiting()) {
+                            while (!walker.getSubWalkers().isEmpty()) {
+                                for (WalkerDistributor walkerDistributor : walker.getSubWalkers()) {
+                                    nextRoom = walkerDistributor.nextStep(grid, roomsMap);
+                                    if (nonNull(nextRoom)) {
+                                        populateRoom(chatId, player, grid, usedItemIds, roomsMap, cluster, nextRoom);
+                                    }
+                                }
+                                walker.getSubWalkers().removeIf(WalkerDistributor::finished);
+                            }
+                            walker.setStatus(WalkerDistributor.Status.FINISHED);
+                        }
                     }
                 }
-
+                mainPathWalker.getSubWalkers().removeIf(WalkerDistributor::finished);
+                log.debug("Current map state\n{}", printMapToLogs(grid, roomsMap));
             }
         }
         level.setRoomsMap(roomsMap);
         level.setGrid(grid);
+        level.setLevelMap(new LevelMap(levelStartSection));
         log.debug("Current map state\n{}", printMapToLogs(grid, roomsMap));
+        log.debug("Current grid state\n{}", printMapGridToLogs(grid));
         return level;
     }
 
@@ -192,7 +231,7 @@ public class LevelGenerationService {
                               GridSection[][] grid, Set<String> usedItemIds,
                               Map<Point, Room> roomsMap, LevelGridCluster cluster,
                               NextRoomDto nextRoom) {
-        log.debug("Populating room...");
+        log.debug("Populating room {}...", nextRoom.getSection().getPoint());
         Weight expectedWeight = weightCalculationService.getExpectedWeigth(cluster.getClusterExpectedWeight(),
                 player.getWeight().toVector().getNorm() / cluster.getDensity(),
                 nextRoom.getCurrentStep(),
@@ -205,25 +244,31 @@ public class LevelGenerationService {
             usedItemIds.addAll(itemsRoom.getItems().stream().map(Item::getId).collect(Collectors.toSet()));
         }
         Room room = nextRoom.getRoom();
-        setRoomContent(grid, room, roomContent);
-        roomService.saveOrUpdateRoom(room);
+        setRoomContent(grid, room, roomContent, roomsMap);
+        roomsMap.put(room.getPoint(), room);
+        if (nextRoom.getCurrentStep() == 0) {
+            setMutualAdjacency(roomsMap.get(cluster.getStartConnectionPoint()), room);
+        }
         log.debug("Current map state\n{}", printMapToLogs(grid, roomsMap));
     }
 
-    private int populateDeadEnds(long chatId, Player player, GridSection[][] grid, LevelGridCluster cluster, Set<String> usedItemIds) {
-        return cluster.getDeadEnds().stream().mapToInt(section -> populateDeadEnd(chatId, player, grid, section, cluster, usedItemIds)).sum();
+    private int populateDeadEnds(long chatId, Player player, GridSection[][] grid, LevelGridCluster cluster, Map<Point, Room> roomsMap, Set<String> usedItemIds) {
+        return cluster.getDeadEnds().stream()
+                .mapToInt(section -> populateDeadEnd(chatId, player, grid, section, cluster, roomsMap, usedItemIds))
+                .sum();
     }
 
-    private int populateDeadEnd(long chatId, Player player, GridSection[][] grid, GridSection start, LevelGridCluster cluster, Set<String> usedItemIds) {
+    private int populateDeadEnd(long chatId, Player player, GridSection[][] grid, GridSection start, LevelGridCluster cluster, Map<Point, Room> roomsMap, Set<String> usedItemIds) {
         val roomContent = roomContentGenerationService.getSpecialTreasure(chatId, player.getAttributes().get(PlayerAttribute.LUCK), usedItemIds);
         usedItemIds.addAll(roomContent.getItems().stream().map(Item::getId).collect(Collectors.toSet()));
         val rewardWeight = roomContent.getRoomContentWeight();
-        val room = buildRoom(start, chatId, roomContent);
+        var room = buildRoom(start, chatId, roomContent);
+        roomsMap.put(room.getPoint(), room);
         val adjacentSections = getAdjacentSectionsInCluster(start.getPoint(), grid, cluster).stream()
                 .filter(section -> section.getStepsFromStart() == start.getStepsFromStart() - 1)
                 .toList();
         ArrayList<WalkerDistributor> deadEndPopulatingWalkers;
-        int totalRooms = 1;
+        int totalRooms = adjacentSections.stream().mapToInt(GridSection::getStepsFromStart).sum();
         Weight lastAddedWeight = null;
         if (adjacentSections.size() > 1) {
             deadEndPopulatingWalkers = Stream.of(WalkerDistributor.builder()
@@ -234,7 +279,7 @@ public class LevelGenerationService {
                             .cluster(cluster)
                             .totalSteps(totalRooms)
                             .currentSection(adjacentSections.getFirst())
-                            .currentStep(start.getStepsFromStart())
+                            .currentStep(adjacentSections.getFirst().getStepsFromStart())
                             .build(),
                     WalkerDistributor.builder()
                             .chatId(chatId)
@@ -244,7 +289,7 @@ public class LevelGenerationService {
                             .cluster(cluster)
                             .totalSteps(totalRooms)
                             .currentSection(adjacentSections.getLast())
-                            .currentStep(start.getStepsFromStart())
+                            .currentStep(adjacentSections.getLast().getStepsFromStart())
                             .build()
             ).collect(Collectors.toCollection(ArrayList::new));
         } else {
@@ -261,9 +306,9 @@ public class LevelGenerationService {
         }
         while (!deadEndPopulatingWalkers.isEmpty()) {
             totalRooms += deadEndPopulatingWalkers.stream().mapToInt(WalkerDistributor::getTotalSteps).sum();
-            deadEndPopulatingWalkers.removeIf(walkerDistributor -> WalkerDistributor.Status.FINISHED.equals(walkerDistributor.getStatus()));
+            deadEndPopulatingWalkers.removeIf(walkerDistributor -> !walkerDistributor.isRunning());
             for (WalkerDistributor walkerDistributor : deadEndPopulatingWalkers) {
-                val next = walkerDistributor.nextStep(grid);
+                val next = walkerDistributor.nextStep(grid, roomsMap);
                 if (nonNull(next)) {
                     val nextExpectedWeight = weightCalculationService.getExpectedDeadEndRouteWeight(
                             isNull(lastAddedWeight) ? rewardWeight : lastAddedWeight,
@@ -276,8 +321,11 @@ public class LevelGenerationService {
                     }
                     val nextRoom = next.getRoom();
                     lastAddedWeight = nextRoomContent.getRoomContentWeight();
-                    setRoomContent(grid, nextRoom, nextRoomContent);
-                    roomService.saveOrUpdateRoom(room);
+                    setRoomContent(grid, nextRoom, nextRoomContent, roomsMap);
+                    roomsMap.put(room.getPoint(), room);
+                    if (next.getCurrentStep() == 0) {
+                        setMutualAdjacency(roomsMap.get(cluster.getStartConnectionPoint()), room);
+                    }
                 }
             }
         }
@@ -285,11 +333,11 @@ public class LevelGenerationService {
     }
 
     private void initConnectionSections(GridSection[][] grid, LinkedList<Point> clusterConnectionPoints) {
-        clusterConnectionPoints.forEach(point -> {
+        for (Point point : clusterConnectionPoints) {
             val section = new GridSection(point.getX(), point.getY());
             section.setConnectionPoint(true);
             grid[point.getX()][point.getY()] = section;
-        });
+        }
     }
 
     private void processNegativeSectionsAndDeadEnds(Collection<LevelGridCluster> clusters, GridSection[][] grid) {
@@ -573,12 +621,11 @@ public class LevelGenerationService {
         return getRandomInt(rangeStart, rangeEnd);
     }
 
-    private void setRoomContent(GridSection[][] grid, Room room, RoomContent roomContent) {
+    private void setRoomContent(GridSection[][] grid, Room room, RoomContent roomContent, Map<Point, Room> roomsMap) {
         log.debug("Setting type {} to room [x:{}, y:{}]", roomContent.getRoomType(), room.getPoint().getX(), room.getPoint().getY());
         grid[room.getPoint().getX()][room.getPoint().getY()].setEmoji(getIcon(Optional.of(roomContent.getRoomType())));
         room.setRoomContent(roomContent);
-        roomService.saveOrUpdateRoom(room);
-        log.debug("Current grid state\n{}", printMapGridToLogs(grid));
+        log.debug("Current map state\n{}", printMapToLogs(grid, roomsMap));
     }
 
     private Room buildRoom(GridSection section, Long chatId, RoomContent roomContent) {
@@ -587,15 +634,7 @@ public class LevelGenerationService {
         section.setEmoji(getIcon(Optional.ofNullable(roomContent.getRoomType())));
         room.setPoint(section.getPoint());
         room.setRoomContent(roomContent);
-        return roomService.saveOrUpdateRoom(room);
-    }
-
-    private Room buildStartRoom(Point point, Long chatId) {
-        return roomService.saveOrUpdateRoom(new Room(point, chatId, new StartRoom()));
-    }
-
-    private Room buildEndRoom(Point point, Long chatId) {
-        return roomService.saveOrUpdateRoom(new Room(point, chatId, new EndRoom()));
+        return room;
     }
 
     private Integer calculateGridSize(Integer levelNumber) {
