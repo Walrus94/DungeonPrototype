@@ -8,7 +8,7 @@ import org.dungeon.prototype.config.TestConfig;
 import org.dungeon.prototype.model.Direction;
 import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.content.EmptyRoom;
-import org.dungeon.prototype.model.room.content.NormalRoom;
+import org.dungeon.prototype.model.room.content.RoomContent;
 import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.properties.MessagingConstants;
 import org.dungeon.prototype.service.message.KeyboardService;
@@ -24,28 +24,36 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.context.ActiveProfiles;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
+import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.util.EnumMap;
 import java.util.Map;
 
-import static java.awt.image.BufferedImage.TYPE_INT_ARGB;
 import static org.dungeon.prototype.TestData.getPlayer;
 import static org.dungeon.prototype.model.Direction.E;
 import static org.dungeon.prototype.model.Direction.N;
 import static org.dungeon.prototype.model.Direction.S;
 import static org.dungeon.prototype.model.Direction.W;
 import static org.dungeon.prototype.model.room.RoomType.NORMAL;
-import static org.dungeon.prototype.properties.CallbackType.*;
+import static org.dungeon.prototype.properties.CallbackType.FORWARD;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest(classes = {
         TestConfig.class,
@@ -120,6 +128,7 @@ public class MessageServiceIntegrationTest {
     }
 
     @Test
+    @SneakyThrows
     @DisplayName("Sends room message")
     public void sendsRoomMessage() {
         val player = getPlayer(CHAT_ID);
@@ -133,24 +142,30 @@ public class MessageServiceIntegrationTest {
         ))));
 
         try (MockedStatic<FileUtil> fileUtilMockedStatic = mockStatic(FileUtil.class)) {
-            val inputFile = new InputFile();
-            inputFile.setMedia(new ByteArrayInputStream(new byte[]{0, 1, 2, 4}), "filename.png");
-            when(FileUtil.getBackgroundLayer(CHAT_ID)).thenReturn(new BufferedImage(1024, 1024, TYPE_INT_ARGB));
-            when(FileUtil.getDoorLayerFragment(eq(CHAT_ID), any(CallbackType.class))).thenReturn(new BufferedImage(1024, 1024, TYPE_INT_ARGB));
-            when(FileUtil.getAdjacentRoomMap(any(EnumMap.class), any(Direction.class))).thenReturn(new EnumMap<>(Map.of(N, true)));
+            ClassPathResource imgFile = new ClassPathResource("static/empty.png");
+            BufferedImage image;
+            try (InputStream inputStream = imgFile.getInputStream()){
+                image = ImageIO.read(inputStream);
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                ImageIO.write(image, "png", outputStream);
+                InputFile inputFile = new InputFile(inputStream, "rendered_room.png");
 
-            when(roomRenderer.generateRoomImage(eq(CHAT_ID), any(EnumMap.class), any(NormalRoom.class)))
-                    .thenReturn(inputFile);
+                when(FileUtil.getBackgroundLayer(CHAT_ID)).thenReturn(image);
+                when(FileUtil.getDoorLayerFragment(eq(CHAT_ID), any(CallbackType.class))).thenReturn(image);
+                when(FileUtil.getAdjacentRoomMap(any(), any(Direction.class))).thenReturn(new EnumMap<>(Map.of(FORWARD, true)));
+                when(roomRenderer.generateRoomImage(eq(CHAT_ID), any(), any(RoomContent.class   )))
+                        .thenReturn(inputFile);
 
-            messageService.sendRoomMessage(CHAT_ID, player, room);
+                messageService.sendRoomMessage(CHAT_ID, player, room);
 
-            ArgumentCaptor<SendPhoto> messageCaptor = ArgumentCaptor.forClass(SendPhoto.class);
+                ArgumentCaptor<SendPhoto> messageCaptor = ArgumentCaptor.forClass(SendPhoto.class);
 
-            verify(dungeonBot).sendMessage(eq(CHAT_ID), messageCaptor.capture());
+                verify(dungeonBot).sendMessage(eq(CHAT_ID), messageCaptor.capture());
 
-            SendPhoto sentMessage = messageCaptor.getValue();
-            assertEquals(CHAT_ID.toString(), sentMessage.getChatId());
-            assertEquals(inputFile, sentMessage.getFile());
+                SendPhoto sentMessage = messageCaptor.getValue();
+                assertEquals(CHAT_ID.toString(), sentMessage.getChatId());
+                assertEquals(inputFile, sentMessage.getFile());
+            }
         }
     }
 

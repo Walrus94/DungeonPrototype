@@ -60,7 +60,7 @@ class RoomServiceTest extends BaseServiceUnitTest {
         ArgumentCaptor<Room> roomArgumentCaptor = ArgumentCaptor.forClass(Room.class);
         doNothing().when(messageService).sendRoomMessage(eq(CHAT_ID), eq(player), roomArgumentCaptor.capture());
 
-        roomService.sendOrUpdateRoomMessage(CHAT_ID, player);
+        roomService.sendRoomMessage(CHAT_ID, player);
 
         val actualRoom = roomArgumentCaptor.getValue();
         assertEquals(roomDocument.getChatId(), actualRoom.getChatId());

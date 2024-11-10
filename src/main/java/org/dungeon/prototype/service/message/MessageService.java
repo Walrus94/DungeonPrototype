@@ -49,12 +49,10 @@ import static org.dungeon.prototype.bot.state.ChatState.PRE_GAME_MENU;
 import static org.dungeon.prototype.properties.CallbackType.ITEM_INVENTORY;
 import static org.dungeon.prototype.properties.CallbackType.ITEM_INVENTORY_EQUIP;
 import static org.dungeon.prototype.properties.CallbackType.ITEM_INVENTORY_UN_EQUIP;
-import static org.dungeon.prototype.properties.CallbackType.MAP;
 import static org.dungeon.prototype.properties.CallbackType.MENU_BACK;
 import static org.dungeon.prototype.properties.CallbackType.MERCHANT_BUY_MENU;
 import static org.dungeon.prototype.properties.CallbackType.MERCHANT_SELL_DISPLAY_ITEM;
 import static org.dungeon.prototype.properties.CallbackType.MERCHANT_SELL_PRICE;
-import static org.dungeon.prototype.properties.CallbackType.PLAYER_STATS;
 import static org.dungeon.prototype.properties.Emoji.BLACK_HEART;
 import static org.dungeon.prototype.properties.Emoji.BLUE_SQUARE;
 import static org.dungeon.prototype.properties.Emoji.BROWN_BLOCK;
@@ -119,7 +117,8 @@ public class MessageService {
     public void sendRoomMessage(long chatId, Player player, Room room) {
         val caption = getRoomMessageCaption(player);
         val keyboardMarkup = keyboardService.getRoomInlineKeyboardMarkup(room, player);
-        val imageFile = roomRenderer.generateRoomImage(chatId, FileUtil.getAdjacentRoomMap(room.getAdjacentRooms(), player.getDirection()), room.getRoomContent());
+        val imageFile = roomRenderer.generateRoomImage(chatId,
+                FileUtil.getAdjacentRoomMap(room.getAdjacentRooms(), player.getDirection()), room.getRoomContent());
         messageSender.sendPhotoMessage(chatId, caption, keyboardMarkup, imageFile);
     }
 
@@ -127,9 +126,9 @@ public class MessageService {
     public void sendMonsterRoomMessage(long chatId, Player player, Room room) {
         val caption = getRoomMessageCaption(player, ((MonsterRoom) room.getRoomContent()).getMonster());
         val keyboardMarkup = keyboardService.getRoomInlineKeyboardMarkup(room, player);
-        val inputFile = roomRenderer.generateRoomImage(chatId,
+        val imageFile = roomRenderer.generateRoomImage(chatId,
                 FileUtil.getAdjacentRoomMap(room.getAdjacentRooms(), player.getDirection()), room.getRoomContent());
-        messageSender.sendPhotoMessage(chatId, caption, keyboardMarkup, inputFile);
+        messageSender.sendPhotoMessage(chatId, caption, keyboardMarkup, imageFile);
     }
 
     @ChatStateUpdate(from = {GAME, GAME_MENU}, to = GAME_MENU)

@@ -46,8 +46,9 @@ public class RoomService {
      * @param chatId id of chat where message sent
      *
      */
-    public void sendOrUpdateRoomMessage(Long chatId, Player player) {
+    public void sendRoomMessage(Long chatId, Player player) {
         val room = getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+        log.debug("Sending room message: {}", room);
         messageService.sendRoomMessage(chatId, player, room);
     }
 
