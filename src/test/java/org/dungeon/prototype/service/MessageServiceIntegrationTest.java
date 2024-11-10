@@ -5,12 +5,16 @@ import lombok.val;
 import org.dungeon.prototype.aspect.MessagingAspectHandler;
 import org.dungeon.prototype.bot.DungeonBot;
 import org.dungeon.prototype.config.TestConfig;
+import org.dungeon.prototype.model.Direction;
 import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.content.EmptyRoom;
+import org.dungeon.prototype.model.room.content.NormalRoom;
+import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.properties.MessagingConstants;
 import org.dungeon.prototype.service.message.KeyboardService;
 import org.dungeon.prototype.service.message.MessageSender;
 import org.dungeon.prototype.service.message.MessageService;
+import org.dungeon.prototype.service.room.ui.RoomRenderer;
 import org.dungeon.prototype.util.FileUtil;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,16 +30,19 @@ import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.util.EnumMap;
 import java.util.Map;
 
+import static java.awt.image.BufferedImage.TYPE_INT_ARGB;
 import static org.dungeon.prototype.TestData.getPlayer;
 import static org.dungeon.prototype.model.Direction.E;
 import static org.dungeon.prototype.model.Direction.N;
 import static org.dungeon.prototype.model.Direction.S;
 import static org.dungeon.prototype.model.Direction.W;
 import static org.dungeon.prototype.model.room.RoomType.NORMAL;
+import static org.dungeon.prototype.properties.CallbackType.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -56,6 +63,8 @@ public class MessageServiceIntegrationTest {
     private static final Integer MESSAGE_ID = 123456;
     @Autowired
     private MessageService messageService;
+    @MockBean
+    private RoomRenderer roomRenderer;
     @MockBean
     private DungeonBot dungeonBot;
 
@@ -114,19 +123,24 @@ public class MessageServiceIntegrationTest {
     @DisplayName("Sends room message")
     public void sendsRoomMessage() {
         val player = getPlayer(CHAT_ID);
-        val room = mock(Room.class);
-        when(room.getRoomContent()).thenReturn(new EmptyRoom(NORMAL));
-        when(room.getAdjacentRooms()).thenReturn(new EnumMap<>(Map.of(
+        val room = new Room();
+        room.setRoomContent(new EmptyRoom(NORMAL));
+        room.setAdjacentRooms((new EnumMap<>(Map.of(
                 N, true,
-                S, true,
+                S, false,
                 E, false,
                 W, false
-        )));
+        ))));
 
         try (MockedStatic<FileUtil> fileUtilMockedStatic = mockStatic(FileUtil.class)) {
             val inputFile = new InputFile();
-            inputFile.setMedia(new ByteArrayInputStream(new byte[]{0, 1, 2, 4}), "filename");
-            when(FileUtil.getImage(any())).thenReturn(inputFile);
+            inputFile.setMedia(new ByteArrayInputStream(new byte[]{0, 1, 2, 4}), "filename.png");
+            when(FileUtil.getBackgroundLayer(CHAT_ID)).thenReturn(new BufferedImage(1024, 1024, TYPE_INT_ARGB));
+            when(FileUtil.getDoorLayerFragment(eq(CHAT_ID), any(CallbackType.class))).thenReturn(new BufferedImage(1024, 1024, TYPE_INT_ARGB));
+            when(FileUtil.getAdjacentRoomMap(any(EnumMap.class), any(Direction.class))).thenReturn(new EnumMap<>(Map.of(N, true)));
+
+            when(roomRenderer.generateRoomImage(eq(CHAT_ID), any(EnumMap.class), any(NormalRoom.class)))
+                    .thenReturn(inputFile);
 
             messageService.sendRoomMessage(CHAT_ID, player, room);
 

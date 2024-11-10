@@ -209,6 +209,11 @@ class RoomServiceTest extends BaseServiceUnitTest {
     void restoreArmor() {
         val player = getPlayer(CHAT_ID, CURRENT_ROOM_ID);
         val room = new RoomDocument();
+        room.setRoomContent(new RoomContentDocument());
+        room.getRoomContent().setRoomType(RoomType.ANVIL);
+        room.getRoomContent().setArmorRestored(false);
+        room.getRoomContent().setAttackBonus(2);
+        room.getRoomContent().setChanceToBreakWeapon(0.0);
         room.setId(CURRENT_ROOM_ID);
         when(playerService.getPlayer(CHAT_ID)).thenReturn(player);
         when(effectService.updateArmorEffect(player)).thenReturn(player);
