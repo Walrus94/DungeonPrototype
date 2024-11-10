@@ -22,6 +22,8 @@ import org.dungeon.prototype.model.room.content.Treasure;
 import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.properties.MessagingConstants;
 import org.dungeon.prototype.service.PlayerLevelService;
+import org.dungeon.prototype.service.room.ui.RoomRenderer;
+import org.dungeon.prototype.util.FileUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -65,7 +67,6 @@ import static org.dungeon.prototype.properties.Emoji.SHIELD;
 import static org.dungeon.prototype.properties.Emoji.STONKS;
 import static org.dungeon.prototype.properties.Emoji.SWORD;
 import static org.dungeon.prototype.properties.Emoji.TREASURE;
-import static org.dungeon.prototype.util.FileUtil.getImage;
 
 @Slf4j
 @Service
@@ -82,6 +83,8 @@ public class MessageService {
     private MessageSender messageSender;
     @Autowired
     private MessagingConstants messagingConstants;
+    @Autowired
+    private RoomRenderer roomRenderer;
     @Autowired
     private KeyboardService keyboardService;
 
@@ -113,17 +116,19 @@ public class MessageService {
      * @param room current room
      */
     @ChatStateUpdate(from = {PRE_GAME_MENU, GAME_MENU, GAME, BATTLE}, to = GAME)
-    public void sendRoomMessage(Long chatId, Player player, Room room) {
+    public void sendRoomMessage(long chatId, Player player, Room room) {
         val caption = getRoomMessageCaption(player);
         val keyboardMarkup = keyboardService.getRoomInlineKeyboardMarkup(room, player);
-        val inputFile = getImage(room);
-        messageSender.sendPhotoMessage(chatId, caption, keyboardMarkup, inputFile);
+        val imageFile = roomRenderer.generateRoomImage(chatId, FileUtil.getAdjacentRoomMap(room.getAdjacentRooms(), player.getDirection()), room.getRoomContent());
+        messageSender.sendPhotoMessage(chatId, caption, keyboardMarkup, imageFile);
     }
+
     @ChatStateUpdate(from = {PRE_GAME_MENU, GAME_MENU, GAME, BATTLE}, to = BATTLE)
-    public void sendMonsterRoomMessage(Long chatId, Player player, Room room) {
+    public void sendMonsterRoomMessage(long chatId, Player player, Room room) {
         val caption = getRoomMessageCaption(player, ((MonsterRoom) room.getRoomContent()).getMonster());
         val keyboardMarkup = keyboardService.getRoomInlineKeyboardMarkup(room, player);
-        val inputFile = getImage(room);
+        val inputFile = roomRenderer.generateRoomImage(chatId,
+                FileUtil.getAdjacentRoomMap(room.getAdjacentRooms(), player.getDirection()), room.getRoomContent());
         messageSender.sendPhotoMessage(chatId, caption, keyboardMarkup, inputFile);
     }
 
@@ -140,7 +145,7 @@ public class MessageService {
         messageSender.sendMessage(
                 chatId,
                 "Inventory: ",
-                keyboardService.getInventoryReplyMarkup(inventory, ITEM_INVENTORY, ITEM_INVENTORY_UN_EQUIP, ITEM_INVENTORY_EQUIP, List.of(MAP, PLAYER_STATS)));
+                keyboardService.getInventoryReplyMarkup(inventory, ITEM_INVENTORY, ITEM_INVENTORY_UN_EQUIP, ITEM_INVENTORY_EQUIP, List.of(CallbackType.MAP, CallbackType.PLAYER_STATS)));
     }
 
     @ChatStateUpdate(from = {GAME, GAME_MENU}, to = GAME_MENU)
