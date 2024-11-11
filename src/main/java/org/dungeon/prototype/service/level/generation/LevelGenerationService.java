@@ -171,7 +171,7 @@ public class LevelGenerationService {
                     .cluster(cluster)
                     .currentSection(grid[clusterEndPoint.getX()][clusterEndPoint.getY()])
                     .runSubWalkerOnRouteFork(true)
-                    .previousRoom(roomsMap.get(level.getEnd()))
+                    .previousRoom(roomsMap.get(clusterEndPoint))
                     .currentStep(mainPathStart.getStepsFromStart())
                     .status(WalkerDistributor.Status.RUNNING)
                     .mainPathLength(mainPathStart.getStepsFromStart())
@@ -278,7 +278,7 @@ public class LevelGenerationService {
                             .status(WalkerDistributor.Status.RUNNING)
                             .cluster(cluster)
                             .totalSteps(totalRooms)
-                            .currentSection(adjacentSections.getFirst())
+                            .currentSection(start)
                             .currentStep(adjacentSections.getFirst().getStepsFromStart())
                             .build(),
                     WalkerDistributor.builder()
@@ -288,7 +288,7 @@ public class LevelGenerationService {
                             .status(WalkerDistributor.Status.RUNNING)
                             .cluster(cluster)
                             .totalSteps(totalRooms)
-                            .currentSection(adjacentSections.getLast())
+                            .currentSection(start)
                             .currentStep(adjacentSections.getLast().getStepsFromStart())
                             .build()
             ).collect(Collectors.toCollection(ArrayList::new));
@@ -300,8 +300,8 @@ public class LevelGenerationService {
                     .status(WalkerDistributor.Status.RUNNING)
                     .cluster(cluster)
                     .totalSteps(totalRooms)
-                    .currentSection(adjacentSections.getFirst())
-                    .currentStep(start.getStepsFromStart())
+                    .currentSection(start)
+                    .currentStep(adjacentSections.getFirst().getStepsFromStart())
                     .build()).collect(Collectors.toCollection(ArrayList::new));
         }
         while (!deadEndPopulatingWalkers.isEmpty()) {
