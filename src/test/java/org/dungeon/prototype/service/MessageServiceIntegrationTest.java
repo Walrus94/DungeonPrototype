@@ -81,18 +81,18 @@ public class MessageServiceIntegrationTest {
     @DisplayName("Sends start message")
     public void sendsStartMessage() {
         val message = mock(Message.class);
-        ArgumentCaptor<SendMessage> messageCaptor = ArgumentCaptor.forClass(SendMessage.class);
+        ArgumentCaptor<SendPhoto> messageCaptor = ArgumentCaptor.forClass(SendPhoto.class);
 
         doNothing().when(dungeonBot).sendMessage(anyLong(), any(SendMessage.class));
         when(message.getMessageId()).thenReturn(MESSAGE_ID);
 
-        messageService.sendStartMessage(CHAT_ID, "nickname");
+        messageService.sendStartMessage(CHAT_ID, "nickname", false);
 
         verify(dungeonBot).sendMessage(eq(CHAT_ID), messageCaptor.capture());
 
-        SendMessage sentMessage = messageCaptor.getValue();
+        SendPhoto sentMessage = messageCaptor.getValue();
         assertEquals(CHAT_ID.toString(), sentMessage.getChatId());
-        assertEquals("Welcome to dungeon, nickname!", sentMessage.getText());
+        assertEquals("Welcome to dungeon, nickname!", sentMessage.getCaption());
     }
 
     @SneakyThrows
@@ -117,14 +117,14 @@ public class MessageServiceIntegrationTest {
     @Test
     @DisplayName("Sends welcome message")
     public void sendsContinueMessage() {
-        messageService.sendContinueMessage(CHAT_ID, "nickname", false);
+        messageService.sendStartMessage(CHAT_ID, "nickname", false);
 
-        ArgumentCaptor<SendMessage> messageCaptor = ArgumentCaptor.forClass(SendMessage.class);
+        ArgumentCaptor<SendPhoto> messageCaptor = ArgumentCaptor.forClass(SendPhoto.class);
         verify(dungeonBot).sendMessage(eq(CHAT_ID), messageCaptor.capture());
 
-        SendMessage sentMessage = messageCaptor.getValue();
+        SendPhoto sentMessage = messageCaptor.getValue();
         assertEquals(CHAT_ID.toString(), sentMessage.getChatId());
-        assertEquals("Welcome to dungeon, nickname!", sentMessage.getText());
+        assertEquals("Welcome to dungeon, nickname!", sentMessage.getCaption());
     }
 
     @Test

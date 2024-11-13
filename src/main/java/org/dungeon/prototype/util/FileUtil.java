@@ -8,9 +8,12 @@ import org.dungeon.prototype.model.Direction;
 import org.dungeon.prototype.model.room.RoomType;
 import org.dungeon.prototype.properties.CallbackType;
 import org.springframework.core.io.ClassPathResource;
+import org.telegram.telegrambots.meta.api.objects.InputFile;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.EnumMap;
@@ -27,7 +30,7 @@ import static org.dungeon.prototype.properties.CallbackType.RIGHT;
 @Slf4j
 @UtilityClass
 public class FileUtil {
-
+    private static final String SPLASH_SCREEN_IMAGE = "static/images/main_splash.png";
     private static final String DEFAULT_BACKGROUND_ASSET = "static/images/room/default_background.png";
     private static final String WEREWOLF_ROOM_ASSET = "static/images/room/content/monster/werewolf.png";
     private static final String MONSTER_KILLED_ROOM_ASSET = "static/images/room/content/monster/monster_killed.png";
@@ -47,6 +50,19 @@ public class FileUtil {
     private static final String RIGHT_DOOR_ASSET = "static/images/room/door/right.png";
     private static final String FORWARD_DOOR_ASSET = "static/images/room/door/forward.png";
 
+
+    public static InputFile getSplashScreenImage(long chatId) {
+        ClassPathResource imgFile = new ClassPathResource(SPLASH_SCREEN_IMAGE);
+        try (InputStream inputStream = imgFile.getInputStream()){
+            BufferedImage splashScreen =  ImageIO.read(inputStream);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(splashScreen, "png", baos);
+            InputStream stream = new ByteArrayInputStream(baos.toByteArray());
+            return new InputFile(stream, "splash.png");
+        } catch (IOException e) {
+            throw new FileLoadingException(chatId, e.getMessage());
+        }
+    }
 
     public static BufferedImage getBackgroundLayer(long chatId) {
         ClassPathResource imgFile = new ClassPathResource(DEFAULT_BACKGROUND_ASSET);

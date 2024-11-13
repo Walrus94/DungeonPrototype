@@ -2,7 +2,6 @@ package org.dungeon.prototype.bot;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.dungeon.prototype.annotations.aspect.ClearChatContext;
 import org.dungeon.prototype.annotations.aspect.InitializeChatContext;
 import org.dungeon.prototype.service.PlayerService;
 import org.dungeon.prototype.service.inventory.InventoryService;
@@ -36,7 +35,7 @@ public class BotCommandHandler {
         } else {
             val hasSavedGame = levelService.hasLevel(chatId);
             val nickname = playerService.getNicknameByChatId(chatId);
-            messageService.sendContinueMessage(chatId, nickname, hasSavedGame);
+            messageService.sendStartMessage(chatId, nickname, hasSavedGame);
         }
     }
 
@@ -58,7 +57,6 @@ public class BotCommandHandler {
         playerService.sendPlayerStatsMessage(chatId);
     }
 
-    @ClearChatContext
     public void processStopAction(long chatId) {
         messageService.sendStopMessage(chatId);
     }

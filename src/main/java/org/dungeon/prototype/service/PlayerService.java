@@ -76,7 +76,7 @@ public class PlayerService {
     @ChatStateUpdate(from = AWAITING_NICKNAME, to = PRE_GAME_MENU)
     public void registerPlayerAndSendStartMessage(Long chatId, String nickname) {
         val player = addNewPlayer(chatId, nickname);
-        messageService.sendStartMessage(chatId, player.getNickname());
+        messageService.sendStartMessage(chatId, player.getNickname(), false);
     }
 
     /**

@@ -133,7 +133,7 @@ class LevelServiceTest extends BaseServiceUnitTest {
                 W, false)));
         document.setStart(new Point(0, 0));
         val end = new RoomDocument();
-        end.setPoint(new Point(5,5));
+        end.setPoint(new Point(5, 5));
         end.setId("endId");
         end.setAdjacentRooms(new EnumMap<>(Map.of(
                 N, true,

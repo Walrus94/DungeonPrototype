@@ -17,7 +17,7 @@ public class MessageSender {
     private static final String DEFAULT_PARSE_MODE = "Markdown";
 
     @MessageSending
-    public SendMessage sendInfoMessage(Long chatId, String text) {
+    public SendMessage sendInfoMessage(long chatId, String text) {
         return SendMessage.builder()
                 .chatId(chatId)
                 .text(text)
@@ -34,7 +34,7 @@ public class MessageSender {
      * @return message data processed by {@link MessagingAspectHandler}
      */
     @MessageSending
-    public SendMessage sendMessage(Long chatId, String text, InlineKeyboardMarkup keyboardMarkup) {
+    public SendMessage sendMessage(long chatId, String text, InlineKeyboardMarkup keyboardMarkup) {
         return SendMessage.builder()
                 .chatId(chatId)
                 .text(text)
@@ -51,7 +51,7 @@ public class MessageSender {
      * @return message data processed by {@link MessagingAspectHandler}
      */
     @MessageSending
-    public SendMessage sendPromptMessage(Long chatId, String text) {
+    public SendMessage sendPromptMessage(long chatId, String text) {
         return SendMessage.builder()
                 .chatId(chatId)
                 .text(text)
@@ -69,7 +69,7 @@ public class MessageSender {
      * @return photo message data processed by {@link MessagingAspectHandler}
      */
     @PhotoMessageSending
-    public SendPhoto sendPhotoMessage(Long chatId, String caption, InlineKeyboardMarkup keyboardMarkup, InputFile inputFile) {
+    public SendPhoto sendPhotoMessage(long chatId, String caption, InlineKeyboardMarkup keyboardMarkup, InputFile inputFile) {
         return SendPhoto.builder()
                 .chatId(chatId)
                 .caption(caption)

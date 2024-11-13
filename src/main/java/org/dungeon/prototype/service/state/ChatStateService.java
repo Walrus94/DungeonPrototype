@@ -17,6 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static java.util.Objects.nonNull;
 import static org.dungeon.prototype.bot.state.ChatState.AWAITING_NICKNAME;
+import static org.dungeon.prototype.bot.state.ChatState.BATTLE;
 import static org.dungeon.prototype.bot.state.ChatState.GAME;
 import static org.dungeon.prototype.bot.state.ChatState.GAME_MENU;
 import static org.dungeon.prototype.bot.state.ChatState.IDLE;
@@ -30,7 +31,7 @@ public class ChatStateService {
 
     /**
      * Initializes chat context: sets chat context state
-     * with {@link ChatState.ACTIVE} or creates new one
+     * with {@link org.dungeon.prototype.bot.state.ChatState#PRE_GAME_MENU} or creates new one
      * with the same state
      * Should be executed by annotating method with {@link org.dungeon.prototype.annotations.aspect.InitializeChatContext}
      *
@@ -63,7 +64,7 @@ public class ChatStateService {
         }
     }
 
-    public Optional<Integer> updateLastMessage(Long chatId, Integer messageId) {
+    public Optional<Integer> updateLastMessage(Long chatId, int messageId) {
         if (chatStateByIdMap.containsKey(chatId) && nonNull(chatStateByIdMap.get(chatId).getLastMessageId())) {
             val lastMessageId = chatStateByIdMap.get(chatId).getLastMessageId();
             chatStateByIdMap.get(chatId).setLastMessageId(messageId);
@@ -91,13 +92,18 @@ public class ChatStateService {
     }
 
     public boolean isGameMenuAvailable(long chatId) {
+        return chatStateByIdMap.containsKey(chatId) && List.of(GAME, BATTLE, GAME_MENU)
+                .contains(chatStateByIdMap.get(chatId).getChatState());
+    }
+
+    public boolean isInventoryAvailable(long chatId) {
         return chatStateByIdMap.containsKey(chatId) && List.of(GAME, GAME_MENU)
                 .contains(chatStateByIdMap.get(chatId).getChatState());
     }
 
     /**
-     * Updates chat state to mark with {@link ChatState.IDLE}
-     * ones that were inactive for {@link TIMEOUT_DURATION}
+     * Updates chat state to mark with {@link org.dungeon.prototype.bot.state.ChatState#IDLE}
+     * ones that were inactive for {@link #TIMEOUT_DURATION}
      */
     @Scheduled(fixedRate = 60000)
     public void checkChatTimeouts() {
@@ -105,17 +111,16 @@ public class ChatStateService {
         chatStateByIdMap.forEach((chatId, chatContext) -> {
             if (!IDLE.equals(chatContext.getChatState()) &&
                     currentTime - chatContext.getLastActiveTime() > TIMEOUT_DURATION) {
-                chatContext.setChatState(IDLE);
+                clearChatContext(chatId);
             }
         });
     }
 
-    public Optional<Integer> removeChatState(long chatId) {
+    public void clearChatContext(long chatId) {
         if (chatStateByIdMap.containsKey(chatId)) {
-            val lastMessageId = Optional.of(chatStateByIdMap.get(chatId).getLastMessageId());
-            chatStateByIdMap.remove(chatId);
-            return lastMessageId;
+            var chatState = chatStateByIdMap.get(chatId);
+            chatState.setChatState(IDLE);
+            chatState.setLastActiveTime(System.currentTimeMillis());
         }
-        return Optional.empty();
     }
 }

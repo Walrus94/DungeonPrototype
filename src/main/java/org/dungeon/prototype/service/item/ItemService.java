@@ -235,7 +235,7 @@ public class ItemService {
 
     private Set<Item> findItems(Long chatId, List<String> itemIds) {
         val itemDocuments = itemRepository.findAllByChatIdAndIdIn(chatId, itemIds);
-        val items = itemDocuments.stream()
+        var items = itemDocuments.stream()
                 .map(itemDocument ->
                         switch (itemDocument.getItemType()) {
                             case WEAPON -> ItemMapper.INSTANCE.mapToWeapon(itemDocument);
@@ -248,22 +248,25 @@ public class ItemService {
                     }
                 })
                 .collect(Collectors.toCollection(HashSet::new));
-        //TODO refactor
-        return items.stream().map(item -> {
-                    while ((isNull(item.getName()))) {
-                        val updatedItemDocumentOptional = itemRepository.findByChatIdAndId(chatId, item.getId());
-                        if (updatedItemDocumentOptional.isEmpty()) {
-                            continue;
-                        }
-                        val updatedItemDocument = updatedItemDocumentOptional.get();
-                        item = switch (updatedItemDocument.getItemType()) {
-                            case WEAPON -> ItemMapper.INSTANCE.mapToWeapon(updatedItemDocument);
-                            case WEARABLE -> ItemMapper.INSTANCE.mapToWearable(updatedItemDocument);
-                            case USABLE -> ItemMapper.INSTANCE.mapToUsable(updatedItemDocument);
-                        };
+        while (items.stream().anyMatch(item -> isNull(item.getName()))) {
+            items = items.stream().map(item -> {
+                if (isNull(item.getName())) {
+                    val updatedItemDocumentOptional = itemRepository.findByChatIdAndId(chatId, item.getId());
+                    if (updatedItemDocumentOptional.isEmpty()) {
+                        return item;
                     }
+                    val updatedItemDocument = updatedItemDocumentOptional.get();
+                    return switch (updatedItemDocument.getItemType()) {
+                        case WEAPON -> ItemMapper.INSTANCE.mapToWeapon(updatedItemDocument);
+                        case WEARABLE -> ItemMapper.INSTANCE.mapToWearable(updatedItemDocument);
+                        case USABLE -> ItemMapper.INSTANCE.mapToUsable(updatedItemDocument);
+                    };
+                } else {
                     return item;
-                })
-                .collect(Collectors.toCollection(HashSet::new));
+                }
+            }).collect(Collectors.toCollection(HashSet::new));
+
+        }
+        return items;
     }
 }

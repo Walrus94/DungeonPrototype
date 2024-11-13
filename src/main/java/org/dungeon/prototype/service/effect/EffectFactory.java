@@ -65,7 +65,7 @@ public class EffectFactory {
      * Generates item effect to change its weight by expected value
      * @param item to add effect to
      * @param attribute attribute to apply
-     * @param action {@link Action.ADD} or {@link Action.MULTIPLY}
+     * @param action {@link Action#ADD} or {@link Action#MULTIPLY}
      * @param expectedWeightChange expected weight norm delta
      * @return generated effect
      */

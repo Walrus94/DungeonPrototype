@@ -101,7 +101,7 @@ public class DungeonBot extends SpringWebhookBot {
      * @param chatId  id of chat
      * @param message message to be sent
      */
-    public void sendMessage(Long chatId, SendMessage message) {
+    public void sendMessage(long chatId, SendMessage message) {
         try {
             val messageId = execute(message).getMessageId();
             val lastMessageId = chatStateService.updateLastMessage(chatId, messageId);
@@ -119,7 +119,7 @@ public class DungeonBot extends SpringWebhookBot {
      * @param chatId  id of chat
      * @param message message to be sent
      */
-    public void sendMessage(Long chatId, SendPhoto message) {
+    public void sendMessage(long chatId, SendPhoto message) {
         try {
             val messageId = execute(message).getMessageId();
             val lastMessageId = chatStateService.updateLastMessage(chatId, messageId);
@@ -152,7 +152,7 @@ public class DungeonBot extends SpringWebhookBot {
             botCommandHandler.processMapAction(chatId);
             return;
         }
-        if (messageText.equals("/inventory") && chatStateService.isGameMenuAvailable(chatId)) {
+        if (messageText.equals("/inventory") && chatStateService.isInventoryAvailable(chatId)) {
             botCommandHandler.processInventoryAction(chatId);
             return;
         }

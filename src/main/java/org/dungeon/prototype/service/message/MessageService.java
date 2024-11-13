@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.annotations.aspect.ChatStateUpdate;
+import org.dungeon.prototype.annotations.aspect.ClearChatContext;
 import org.dungeon.prototype.bot.state.ChatState;
 import org.dungeon.prototype.exception.EntityNotFoundException;
 import org.dungeon.prototype.exception.PlayerException;
@@ -86,11 +87,13 @@ public class MessageService {
     @Autowired
     private KeyboardService keyboardService;
 
-    public void sendStartMessage(Long chatId, String nickname) {
-        messageSender.sendMessage(
+    public void sendStartMessage(Long chatId, String nickname, Boolean hasSavedGame) {
+        messageSender.sendPhotoMessage(
                 chatId,
                 String.format("Welcome to dungeon, %s!", nickname),
-                keyboardService.getStartInlineKeyboardMarkup(false));
+                keyboardService.getStartInlineKeyboardMarkup(hasSavedGame),
+                FileUtil.getSplashScreenImage(chatId)
+        );
     }
 
     @ChatStateUpdate(from = PRE_GAME_MENU, to = AWAITING_NICKNAME)
@@ -98,13 +101,6 @@ public class MessageService {
         messageSender.sendPromptMessage(
                 chatId,
         "Welcome to dungeon!\nPlease, enter nickname to register");
-    }
-
-    public void sendContinueMessage(Long chatId, String nickname, Boolean hasSavedGame) {
-        messageSender.sendMessage(
-                chatId,
-                String.format("Welcome to dungeon, %s!", nickname),
-                keyboardService.getStartInlineKeyboardMarkup(hasSavedGame));
     }
 
     /**
@@ -131,7 +127,7 @@ public class MessageService {
         messageSender.sendPhotoMessage(chatId, caption, keyboardMarkup, imageFile);
     }
 
-    @ChatStateUpdate(from = {GAME, GAME_MENU}, to = GAME_MENU)
+    @ChatStateUpdate(from = {GAME, GAME_MENU, BATTLE}, to = GAME_MENU)
     public void sendPlayerStatsMessage(Long chatId, Player player) {
         messageSender.sendMessage(
                 chatId,
@@ -155,6 +151,7 @@ public class MessageService {
                 keyboardService.getTreasureContentReplyMarkup(treasure));
     }
 
+    @ChatStateUpdate(from = {GAME, GAME_MENU}, to = GAME_MENU)
     public void sendInventoryItemMessage(Long chatId, Item item, CallbackType inventoryType, Optional<String> itemType) {
         if (itemType.isPresent()) {
             messageSender.sendMessage(
@@ -219,7 +216,7 @@ public class MessageService {
         }
     }
 
-    @ChatStateUpdate(from = {GAME, GAME_MENU}, to = GAME_MENU)
+    @ChatStateUpdate(from = {GAME, GAME_MENU, BATTLE}, to = GAME_MENU)
     public void sendMapMenuMessage(Long chatId, String levelMap) {
         messageSender.sendMessage(
                 chatId,
@@ -236,13 +233,14 @@ public class MessageService {
     }
 
     @ChatStateUpdate(from = GAME, to = PRE_GAME_MENU)
-    public void sendDeathMessage(Long chatId) {
+    public void sendDeathMessage(long chatId) {
         messageSender.sendMessage(
                 chatId,
                 "You are dead!",
                 keyboardService.getDeathMessageInlineKeyboardMarkup());
     }
 
+    @ClearChatContext
     public void sendStopMessage(long chatId) {
         messageSender.sendInfoMessage(chatId, "Bot stopped. to continue game, please send */start* command");
     }
