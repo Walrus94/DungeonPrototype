@@ -46,7 +46,7 @@ public class MonsterFactory {
         val primaryAttack = properties.getPrimaryAttackType();
         val secondaryAttack = properties.getSecondaryAttackType();
 
-        val expectedHealthPlusAttack = weight.getHpToMaxHp() + weight.getArmorToMaxArmor()  *
+        val expectedHealthPlusAttack = weight.getHp() + weight.getArmor()  *
                 (weight.getChanceToKnockout() + weight.getCriticalHitChance() + weight.getAttack());
 
         // Define optimization objective

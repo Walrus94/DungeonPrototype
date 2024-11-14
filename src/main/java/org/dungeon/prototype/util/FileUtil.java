@@ -2,7 +2,6 @@ package org.dungeon.prototype.util;
 
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
-import lombok.val;
 import org.dungeon.prototype.exception.CallbackParsingException;
 import org.dungeon.prototype.exception.FileLoadingException;
 import org.dungeon.prototype.model.Direction;
@@ -20,13 +19,18 @@ import java.io.InputStream;
 import java.util.EnumMap;
 import java.util.Map;
 
-import static org.dungeon.prototype.model.Direction.*;
-import static org.dungeon.prototype.properties.CallbackType.*;
+import static org.dungeon.prototype.model.Direction.E;
+import static org.dungeon.prototype.model.Direction.N;
+import static org.dungeon.prototype.model.Direction.S;
+import static org.dungeon.prototype.model.Direction.W;
+import static org.dungeon.prototype.properties.CallbackType.FORWARD;
+import static org.dungeon.prototype.properties.CallbackType.LEFT;
+import static org.dungeon.prototype.properties.CallbackType.RIGHT;
 
 @Slf4j
 @UtilityClass
 public class FileUtil {
-
+    private static final String SPLASH_SCREEN_IMAGE = "static/images/main_splash.png";
     private static final String DEFAULT_BACKGROUND_ASSET = "static/images/room/default_background.png";
     private static final String WEREWOLF_ROOM_ASSET = "static/images/room/content/monster/werewolf.png";
     private static final String MONSTER_KILLED_ROOM_ASSET = "static/images/room/content/monster/monster_killed.png";
@@ -41,10 +45,24 @@ public class FileUtil {
     private static final String SHRINE_DRAINED_ROOM_ASSET = "static/images/room/content/shrine_drained.png";
     private static final String MERCHANT_ROOM_ASSET = "static/images/room/content/merchant.png";
     private static final String ANVIL_ROOM_ASSET = "static/images/room/content/anvil.png";
+    private static final String EMPTY_LAYER_ASSET = "static/images/room/content/empty.png";
     private static final String LEFT_DOOR_ASSET = "static/images/room/door/left.png";
     private static final String RIGHT_DOOR_ASSET = "static/images/room/door/right.png";
     private static final String FORWARD_DOOR_ASSET = "static/images/room/door/forward.png";
 
+
+    public static InputFile getSplashScreenImage(long chatId) {
+        ClassPathResource imgFile = new ClassPathResource(SPLASH_SCREEN_IMAGE);
+        try (InputStream inputStream = imgFile.getInputStream()){
+            BufferedImage splashScreen =  ImageIO.read(inputStream);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(splashScreen, "png", baos);
+            InputStream stream = new ByteArrayInputStream(baos.toByteArray());
+            return new InputFile(stream, "splash.png");
+        } catch (IOException e) {
+            throw new FileLoadingException(chatId, e.getMessage());
+        }
+    }
 
     public static BufferedImage getBackgroundLayer(long chatId) {
         ClassPathResource imgFile = new ClassPathResource(DEFAULT_BACKGROUND_ASSET);
@@ -110,19 +128,7 @@ public class FileUtil {
             case SHRINE_DRAINED -> SHRINE_DRAINED_ROOM_ASSET;
             case MERCHANT -> MERCHANT_ROOM_ASSET;
             case ANVIL -> ANVIL_ROOM_ASSET;
-            default -> DEFAULT_BACKGROUND_ASSET;
+            default -> EMPTY_LAYER_ASSET;
         };
-    }
-
-    private static byte[] loadImageAsByteArray(InputStream inputStream) throws IOException {
-        try (ByteArrayOutputStream buffer = new ByteArrayOutputStream()) {
-            int nRead;
-            byte[] data = new byte[1024];
-            while ((nRead = inputStream.read(data, 0, data.length)) != -1) {
-                buffer.write(data, 0, nRead);
-            }
-            buffer.flush();
-            return buffer.toByteArray();
-        }
     }
 }

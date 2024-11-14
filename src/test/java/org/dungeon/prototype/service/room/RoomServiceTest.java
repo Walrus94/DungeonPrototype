@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 import static org.dungeon.prototype.TestData.getMerchant;
 import static org.dungeon.prototype.TestData.getPlayer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
@@ -60,7 +61,7 @@ class RoomServiceTest extends BaseServiceUnitTest {
         ArgumentCaptor<Room> roomArgumentCaptor = ArgumentCaptor.forClass(Room.class);
         doNothing().when(messageService).sendRoomMessage(eq(CHAT_ID), eq(player), roomArgumentCaptor.capture());
 
-        roomService.sendOrUpdateRoomMessage(CHAT_ID, player);
+        roomService.sendRoomMessage(CHAT_ID, player);
 
         val actualRoom = roomArgumentCaptor.getValue();
         assertEquals(roomDocument.getChatId(), actualRoom.getChatId());
@@ -219,6 +220,7 @@ class RoomServiceTest extends BaseServiceUnitTest {
         when(effectService.updateArmorEffect(player)).thenReturn(player);
         when(playerService.updatePlayer(player)).thenReturn(player);
         when(roomRepository.findByChatIdAndId(CHAT_ID, CURRENT_ROOM_ID)).thenReturn(Optional.of(room));
+        when(roomRepository.save(any(RoomDocument.class))).thenReturn(room);
 
         ArgumentCaptor<Player> playerArgumentCaptor = ArgumentCaptor.forClass(Player.class);
         ArgumentCaptor<Room> roomArgumentCaptor = ArgumentCaptor.forClass(Room.class);

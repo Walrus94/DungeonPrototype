@@ -6,20 +6,12 @@ import org.dungeon.prototype.model.effect.ExpirableAdditionEffect;
 import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.monster.Monster;
 import org.dungeon.prototype.model.room.RoomType;
-import org.dungeon.prototype.model.room.content.Anvil;
-import org.dungeon.prototype.model.room.content.HealthShrine;
-import org.dungeon.prototype.model.room.content.ManaShrine;
-import org.dungeon.prototype.model.room.content.Merchant;
-import org.dungeon.prototype.model.room.content.MonsterRoom;
-import org.dungeon.prototype.model.room.content.NormalRoom;
-import org.dungeon.prototype.model.room.content.RoomContent;
-import org.dungeon.prototype.model.room.content.Treasure;
+import org.dungeon.prototype.model.room.content.*;
 import org.dungeon.prototype.model.weight.Weight;
 import org.dungeon.prototype.repository.MonsterRepository;
 import org.dungeon.prototype.repository.converters.mapstruct.MonsterMapper;
 import org.dungeon.prototype.service.effect.EffectFactory;
 import org.dungeon.prototype.service.item.ItemService;
-import org.dungeon.prototype.service.room.generation.LevelRoomTypeClusters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -28,13 +20,8 @@ import java.util.Set;
 
 import static org.dungeon.prototype.model.effect.attributes.EffectAttribute.HEALTH;
 import static org.dungeon.prototype.model.effect.attributes.EffectAttribute.MANA;
-import static org.dungeon.prototype.model.room.RoomType.ANVIL;
-import static org.dungeon.prototype.model.room.RoomType.HEALTH_SHRINE;
-import static org.dungeon.prototype.model.room.RoomType.MANA_SHRINE;
-import static org.dungeon.prototype.model.room.RoomType.MERCHANT;
 import static org.dungeon.prototype.util.RandomUtil.getNormalDistributionRandomDouble;
 import static org.dungeon.prototype.util.RandomUtil.getRandomInt;
-import static org.dungeon.prototype.util.RandomUtil.getRandomRoomType;
 import static org.dungeon.prototype.util.RoomGenerationUtils.convertToMonsterClass;
 
 
@@ -61,37 +48,23 @@ public class RoomContentGenerationService {
      * @param expectedWeight of next room content
      * @return generated room content
      */
-    public RoomContent getNextRoomContent(LevelRoomTypeClusters clusters, Weight expectedWeight) {
-        val chatId = clusters.getChatId();
-        val usedItemIds = clusters.getUsedItemIds();
-        val roomsLeft = clusters.getRoomsLeft();
-        val totalRooms = clusters.getTotalRooms();
-        log.debug("Total rooms: {}, rooms left: {}", totalRooms, roomsLeft);
-        log.debug("Generating next room type...");
-        log.debug("Generating random room type...");
-        val currentStep = totalRooms - roomsLeft;//TODO: verify with debugger
-        val roomType = getRandomRoomType(expectedWeight, currentStep, totalRooms, clusters.getRoomTypePoints());
-        log.debug("Random room type: {}", roomType);
+    public RoomContent getNextRoomContent(Weight expectedWeight, long chatId, RoomType roomType, Set<String> usedItemIds) {
+        log.debug("Generating next room: {}...", roomType);
+
+        if (expectedWeight.toVector().getNorm() == 0.0) {//TODO: consider configuring threshold
+            log.debug("Weight is below threshold, generating normal room");
+            return new NormalRoom();
+        }
+        log.debug("Generating {} of expected weight: {}", roomType, expectedWeight);
+
         log.debug("Generating room content with type {}, expected weight: {}, used items ids: {}", roomType, expectedWeight, usedItemIds);
         return switch (roomType) {
             case WEREWOLF, VAMPIRE, SWAMP_BEAST, DRAGON, ZOMBIE -> getMonster(expectedWeight, roomType);
             case TREASURE -> getTreasure(chatId, expectedWeight, usedItemIds);
-            case MERCHANT -> {
-                clusters.addPenaltyPoint(MERCHANT, currentStep);
-                yield getMerchant(chatId, expectedWeight, usedItemIds);
-            }
-            case ANVIL -> {
-                clusters.addPenaltyPoint(ANVIL, currentStep);
-                yield getAnvil(expectedWeight);
-            }
-            case HEALTH_SHRINE -> {
-                clusters.addPenaltyPoint(HEALTH_SHRINE, currentStep);
-                yield getHealthShrine(expectedWeight.toVector().getNorm());
-            }
-            case MANA_SHRINE -> {
-                clusters.addPenaltyPoint(MANA_SHRINE, currentStep);
-                yield getManaShrine(expectedWeight.toVector().getNorm());
-            }
+            case MERCHANT -> getMerchant(chatId, expectedWeight, usedItemIds);
+            case ANVIL -> getAnvil(expectedWeight);
+            case HEALTH_SHRINE -> getHealthShrine(expectedWeight.toVector().getNorm());
+            case MANA_SHRINE -> getManaShrine(expectedWeight.toVector().getNorm());
             default -> new NormalRoom();
         };
     }
@@ -122,7 +95,7 @@ public class RoomContentGenerationService {
         return merchant;
     }
 
-    private Treasure getTreasure(Long chatId, Weight expectedWeight, Set<String> usedItemIds) {
+    private Treasure getTreasure(long chatId, Weight expectedWeight, Set<String> usedItemIds) {
         log.debug("Generating treasure...");
         log.debug("Expected weight: {}", expectedWeight);
         int gold;
@@ -152,24 +125,29 @@ public class RoomContentGenerationService {
         }
     }
 
+    public Treasure getSpecialTreasure(long chatId, int playerLuck, Set<String> usedItemIds) {
+        Treasure treasure = new Treasure();
+        treasure.setGold(0);
+        treasure.setItems(Set.of(itemService.getHighQualityItem(chatId, playerLuck, usedItemIds)));
+        return treasure;
+    }
+
     private static int getRandomGoldAmount(Double expectedWeight) {
         return getNormalDistributionRandomDouble(expectedWeight,
                 expectedWeight * 0.1).intValue();
     }
 
     private MonsterRoom getMonster(Weight expectedWeight, RoomType roomType) {
-        val monster = generateNextMonster(expectedWeight, roomType);
+        val monsterClass = convertToMonsterClass(roomType);
+        log.debug("Generating monster of type {} and weight {}", roomType, expectedWeight);
+        Monster monster = monsterFactory.generateMonsterByExpectedWeight(expectedWeight, monsterClass);
         val monsterRoom = new MonsterRoom();
+        val monsterDocument = MonsterMapper.INSTANCE.mapToDocument(monster);
+        monster = MonsterMapper.INSTANCE.mapToMonster(monsterRepository.save(monsterDocument));
+
         monsterRoom.setMonster(monster);
         return monsterRoom;
     }
 
-    private Monster generateNextMonster(Weight weight, RoomType roomType) {
-        log.debug("Generating monster of type {} and weight {}", roomType, weight);
-        val monsterClass = convertToMonsterClass(roomType);
 
-        Monster monster = monsterFactory.generateMonsterByExpectedWeight(weight, monsterClass);
-        val monsterDocument = MonsterMapper.INSTANCE.mapToDocument(monster);
-        return MonsterMapper.INSTANCE.mapToMonster(monsterRepository.save(monsterDocument));
-    }
 }

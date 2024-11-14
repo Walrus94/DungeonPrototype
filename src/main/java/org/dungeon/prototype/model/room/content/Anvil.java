@@ -16,7 +16,7 @@ public class Anvil implements RoomContent {
     @Override
     public Weight getRoomContentWeight() {
         return Weight.builder()
-                .armorToMaxArmor(1.0)
+                .armor(1.0)
                 .attack(attackBonus * (1 - chanceToBreakWeapon))
                 .build();
     }

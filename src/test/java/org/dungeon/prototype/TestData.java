@@ -2,7 +2,7 @@ package org.dungeon.prototype;
 
 import lombok.experimental.UtilityClass;
 import lombok.val;
-import org.dungeon.prototype.model.Level;
+import org.dungeon.prototype.model.level.Level;
 import org.dungeon.prototype.model.Point;
 import org.dungeon.prototype.model.effect.Effect;
 import org.dungeon.prototype.model.effect.ExpirableMultiplicationEffect;
@@ -32,7 +32,7 @@ import org.dungeon.prototype.model.player.Player;
 import org.dungeon.prototype.model.player.PlayerAttack;
 import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.content.Merchant;
-import org.dungeon.prototype.model.ui.level.LevelMap;
+import org.dungeon.prototype.model.level.ui.LevelMap;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -56,16 +56,28 @@ import static org.dungeon.prototype.model.player.PlayerAttribute.STAMINA;
 @UtilityClass
 public class TestData {
 
-    public static Level getLevel() {
+    public static Level getLevel(int levelNumber) {
         val level = new Level();
+        level.setNumber(levelNumber);
         val start = new Room();
-        start.setPoint(new Point(5, 6));
+        start.setId("startRoomId");
+        start.setPoint(new Point(0, 0));
         start.setAdjacentRooms(new EnumMap<>(Map.of(
                 N, true,
                 E, false,
                 S, false,
                 W, false)));
-        level.setStart(start);
+        level.setStart(start.getPoint());
+        val end = new Room();
+        end.setId("endRoomId");
+        end.setPoint(new Point(5, 5));
+        end.setAdjacentRooms(new EnumMap<>(Map.of(
+                N, true,
+                E, false,
+                S, false,
+                W, false)));
+        level.setEnd(end.getPoint());
+        level.setRoomsMap(Map.of(start.getPoint(), start, end.getPoint(), end));
         val levelMap = new LevelMap();
         level.setLevelMap(levelMap);
         return level;

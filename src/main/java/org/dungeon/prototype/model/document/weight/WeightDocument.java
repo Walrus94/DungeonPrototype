@@ -11,14 +11,14 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class WeightDocument {
     @Id
     private String id;
-    private Double hpToMaxHp;
-    private Double hpDeficiencyToMaxHp;
-    private Double manaToMaxMana;
-    private Double manaDeficiencyToMaxMana;
-    private Double armorToMaxArmor;
-    private Double armorDeficiencyToMaxArmor;
+    private Double hp;
+    private Double maxHp;
+    private Double mana;
+    private Double maxMana;
+    private Double armor;
+    private Double maxArmor;
     private Double chanceToDodge;
-    private Double goldBonusToGold;
+    private Double goldBonus;
     private Double xpBonus;
     private Double attack;
     private Double criticalHitChance;

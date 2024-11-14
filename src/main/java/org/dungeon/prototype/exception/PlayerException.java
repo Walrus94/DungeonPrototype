@@ -5,7 +5,7 @@ import org.dungeon.prototype.properties.CallbackType;
 
 public class PlayerException extends DungeonPrototypeException {
     @Getter
-    private final Long chatId;
+    private final long chatId;
     @Getter
     private final CallbackType button;
 

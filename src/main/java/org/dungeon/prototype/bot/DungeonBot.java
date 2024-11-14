@@ -35,7 +35,7 @@ public class DungeonBot extends SpringWebhookBot {
     private final String botUsername;
     private final  String botPath;
 
-    public DungeonBot(String botUsername, String botToken, String botPath,  SetWebhook setWebhook) {
+    public DungeonBot(String botUsername, String botToken, String botPath, SetWebhook setWebhook) {
         super(setWebhook, botToken);
         this.botUsername = botUsername;
         this.botPath = botPath;
@@ -101,7 +101,7 @@ public class DungeonBot extends SpringWebhookBot {
      * @param chatId  id of chat
      * @param message message to be sent
      */
-    public void sendMessage(Long chatId, SendMessage message) {
+    public void sendMessage(long chatId, SendMessage message) {
         try {
             val messageId = execute(message).getMessageId();
             val lastMessageId = chatStateService.updateLastMessage(chatId, messageId);
@@ -119,12 +119,9 @@ public class DungeonBot extends SpringWebhookBot {
      * @param chatId  id of chat
      * @param message message to be sent
      */
-    public void sendMessage(Long chatId, SendPhoto message) {
+    public void sendMessage(long chatId, SendPhoto message) {
         try {
             val messageId = execute(message).getMessageId();
-            if (messageId == -1) {
-                throw new SendMessageException(chatId, CallbackType.CONTINUE_GAME);
-            }
             val lastMessageId = chatStateService.updateLastMessage(chatId, messageId);
             lastMessageId.ifPresent(id -> deleteMessage(chatId, id));
         } catch (TelegramApiException e) {
@@ -155,7 +152,7 @@ public class DungeonBot extends SpringWebhookBot {
             botCommandHandler.processMapAction(chatId);
             return;
         }
-        if (messageText.equals("/inventory") && chatStateService.isGameMenuAvailable(chatId)) {
+        if (messageText.equals("/inventory") && chatStateService.isInventoryAvailable(chatId)) {
             botCommandHandler.processInventoryAction(chatId);
             return;
         }

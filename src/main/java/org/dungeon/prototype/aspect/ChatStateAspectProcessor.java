@@ -1,7 +1,6 @@
 package org.dungeon.prototype.aspect;
 
 import lombok.extern.slf4j.Slf4j;
-import lombok.val;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.After;
@@ -12,7 +11,6 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.dungeon.prototype.annotations.aspect.ChatStateUpdate;
 import org.dungeon.prototype.bot.state.ChatState;
 import org.dungeon.prototype.service.state.ChatStateService;
-import org.dungeon.prototype.bot.DungeonBot;
 import org.dungeon.prototype.exception.ChatStateUpdateException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -23,8 +21,6 @@ import java.lang.reflect.Method;
 @Aspect
 @Component
 public class ChatStateAspectProcessor {
-    @Autowired
-    private DungeonBot dungeonBot;
     @Autowired
     private ChatStateService chatStateService;
 
@@ -79,8 +75,7 @@ public class ChatStateAspectProcessor {
     private void handleClearChatContext(JoinPoint joinPoint) {
         Object[] args = joinPoint.getArgs();
         if (args.length > 0 && args[0] instanceof Long chatId) {
-            val lastMessageId = chatStateService.removeChatState(chatId);
-            lastMessageId.ifPresent(integer -> dungeonBot.deleteMessage(chatId, integer));
+            chatStateService.clearChatContext(chatId);
         }
     }
 }

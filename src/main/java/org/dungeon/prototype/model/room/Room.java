@@ -44,13 +44,12 @@ public class Room {
 
     public void addAdjacentRoom(Direction direction) {
         adjacentRooms.put(direction, true);
-
         log.debug("Added adjacent room to {} in {} direction", point, direction);
     }
 
     @Override
     public String toString() {
-        return Objects.isNull(roomContent) ? "Point=" + point :
-                "Room [type=" + roomContent.getRoomType() + ", point=" + point + "]";
+        return Objects.isNull(roomContent) ? "id=" + id + ", point=" + point :
+                "Room [type=" + roomContent.getRoomType() + ", id=" + id + ", point=" + point + "]";
     }
 }

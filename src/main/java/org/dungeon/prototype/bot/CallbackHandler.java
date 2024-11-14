@@ -240,7 +240,7 @@ public class CallbackHandler {
 
     private void handleSendingRoomMessage(Long chatId) {
         val player = playerService.getPlayer(chatId);
-        roomService.sendOrUpdateRoomMessage(chatId, player);
+        roomService.sendRoomMessage(chatId, player);
     }
 
     private void handleOpeningTreasure(Long chatId) {

@@ -9,6 +9,7 @@ import org.dungeon.prototype.model.player.PlayerAttribute;
 import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.content.Anvil;
 import org.dungeon.prototype.model.room.content.Merchant;
+import org.dungeon.prototype.model.room.content.MonsterRoom;
 import org.dungeon.prototype.model.room.content.RoomContent;
 import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.repository.RoomContentRepository;
@@ -46,9 +47,14 @@ public class RoomService {
      * @param chatId id of chat where message sent
      *
      */
-    public void sendOrUpdateRoomMessage(Long chatId, Player player) {
+    public void sendRoomMessage(Long chatId, Player player) {
         val room = getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
-        messageService.sendRoomMessage(chatId, player, room);
+        log.debug("Sending room message: {}", room);
+        if (room.getRoomContent() instanceof MonsterRoom) {
+            messageService.sendMonsterRoomMessage(chatId, player, room);
+        } else {
+            messageService.sendRoomMessage(chatId, player, room);
+        }
     }
 
     /**
@@ -144,7 +150,7 @@ public class RoomService {
      */
     public void restoreArmor(Long chatId) {
         var player = playerService.getPlayer(chatId);
-        val currentRoom = getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
+        var currentRoom = getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
         if (currentRoom.getRoomContent() instanceof Anvil anvil) {
             if (!anvil.isArmorRestored()) {
                 player = effectService.updateArmorEffect(player);
@@ -152,6 +158,7 @@ public class RoomService {
                 playerService.updatePlayer(player);
                 anvil.setArmorRestored(true);
                 saveOrUpdateRoomContent(anvil);
+                currentRoom = saveOrUpdateRoom(currentRoom);
             }
         }
         messageService.sendRoomMessage(chatId, player, currentRoom);

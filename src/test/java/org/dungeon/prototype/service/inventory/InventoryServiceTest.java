@@ -227,7 +227,7 @@ class InventoryServiceTest extends BaseServiceUnitTest {
         try(MockedStatic<GenerationUtil> generationUtilMockedStatic = mockStatic(GenerationUtil.class)) {
             when(GenerationUtil.calculateWearableWeight(anyInt(), anyDouble(), any(MagicType.class))).thenReturn(
                     Weight.builder()
-                            .armorToMaxArmor(5.0)
+                            .armor(5.0)
                             .build());
             when(GenerationUtil.calculateWeaponWeight(anyInt(), anyDouble(), anyDouble(), anyDouble(), anyDouble(), any(MagicType.class))).thenReturn(
                     Weight.builder()
@@ -282,7 +282,7 @@ class InventoryServiceTest extends BaseServiceUnitTest {
         try(MockedStatic<GenerationUtil> generationUtilMockedStatic = mockStatic(GenerationUtil.class)) {
             when(GenerationUtil.calculateWearableWeight(anyInt(), anyDouble(), any(MagicType.class))).thenReturn(
                     Weight.builder()
-                            .armorToMaxArmor(5.0)
+                            .armor(5.0)
                             .build());
             when(GenerationUtil.calculateWeaponWeight(anyInt(), anyDouble(), anyDouble(), anyDouble(), anyDouble(), any(MagicType.class))).thenReturn(
                     Weight.builder()

@@ -20,7 +20,7 @@ public class Treasure extends ItemsRoom {
     public Weight getRoomContentWeight() {
         //TODO: verify formula
         return items.stream().map(Item::getWeight).reduce(
-                Weight.builder().goldBonusToGold(gold.doubleValue()).build(), Weight::add);
+                Weight.builder().goldBonus(gold.doubleValue()).build(), Weight::add);
     }
 
     @Override
