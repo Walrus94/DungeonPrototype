@@ -1,0 +1,82 @@
+services:
+
+  zookeeper:
+    image: 'confluentinc/cp-zookeeper:latest'
+    container_name: zookeeper
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - target: 2181
+        published: 2181
+        protocol: tcp
+        mode: host
+    networks:
+      - dungeon-net
+
+  kafka:
+    image: 'confluentinc/cp-kafka:latest'
+    container_name: kafka
+    env_file:
+      - shared.env
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    depends_on:
+      - zookeeper
+    ports:
+      - target: 9092
+        published: 9092
+        protocol: tcp
+        mode: host
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${KAFKA_BOOTSTRAP_SERVERS}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_DEFAULT_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_LOG4J_LOGGERS: "kafka.consumer.logger=INFO"
+    networks:
+      - dungeon-net
+
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    env_file:
+      - shared.env
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    ports:
+      - target: 27017
+        published: 27017
+        protocol: tcp
+        mode: host
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME: /run/secrets/mongo_db_user
+      - MONGO_INITDB_ROOT_PASSWORD: /run/secrets/mongo_db_password
+    secrets:
+      - mongo_db_user
+      - mongo_db_password
+    networks:
+      - dungeon-net
+
+secrets:
+  mongo_db_user:
+    external: true
+  mongo_db_password:
+    external: true
+
+networks:
+  dungeon-net:
+    driver: overlay

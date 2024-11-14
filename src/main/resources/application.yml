@@ -1,22 +1,24 @@
 spring:
   data:
     mongodb:
-      uri: mongodb://mongo:27017/
-      database: dungeon_proto_db
+      uri: ${SPRING_DATA_MONGODB_URI}
+      database: ${SPRING_DATA_MONGODB_DATABASE}
+      username: ${SPRING_DATA_MONGODB_USERNAME}
+      password: ${SPRING_DATA_MONGODB_PASSWORD}
   kafka:
-    bootstrap-servers: kafka:9092
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
 bot:
-  username: dungeon_prototype_bot
+  username: ${BOT_USERNAME}
   path: /webhook
-  webhook:
-  token:
+  webhook: ${BOT_WEBHOOK_URL}
+  token: ${BOT_AUTH_TOKEN}
 
 kafka-topics:
-  item-naming-topic: item-naming-topic
+  item-naming-topic: ${ITEM_NAMING_TOPIC}
 
 messaging:
   bar-blocks: 6
