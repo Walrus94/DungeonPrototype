@@ -1,6 +1,7 @@
 package org.dungeon.prototype.config;
 
 import com.mongodb.MongoClientSettings;
+import com.mongodb.MongoCredential;
 import com.mongodb.ServerAddress;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
@@ -15,6 +16,7 @@ import org.dungeon.prototype.repository.converters.PointReadingConverter;
 import org.dungeon.prototype.repository.converters.PointWritingConverter;
 import org.dungeon.prototype.repository.converters.WearableTypeReadingConverter;
 import org.dungeon.prototype.repository.converters.WearableTypeWritingConverter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
@@ -28,24 +30,40 @@ import java.util.List;
 @Configuration
 @EnableMongoRepositories(basePackages = "org.dungeon.prototype.repository")
 public class MongoConfig extends AbstractMongoClientConfiguration {
+    private final String uri;
+    private final String database;
+    private final String username;
+    private final String password;
+
+    public MongoConfig(@Value("${spring.data.mongodb.uri}") String uri,
+                       @Value("${spring.data.mongodb.database}") String database,
+                       @Value("${spring.data.mongodb.username}") String username,
+                       @Value("${spring.data.mongodb.password}") String password) {
+        this.uri = uri;
+        this.database = database;
+        this.username = username;
+        this.password = password;
+    }
 
     @NotNull
     @Override
     protected String getDatabaseName() {
-        return "dungeon_proto_db";
+        return database;
     }
 
     @Bean
     @Override
     public MongoClient mongoClient() {
-        return MongoClients.create("mongodb://mongo:27017");
+        return MongoClients.create(uri);
     }
 
     @Override
     protected void configureClientSettings(MongoClientSettings.Builder builder) {
         builder.applyToClusterSettings(settings ->
-                settings.hosts(List.of(new ServerAddress("mongo", 27017)))); // 'mongo' is the service name in Docker
+                        settings.hosts(List.of(new ServerAddress("mongo", 27017))))
+                .credential(MongoCredential.createCredential(username, database, password.toCharArray()));
     }
+
     @Bean
     @NotNull
     @Override
@@ -63,6 +81,7 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
         converters.add(new PointWritingConverter());
         return new MongoCustomConversions(converters);
     }
+
     @Override
     protected boolean autoIndexCreation() {
         return true;

@@ -12,7 +12,11 @@ logging.basicConfig(level=logging.DEBUG)
 # Load the Hugging Face API token from the environment variable
 hf_model_file = os.getenv('HUGGINGFACE_MODEL_FILE')
 kafka_bootstrap_server = os.getenv('KAFKA_BOOTSTRAP_SERVERS')
+kafka_topic_name = os.getenv("KAFKA_TOPIC_NAME")
 mongo_connection_string = os.getenv('MONGO_DB_CONNECTION')
+mongo_database_name = os.getenv('MONGO_DB_DATABASE')
+mongo_database_user = os.getenv('MONGO_DB_USERNAME')
+mongo_database_password = os.getenv('MONGO_DB_PASSWORD')
 
 llm = Llama.from_pretrained(
     repo_id="bartowski/llama-3-fantasy-writer-8b-GGUF",
@@ -30,11 +34,15 @@ kafka_consumer = Consumer({
     'auto.offset.reset': 'earliest'
 })
 
-kafka_consumer.subscribe(['item-naming-topic'])
+kafka_consumer.subscribe([kafka_topic_name])
 
 # Configure MongoDB Connection
-mongo_client = MongoClient(mongo_connection_string)  # Connect to MongoDB container
-db = mongo_client['dungeon_proto_db']
+mongo_client = MongoClient(mongo_connection_string,
+                           username=mongo_database_user,
+                           password=mongo_database_password,
+                           authSource=mongo_database_name,
+                           authMechanism="SCRAM-SHA-256")
+db = mongo_client[mongo_database_name]
 collection = db['items']
 
 def update_mongo_item(chat_id, item_id, generated_name):
@@ -73,14 +81,16 @@ def process_kafka_message(message):
         messages = [
             { 
                 "role": "system", 
-                "content": "Generate short (1-3 words) name for item from fantasy dungeon crawler rpg by given description. Respond with one line of text containing item name, without formatting, quotation marks, dots, or additional text" },
+                "content": "Generate short (1-3 words) name for item from fantasy dungeon crawler rpg by given "
+                           "description. Respond with one line of text containing item name, without formatting, "
+                           "quotation marks, dots, or additional text"},
             {
                 "role": "user",
                 "content": prompt
             }
         ],
         temperature = 0.8,
-        max_tokens = 20
+        max_tokens = 10
     )
     try:
         logging.debug(f"Raw response from LLM: {response}")
