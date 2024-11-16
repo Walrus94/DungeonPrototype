@@ -19,7 +19,7 @@ jobs:
       with:
         ssh_host: ${{ secrets.REMOTE_HOST }}
         ssh_user: ${{ secrets.REMOTE_USER}}
-        ssh-private-key: ${{ secrets.REMOTE_HOST_KEY }}
+        ssh-private_key: ${{ secrets.REMOTE_HOST_KEY }}
     - name: Run Docker compose
       uses: Autom3/docker-deployment-action@3.0.1
       with:
