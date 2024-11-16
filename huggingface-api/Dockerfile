@@ -13,4 +13,4 @@ RUN pip install llama-cpp-python \
     --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --verbose
 
 # Run the application
-ENTRYPOINT python app.py
+ENTRYPOINT python app.py tail -f /dev/null
