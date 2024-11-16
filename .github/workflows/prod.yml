@@ -15,8 +15,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - uses: Autom3/docker-deployment-action@3.0.0
+      with:
+        remote_docker_host: ${{ secrets.REMOTE_HOST }}
+        ssh-private-key: ${{ secrets.REMOTE_HOST_KEY }}
     - name: Run Docker compose
-      uses: hoverkraft-tech/compose-action@v2.0.2
+      uses: Autom3/docker-deployment-action@3.0.1
       with:
         up-flags:
           --build --detach
