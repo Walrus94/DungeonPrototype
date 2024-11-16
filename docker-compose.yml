@@ -26,9 +26,7 @@ services:
       - huggingface-api
     ports:
       - ${BOT_WEBHOOK_PORT}:${BOT_WEBHOOK_PORT}
-      - ${REMOTE_DEBUG_PORT}:${REMOTE_DEBUG_PORT}
     environment:
-      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${REMOTE_DEBUG_PORT}
       SPRING_ACTIVE_PROFILE: ${ENV}
       BOT_USERNAME: ${BOT_USERNAME}
       BOT_WEBHOOK_URL: ${BOT_WEBHOOK_URL}
