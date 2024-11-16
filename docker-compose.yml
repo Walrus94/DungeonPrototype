@@ -86,3 +86,4 @@ secrets:
 networks:
   dungeon-net:
     external: true
+    name: dungeon-net

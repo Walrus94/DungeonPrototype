@@ -64,4 +64,4 @@ secrets:
 
 networks:
   dungeon-net:
-    driver: overlay
+    driver: bridge
