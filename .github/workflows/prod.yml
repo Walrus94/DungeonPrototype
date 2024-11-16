@@ -21,14 +21,14 @@ jobs:
         up-flags:
           --build --detach
       env: 
-        BOT_AUTH_TOKEN: ${{secrets.BOT_TOKEN_PROD}}
+        BOT_AUTH_TOKEN: ${{ secrets.BOT_TOKEN_PROD }}
         BOT_USERNAME: ${{vars.BOT_USERNAME}}
-        BOT_WEBHOOK_PORT: ${BOT_WEBHOOK_PORT}
-        BOT_WEBHOOK_URL: ${BOT_WEBHOOK_URL}
-        ENV: ${ENV}
-        KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
-        KAFKA_ITEM_NAMING_TOPIC: ${KAFKA_ITEM_NAMING_TOPIC}
-        MONGO_DB_DATABASE_NAME: ${MONGO_DB_DATABASE_NAME}
-        MONGO_DB_URI: ${MONGO_DB_URI}
+        BOT_WEBHOOK_PORT: ${{vars.BOT_WEBHOOK_PORT}}
+        BOT_WEBHOOK_URL: ${{vars.BOT_WEBHOOK_URL}}
+        ENV: ${{vars.ENV}}
+        KAFKA_BOOTSTRAP_SERVERS: ${{vars.KAFKA_BOOTSTRAP_SERVERS}}
+        KAFKA_ITEM_NAMING_TOPIC: ${{vars.KAFKA_ITEM_NAMING_TOPIC}}
+        MONGO_DB_DATABASE_NAME: ${{vars.MONGO_DB_DATABASE_NAME}}
+        MONGO_DB_URI: ${{vars.MONGO_DB_URI}}
         MONGO_DB_USER: ${{ secrets.MONGO_DB_USER }}
         MONGO_DB_PASSWORD: ${{ secrets.MONGO_DB_PASSWORD }}
