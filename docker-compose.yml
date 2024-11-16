@@ -1,3 +1,5 @@
+include:
+  - docker-compos.shared.yml
 services:
 
   cloudflared:
@@ -70,18 +72,6 @@ services:
       - dungeon-net
     volumes:
       - ./model:/app/model
-
-secrets:
-  mongo_db_user:
-    external: true
-  mongo_db_password:
-    external: true
-  dungeon_bot_token_prod:
-    external: true
-  dungeon_bot_token_dev:
-    external: true
-  dungeon_bot_token_test:
-    external: true
 
 networks:
   dungeon-net:
