@@ -66,8 +66,3 @@ services:
       - dungeon-net
     volumes:
       - ./model:/app/model
-
-networks:
-  dungeon-net:
-    external: true
-    name: dungeon-net
