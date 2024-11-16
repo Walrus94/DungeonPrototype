@@ -3,18 +3,12 @@ services:
   zookeeper:
     image: 'confluentinc/cp-zookeeper:latest'
     container_name: zookeeper
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
+    restart: on-failure
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     ports:
-      - target: 2181
-        published: 2181
-        protocol: tcp
-        mode: host
+      - '2181:2181'
     networks:
       - dungeon-net
 
@@ -23,10 +17,7 @@ services:
     container_name: kafka
     env_file:
       - shared.env
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
+    restart: on-failure
     depends_on:
       - zookeeper
     ports:
@@ -53,18 +44,12 @@ services:
     container_name: mongo
     env_file:
       - shared.env
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
+    restart: on-failure
     ports:
-      - target: 27017
-        published: 27017
-        protocol: tcp
-        mode: host
+      - '27017:27017'
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=/run/secrets/mongo_db_user
-      - MONGO_INITDB_ROOT_PASSWORD=/run/secrets/mongo_db_password
+      - MONGO_INITDB_ROOT_USERNAME: /run/secrets/mongo_db_user
+      - MONGO_INITDB_ROOT_PASSWORD: /run/secrets/mongo_db_password
     secrets:
       - mongo_db_user
       - mongo_db_password

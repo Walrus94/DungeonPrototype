@@ -3,10 +3,7 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared-agent-${ENV}
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
+    restart: on-failure
     command: tunnel --config /etc/cloudflared/config-${ENV}.yml run dungeon-bot-${ENV}
     volumes:
       - ./cloudflared:/etc/cloudflared
@@ -14,29 +11,20 @@ services:
       - dungeon-net
 
   dungeon-prototype-app:
-    image: dungeon-prototype-app:latest   # This is the name of the Docker image for your Spring Boot app
-    container_name: dungeon-prototype-app_${ENV}
+    image: dungeon-prototype-app:latest
+    container_name: dungeon-prototype-app-${ENV}
     env_file:
       - shared.env
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
+    restart: on-failure
     build:
-      context: .  # Build context is the project root where the Dockerfile is located
+      context: .
     depends_on:
       - kafka
       - mongo
       - huggingface-api
     ports:
-      - target: ${BOT_WEBHOOK_PORT}
-        published: ${BOT_WEBHOOK_PORT}
-        protocol: tcp
-        mode: host
-      - target: ${REMOTE_DEBUG_PORT}
-        published: ${REMOTE_DEBUG_PORT}
-        protocol: tcp
-        mode: host
+      - ${BOT_WEBHOOK_PORT}:${BOT_WEBHOOK_PORT}
+      - ${REMOTE_DEBUG_PORT}:${REMOTE_DEBUG_PORT}
     environment:
       JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${REMOTE_DEBUG_PORT}
       SPRING_ACTIVE_PROFILE: ${ENV}
@@ -58,13 +46,10 @@ services:
 
   huggingface-api:
     image: huggingface-api:latest
-    container_name: huggingface-api
+    container_name: huggingface-api-${ENV}
     env_file:
       - shared.env
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
+    restart: on-failure
     build:
       context: ./huggingface-api
     depends_on:
