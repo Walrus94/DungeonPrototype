@@ -21,7 +21,7 @@ jobs:
           --build --detach
       env: 
         BOT_AUTH_TOKEN: ${{secrets.BOT_TOKEN_PROD}}
-        BOT_USERNAME: ${env.BOT_USERNAME}
+        BOT_USERNAME: ${{vars.BOT_USERNAME}}
         BOT_WEBHOOK_PORT: ${BOT_WEBHOOK_PORT}
         BOT_WEBHOOK_URL: ${BOT_WEBHOOK_URL}
         ENV: ${ENV}
