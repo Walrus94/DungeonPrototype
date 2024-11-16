@@ -15,8 +15,6 @@ services:
   kafka:
     image: 'confluentinc/cp-kafka:latest'
     container_name: kafka
-    env_file:
-      - shared.env
     restart: on-failure
     depends_on:
       - zookeeper
@@ -42,8 +40,6 @@ services:
   mongo:
     image: mongo:latest
     container_name: mongo
-    env_file:
-      - shared.env
     restart: on-failure
     ports:
       - '27017:27017'
