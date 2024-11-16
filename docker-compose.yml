@@ -15,8 +15,6 @@ services:
   dungeon-prototype-app:
     image: dungeon-prototype-app:latest
     container_name: dungeon-prototype-app-${ENV}
-    env_file:
-      - shared.env
     restart: on-failure
     build:
       context: .
@@ -43,8 +41,6 @@ services:
   huggingface-api:
     image: huggingface-api:latest
     container_name: huggingface-api-${ENV}
-    env_file:
-      - shared.env
     restart: on-failure
     build:
       context: ./huggingface-api
