@@ -1,0 +1,33 @@
+name: CI for production
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Run Docker compose
+      uses: hoverkraft-tech/compose-action@v2.0.2
+      with:
+        up-flags:
+          --build --detach
+      env: 
+        BOT_AUTH_TOKEN: ${{ secrets.BOT_TOKEN_PROD }}
+        BOT_USERNAME: $BOT_USERNAME
+        BOT_WEBHOOK_PORT: $BOT_WEBHOOK_PORT
+        BOT_WEBHOOK_URL: $BOT_WEBHOOK_URL
+        ENV: $ENV
+        KAFKA_BOOTSTRAP_SERVERS: $KAFKA_BOOTSTRAP_SERVERS
+        KAFKA_ITEM_NAMING_TOPIC: $KAFKA_ITEM_NAMING_TOPIC
+        MONGO_DB_DATABASE_NAME: $MONGO_DB_DATABASE_NAME
+        MONGO_DB_URI: $MONGO_DB_URI
+        MONGO_DB_USER: ${{ secrets.MONGO_DB_USER }}
+        MONGO_DB_PASSWORD: ${{ secrets.MONGO_DB_PASSWORD }}
