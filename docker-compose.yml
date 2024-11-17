@@ -7,8 +7,7 @@ services:
     container_name: cloudflared-agent-${ENV}
     restart: on-failure
     command:
-      run tunnel --no-autoupdate --url dungeon-prototype-app-${ENV}:${BOT_WEBHOOK_PORT} 
-      --token ${CLOUDFLARE_TOKEN_PROD} run dungeon-bot-${ENV}
+      tunnel --no-autoupdate --token ${CLOUDFLARE_TOKEN_PROD} run dungeon-bot-${ENV}
     volumes:
       - ./cloudflared:/etc/cloudflared
     networks:
