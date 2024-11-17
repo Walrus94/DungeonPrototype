@@ -8,8 +8,6 @@ services:
     restart: on-failure
     command:
       tunnel run --token ${CLOUDFLARE_TOKEN_PROD} dungeon-bot-${ENV} --no-autoupdate
-    volumes:
-      - ./cloudflared:/etc/cloudflared
     networks:
       - dungeon-net
 
