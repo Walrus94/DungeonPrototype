@@ -23,6 +23,7 @@ jobs:
           BOT_USERNAME: ${{vars.BOT_USERNAME}}
           BOT_WEBHOOK_PORT: ${{vars.BOT_WEBHOOK_PORT}}
           BOT_WEBHOOK_URL: ${{vars.BOT_WEBHOOK_URL}}
+          CLOUDFLARE_TOKEN_PROD: ${{secrets.CLOUDFLARE_TOKEN_PROD}}
           KAFKA_BOOTSTRAP_SERVERS: ${{vars.KAFKA_BOOTSTRAP_SERVERS}}
           KAFKA_ITEM_NAMING_TOPIC: ${{vars.KAFKA_ITEM_NAMING_TOPIC}}
           MONGO_DB_DATABASE_NAME: ${{vars.MONGO_DB_DATABASE_NAME}}
@@ -36,6 +37,7 @@ jobs:
           echo "BOT_USERNAME=${BOT_USERNAME}" >> .env
           echo "BOT_WEBHOOK_PORT=${BOT_WEBHOOK_PORT}" >> .env
           echo "BOT_WEBHOOK_URL=${BOT_WEBHOOK_URL}" >> .env
+          echo "CLOUDFLARE_TOKEN_PROD=${CLOUDFLARE_TOKEN_PROD}" >> .env
           echo "KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}" >> .env
           echo "KAFKA_ITEM_NAMING_TOPIC=${KAFKA_ITEM_NAMING_TOPIC}" >> .env
           echo "MONGO_DB_DATABASE_NAME=${MONGO_DB_DATABASE_NAME}" >> .env
