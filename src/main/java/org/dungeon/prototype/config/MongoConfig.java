@@ -61,7 +61,7 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
     protected void configureClientSettings(MongoClientSettings.Builder builder) {
         builder.applyToClusterSettings(settings ->
                         settings.hosts(List.of(new ServerAddress("mongo", 27017))))
-                .credential(MongoCredential.createCredential(username, database, password.toCharArray()));
+                .credential(MongoCredential.createScramSha256Credential(username, database, password.toCharArray()));
     }
 
     @Bean
