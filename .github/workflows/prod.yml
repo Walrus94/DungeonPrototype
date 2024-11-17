@@ -14,7 +14,8 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Update repository
+        run : cd ${{vars.WORK_DIR}} && git pull origin main
       - name: Set environment variables
         env:
           ENV: ${{vars.ENV}}
@@ -41,6 +42,7 @@ jobs:
           echo "MONGO_DB_USER=${MONGO_DB_USER}" >> .env
           echo "MONGO_DB_PASSWORD=${MONGO_DB_PASSWORD}" >> .env
       - name: Run Docker Compose
-        run: docker-compose --env-file .env up -d
+        run: cd ${{vars.WORK_DIR}} 
+          && docker-compose --env-file .env up -d
       - name: Clean up environment file
         run: rm -f .env
