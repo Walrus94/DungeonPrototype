@@ -1,7 +1,0 @@
-tunnel: dungeon-bot-dev
-credentials-file: /etc/cloudflared/.json
-
-ingress:
-  - hostname: dungeonprototypebot.xyz/dev/webhook
-    service: http://localhost:8080
-  - service: http_status:404  # Default response for non-matching requests
