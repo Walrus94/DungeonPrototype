@@ -60,7 +60,7 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
     @Override
     protected void configureClientSettings(MongoClientSettings.Builder builder) {
         builder.applyToClusterSettings(settings ->
-                        settings.hosts(List.of(new ServerAddress("mongo://mongodb", 27017))))
+                        settings.hosts(List.of(new ServerAddress("mongodb://mongo", 27017))))
                 .credential(MongoCredential.createScramSha256Credential(username, database, password.toCharArray()));
     }
 
