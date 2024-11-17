@@ -23,7 +23,7 @@ services:
       - kafka
       - mongo
       - huggingface-api
-      - cloudflared-agent
+      - cloudflared
     ports:
       - ${BOT_WEBHOOK_PORT}:${BOT_WEBHOOK_PORT}
     environment:
