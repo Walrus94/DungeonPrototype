@@ -51,4 +51,4 @@ services:
 
 networks:
   dungeon-net:
-    driver: bridge
+    external: true
