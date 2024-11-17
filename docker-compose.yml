@@ -7,7 +7,7 @@ services:
     container_name: cloudflared-agent-${ENV}
     restart: on-failure
     command:
-      tunnel --no-autoupdate run --token ${CLOUDFLARE_TOKEN_PROD}
+      cloudflared tunnel --no-autoupdate run --token ${CLOUDFLARE_TOKEN_PROD}
     networks:
       - dungeon-net
 
