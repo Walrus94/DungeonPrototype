@@ -22,8 +22,8 @@ services:
     depends_on:
       - kafka
       - mongo
-      - huggingface-api-${ENV}
-      - cloudflared-agent-${ENV}
+      - huggingface-api
+      - cloudflared-agent
     ports:
       - ${BOT_WEBHOOK_PORT}:${BOT_WEBHOOK_PORT}
     environment:
