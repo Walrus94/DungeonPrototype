@@ -81,10 +81,4 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
         converters.add(new PointWritingConverter());
         return new MongoCustomConversions(converters);
     }
-
-    @Override
-    protected boolean autoIndexCreation() {
-        return true;
-    }
-
 }
