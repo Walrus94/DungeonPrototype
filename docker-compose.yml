@@ -6,9 +6,8 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared-agent-${ENV}
     restart: on-failure
-    command: cloudflared tunnel create dungeon-bot-${ENV} &&
-      cloudflared tunnel route dns dungeon-bot-${ENV} ${BOT_WEBHOOK_URL}
-      cloudflared tunnel --config /etc/cloudflared/config-${ENV}.yml run dungeon-bot-${ENV}
+    command:
+      tunnel --config /etc/cloudflared/config-${ENV}.yml run dungeon-bot-${ENV}
     volumes:
       - ./cloudflared:/etc/cloudflared
     networks:
