@@ -14,21 +14,33 @@ jobs:
       contents: read
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Run Docker compose
-      uses: Autom3/docker-deployment-action@3.0.1
-      with:
-        up-flags:
-          --build --detach
-      env: 
-        BOT_AUTH_TOKEN: ${{ secrets.BOT_TOKEN_PROD }}
-        BOT_USERNAME: ${{vars.BOT_USERNAME}}
-        BOT_WEBHOOK_PORT: ${{vars.BOT_WEBHOOK_PORT}}
-        BOT_WEBHOOK_URL: ${{vars.BOT_WEBHOOK_URL}}
-        ENV: ${{vars.ENV}}
-        KAFKA_BOOTSTRAP_SERVERS: ${{vars.KAFKA_BOOTSTRAP_SERVERS}}
-        KAFKA_ITEM_NAMING_TOPIC: ${{vars.KAFKA_ITEM_NAMING_TOPIC}}
-        MONGO_DB_DATABASE_NAME: ${{vars.MONGO_DB_DATABASE_NAME}}
-        MONGO_DB_URI: ${{vars.MONGO_DB_URI}}
-        MONGO_DB_USER: ${{ secrets.MONGO_DB_USER }}
-        MONGO_DB_PASSWORD: ${{ secrets.MONGO_DB_PASSWORD }}
+      - uses: actions/checkout@v4
+      - name: Set environment variables
+        env:
+          ENV: ${{vars.ENV}}
+          BOT_AUTH_TOKEN: ${{ secrets.BOT_TOKEN_PROD }}
+          BOT_USERNAME: ${{vars.BOT_USERNAME}}
+          BOT_WEBHOOK_PORT: ${{vars.BOT_WEBHOOK_PORT}}
+          BOT_WEBHOOK_URL: ${{vars.BOT_WEBHOOK_URL}}
+          KAFKA_BOOTSTRAP_SERVERS: ${{vars.KAFKA_BOOTSTRAP_SERVERS}}
+          KAFKA_ITEM_NAMING_TOPIC: ${{vars.KAFKA_ITEM_NAMING_TOPIC}}
+          MONGO_DB_DATABASE_NAME: ${{vars.MONGO_DB_DATABASE_NAME}}
+          MONGO_DB_URI: ${{vars.MONGO_DB_URI}}
+          MONGO_DB_USER: ${{ secrets.MONGO_DB_USER }}
+          MONGO_DB_PASSWORD: ${{ secrets.MONGO_DB_PASSWORD }}
+        run: |
+          echo "ENV=${ENV}" >> .env
+          echo "BOT_AUTH_TOKEN=${BOT_AUTH_TOKEN}" >> .env
+          echo "BOT_USERNAME=${BOT_USERNAME}" >> .env
+          echo "BOT_WEBHOOK_PORT=${BOT_WEBHOOK_PORT}" >> .env
+          echo "BOT_WEBHOOK_URL=${BOT_WEBHOOK_URL}" >> .env
+          echo "KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}" >> .env
+          echo "KAFKA_ITEM_NAMING_TOPIC=${KAFKA_ITEM_NAMING_TOPIC}" >> .env
+          echo "MONGO_DB_DATABASE_NAME=${MONGO_DB_DATABASE_NAME}" >> .env
+          echo "MONGO_DB_URI=${MONGO_DB_URI}" >> .env
+          echo "MONGO_DB_USER=${MONGO_DB_USER}" >> .env
+          echo "MONGO_DB_PASSWORD=${MONGO_DB_PASSWORD}" >> .env
+      - name: Run Docker Compose
+        run: docker-compose --env-file .env up -d
+      - name: Clean up environment file
+        run: rm -f .env
