@@ -30,6 +30,7 @@ jobs:
           MONGO_DB_USER: ${{ secrets.MONGO_DB_USER }}
           MONGO_DB_PASSWORD: ${{ secrets.MONGO_DB_PASSWORD }}
         run: |
+          cd ${{vars.WORK_DIR}} &&
           echo "ENV=${ENV}" >> .env
           echo "BOT_AUTH_TOKEN=${BOT_AUTH_TOKEN}" >> .env
           echo "BOT_USERNAME=${BOT_USERNAME}" >> .env
@@ -45,4 +46,4 @@ jobs:
         run: cd ${{vars.WORK_DIR}} 
           && docker-compose --env-file .env up -d
       - name: Clean up environment file
-        run: rm -f .env
+        run: cd ${{vars.WORK_DIR}} %% && rm -f .env
