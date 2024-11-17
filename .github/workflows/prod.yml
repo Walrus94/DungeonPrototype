@@ -8,18 +8,13 @@ on:
 
 jobs:
   build-and-run:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     environment: prod
     permissions:
       contents: read
 
     steps:
     - uses: actions/checkout@v4
-    - uses: humbertocrispim/ssh-docker-compose-action@v1.0.0
-      with:
-        ssh_host: ${{ secrets.REMOTE_HOST }}
-        ssh_user: ${{ secrets.REMOTE_USER}}
-        ssh_private_key: ${{ secrets.REMOTE_HOST_KEY }}
     - name: Run Docker compose
       uses: Autom3/docker-deployment-action@3.0.1
       with:
