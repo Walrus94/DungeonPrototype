@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Update repository
-        run : cd ${{vars.WORK_DIR}} && git pull origin main
+        run : cd ${{secrets.WORK_DIR}} && git pull origin main
       - name: Set environment variables
         env:
           ENV: ${{vars.ENV}}
