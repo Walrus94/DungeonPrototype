@@ -559,40 +559,7 @@ player:
   attribute-mana-factor: 1
 
 logging:
+  file:
+    name: /logs/app.log
   level:
-    org:
-      dungeon:
-        prototype:
-          bot:
-            DungeonBot: DEBUG
-          model:
-            room:
-              Room: DEBUG
-            Level: DEBUG
-          kafka:
-            KafkaProducer: DEBUG
-          service:
-            PlayerLevelService: DEBUG
-            BattleService: DEBUG
-            room:
-              TreasureService: DEBUG
-              generation.room.content:
-                RoomContentGenerationService: DEBUG
-            item:
-              generation:
-                ItemGenerator: DEBUG
-                ItemNamingService: DEBUG
-              ItemService: DEBUG
-            level:
-              LevelService: DEBUG
-              generation:
-                LevelGenerationService: DEBUG
-                WalkerBuilder: DEBUG
-                WalkerDistributor: DEBUG
-            message:
-              MessageService: DEBUG
-              MessageSender: DEBUG
-          util:
-            RoomGenerationUtils: DEBUG
-            LevelUtil: DEBUG
-            RandomUtil: DEBUG
+    root: info
