@@ -52,3 +52,8 @@ jobs:
           docker-compose --env-file .env up --build -d
       - name: Clean up environment file
         run: cd ${{vars.WORK_DIR}} && rm -f .env
+      - name: Cleanup Docker Data
+        run: docker system prune -af &&
+          docker volume prune -f
+      - name: Verify Cleanup
+        run: docker system df
