@@ -34,7 +34,7 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
     private final String password;
 
     public MongoConfig(@Value("${spring.data.mongodb.uri}") String uri,
-                       @Value("${spring.data.mongodb.port") String port,
+                       @Value("${spring.data.mongodb.port}") String port,
                        @Value("${spring.data.mongodb.database}") String database,
                        @Value("${spring.data.mongodb.username}") String username,
                        @Value("${spring.data.mongodb.password}") String password) {
