@@ -3,8 +3,6 @@ name: CI for production
 on:
   push:
     branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
 
 jobs:
   build-and-run:
@@ -15,7 +13,7 @@ jobs:
 
     steps:
       - name: Update repository
-        run : cd ${{vars.WORK_DIR}} && git pull origin master
+        run : cd ${{vars.WORK_DIR}} && git fetch origin master && git checkout
       - name: Set environment variables
         env:
           ENV: ${{vars.ENV}}
@@ -50,7 +48,7 @@ jobs:
         run: cd ${{vars.WORK_DIR}} &&
           docker-compose -f docker-compose.shared.yml --env-file .env up --build -d
       - name: Run Environment specific services
-        run: cd ${{vars.WORK_DIR}} 
-          && docker-compose --env-file .env up --build -d
+        run: cd ${{vars.WORK_DIR}} && 
+          docker-compose --env-file .env up --build -d
       - name: Clean up environment file
         run: cd ${{vars.WORK_DIR}} && rm -f .env

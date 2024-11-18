@@ -18,5 +18,11 @@ RUN gradle bootJar --no-daemon
 FROM openjdk:23-ea-8-jdk-slim
 COPY --from=build /app/build/libs/*.jar /app/DungeonPrototype.jar
 
+ENV MODE=run
+
 # Run the Spring Boot app
-ENTRYPOINT ["java", "-jar", "/app/DungeonPrototype.jar", "tail", "-f", "/dev/null"]
+CMD if [ "$MODE" = "test" ]; then \
+["java", "-jar", "/app/DungeonPrototype.jar", "-test" "tail", "-f", "/dev/null"]
+else \
+ ["java", "-jar", "/app/DungeonPrototype.jar", "tail", "-f", "/dev/null"]
+fi
