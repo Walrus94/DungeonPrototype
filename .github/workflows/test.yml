@@ -12,7 +12,8 @@ jobs:
 
     steps:
       - name: Update repository
-        run : cd ${{vars.WORK_DIR}} && git fetch origin ${{ github.event.pull_request.head.ref }} && git checkout
+        run : cd ${{vars.WORK_DIR}} && git fetch origin ${{ github.event.pull_request.head.ref }} &&
+          git checkout && git pull
 
       - name: Run tests
         run: cd ${{vars.WORK_DIR}} &&
