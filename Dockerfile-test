@@ -1,5 +1,5 @@
 # Use Gradle to build the DungeonPrototype app
-FROM openjdk:23-ea-8-jdk-slim
+FROM gradle:8.10.1 AS build
 
 WORKDIR /app
 
