@@ -19,6 +19,3 @@ jobs:
         run: cd ${{vars.WORK_DIR}} &&
           docker build -f Dockerfile-test -t dungeon-prototype-app . &&
           docker run dungeon-prototype-app
-      - name: Stop and remove container
-        run: cd ${{vars.WORK_DIR}} &&
-          docker stop dungeon-prototype-app && docker container rm dungeon-prototype-app
