@@ -13,7 +13,7 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
 server:
-  port: 9090
+  port: ${BOT_WEBHOOK_PORT}
 
 bot:
   username: ${BOT_USERNAME}

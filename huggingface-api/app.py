@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.DEBUG)
 hf_model_file = os.getenv('HUGGINGFACE_MODEL_FILE')
 kafka_bootstrap_server = os.getenv('KAFKA_BOOTSTRAP_SERVERS')
 kafka_topic_name = os.getenv("KAFKA_TOPIC_NAME")
-mongo_connection_string = os.getenv('MONGO_DB_CONNECTION')
+mongo_database_port = os.getenv('MONGO_DB_PORT')
 mongo_database_name = os.getenv('MONGO_DB_DATABASE')
 mongo_database_user = os.getenv('MONGO_DB_USERNAME')
 mongo_database_password = os.getenv('MONGO_DB_PASSWORD')
@@ -37,11 +37,10 @@ kafka_consumer = Consumer({
 kafka_consumer.subscribe([kafka_topic_name])
 
 # Configure MongoDB Connection
-mongo_client = MongoClient(mongo_connection_string,
-                           username=mongo_database_user,
-                           password=mongo_database_password,
-                           authSource=mongo_database_name,
-                           authMechanism="SCRAM-SHA-256")
+mongo_client = MongoClient("mongodb://" + mongo_database_user + ":" + mongo_database_password +
+                           "@" +
+                           "localhost:" + mongo_database_port +
+                           "/?authMechanism=SCRAM-SHA-1")
 db = mongo_client[mongo_database_name]
 collection = db['items']
 

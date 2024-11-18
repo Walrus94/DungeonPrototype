@@ -27,18 +27,15 @@ import java.util.List;
 @Configuration
 @EnableMongoRepositories(basePackages = "org.dungeon.prototype.repository")
 public class MongoConfig extends AbstractMongoClientConfiguration {
-    private final String uri;
     private final String port;
     private final String database;
     private final String username;
     private final String password;
 
-    public MongoConfig(@Value("${spring.data.mongodb.uri}") String uri,
-                       @Value("${spring.data.mongodb.port}") String port,
+    public MongoConfig(@Value("${spring.data.mongodb.port}") String port,
                        @Value("${spring.data.mongodb.database}") String database,
                        @Value("${spring.data.mongodb.username}") String username,
                        @Value("${spring.data.mongodb.password}") String password) {
-        this.uri = uri;
         this.port = port;
         this.database = database;
         this.username = username;
@@ -54,7 +51,7 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
     @Bean
     @Override
     public MongoClient mongoClient() {
-        return MongoClients.create(createConnectionString(uri, port, username, password));
+        return MongoClients.create(createConnectionString(port, username, password));
     }
 
     @Bean
@@ -75,7 +72,7 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
         return new MongoCustomConversions(converters);
     }
 
-    private static String createConnectionString(String uri, String port, String username, String password) {
+    private static String createConnectionString(String port, String username, String password) {
         return "mongodb://" + username + ":" + password +
                 "@" +
                 "localhost:" + port +
