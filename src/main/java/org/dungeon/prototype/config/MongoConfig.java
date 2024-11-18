@@ -1,8 +1,5 @@
 package org.dungeon.prototype.config;
 
-import com.mongodb.MongoClientSettings;
-import com.mongodb.MongoCredential;
-import com.mongodb.ServerAddress;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import jakarta.validation.constraints.NotNull;
@@ -31,15 +28,18 @@ import java.util.List;
 @EnableMongoRepositories(basePackages = "org.dungeon.prototype.repository")
 public class MongoConfig extends AbstractMongoClientConfiguration {
     private final String uri;
+    private final String port;
     private final String database;
     private final String username;
     private final String password;
 
     public MongoConfig(@Value("${spring.data.mongodb.uri}") String uri,
+                       @Value("${spring.data.mongodb.port") String port,
                        @Value("${spring.data.mongodb.database}") String database,
                        @Value("${spring.data.mongodb.username}") String username,
                        @Value("${spring.data.mongodb.password}") String password) {
         this.uri = uri;
+        this.port = port;
         this.database = database;
         this.username = username;
         this.password = password;
@@ -54,14 +54,7 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
     @Bean
     @Override
     public MongoClient mongoClient() {
-        return MongoClients.create(uri);
-    }
-
-    @Override
-    protected void configureClientSettings(MongoClientSettings.Builder builder) {
-        builder.applyToClusterSettings(settings ->
-                        settings.hosts(List.of(new ServerAddress("mongodb", 27017))))
-                .credential(MongoCredential.createScramSha256Credential(username, database, password.toCharArray()));
+        return MongoClients.create(createConnectionString(uri, port, username, password));
     }
 
     @Bean
@@ -80,5 +73,12 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
         converters.add(new PointReadingConverter());
         converters.add(new PointWritingConverter());
         return new MongoCustomConversions(converters);
+    }
+
+    private static String createConnectionString(String uri, String port, String username, String password) {
+        return new StringBuilder("mongodb://").append(username).append(":").append(password)
+                .append("@")
+                .append(uri).append(":").append(port)
+                .append("/?authMechanism=SCRAM-SHA-1").toString();
     }
 }

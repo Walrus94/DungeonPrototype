@@ -28,6 +28,7 @@ jobs:
           KAFKA_ITEM_NAMING_TOPIC: ${{vars.KAFKA_ITEM_NAMING_TOPIC}}
           MONGO_DB_DATABASE_NAME: ${{vars.MONGO_DB_DATABASE_NAME}}
           MONGO_DB_URI: ${{vars.MONGO_DB_URI}}
+          MONGO_DB_PORT: ${{vars.MONGO_DB_PORT}}
           MONGO_DB_USER: ${{ secrets.MONGO_DB_USER }}
           MONGO_DB_PASSWORD: ${{ secrets.MONGO_DB_PASSWORD }}
         run: |
@@ -41,6 +42,7 @@ jobs:
           echo "KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}" >> .env
           echo "KAFKA_ITEM_NAMING_TOPIC=${KAFKA_ITEM_NAMING_TOPIC}" >> .env
           echo "MONGO_DB_DATABASE_NAME=${MONGO_DB_DATABASE_NAME}" >> .env
+          echo "MONGO_DB_PORT=${MONGO_DB_PORT}" >> .env
           echo "MONGO_DB_URI=${MONGO_DB_URI}" >> .env
           echo "MONGO_DB_USER=${MONGO_DB_USER}" >> .env
           echo "MONGO_DB_PASSWORD=${MONGO_DB_PASSWORD}" >> .env
