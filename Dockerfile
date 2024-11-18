@@ -22,7 +22,6 @@ ENV MODE=run
 
 # Run the Spring Boot app
 CMD if [ "$MODE" = "test" ] then \
-    ["java", "-jar", "-test" "/app/DungeonPrototype.jar", "tail", "-f", "/dev/null"]
-    else \
+    ["java", "-jar", "-test" "/app/DungeonPrototype.jar", "tail", "-f", "/dev/null"] else \
     ["java", "-jar", "/app/DungeonPrototype.jar", "tail", "-f", "/dev/null"]
     fi
