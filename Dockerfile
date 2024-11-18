@@ -21,8 +21,8 @@ COPY --from=build /app/build/libs/*.jar /app/DungeonPrototype.jar
 ENV MODE=run
 
 # Run the Spring Boot app
-CMD if [ "$MODE" = "test" ]; then \
-["java", "-jar", "/app/DungeonPrototype.jar", "-test" "tail", "-f", "/dev/null"]
-else \
- ["java", "-jar", "/app/DungeonPrototype.jar", "tail", "-f", "/dev/null"]
-fi
+CMD if [ "$MODE" = "test" ] then \
+    ["java", "-jar", "-test" "/app/DungeonPrototype.jar", "tail", "-f", "/dev/null"]
+    else \
+    ["java", "-jar", "/app/DungeonPrototype.jar", "tail", "-f", "/dev/null"]
+    fi
