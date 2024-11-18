@@ -13,4 +13,4 @@ COPY . .
 
 RUN gradle dependencies --no-daemon
 
-RUN gradle test;
+CMD ["gradle", "test"]
