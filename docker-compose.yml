@@ -1,33 +1,24 @@
-include:
-  - docker-compose.shared.yml
 services:
 
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared-agent-${ENV}
     restart: on-failure
+    network_mode: host
     command:
       tunnel run dungeon-bot-${ENV}
     environment:
       - TUNNEL_TOKEN=${CLOUDFLARE_TOKEN_PROD}
-    networks:
-      - dungeon-net
 
   dungeon-prototype-app:
     image: dungeon-prototype-app:latest
     container_name: dungeon-prototype-app-${ENV}
     restart: on-failure
+    network_mode: host
     build:
       context: .
-    depends_on:
-      - kafka
-      - mongo
-      - huggingface-api
-      - cloudflared
     ports:
       - ${BOT_WEBHOOK_PORT}:${BOT_WEBHOOK_PORT}
-    expose:
-      - ${BOT_WEBHOOK_PORT}
     environment:
       SPRING_ACTIVE_PROFILE: ${ENV}
       BOT_USERNAME: ${BOT_USERNAME}
@@ -40,18 +31,14 @@ services:
       SPRING_DATA_MONGODB_DATABASE: ${MONGO_DB_DATABASE_NAME}
       SPRING_DATA_MONGODB_USERNAME: ${MONGO_DB_USER}
       SPRING_DATA_MONGODB_PASSWORD: ${MONGO_DB_PASSWORD}
-    networks:
-      - dungeon-net
 
   huggingface-api:
     image: huggingface-api:latest
     container_name: huggingface-api-${ENV}
     restart: on-failure
+    network_mode: host
     build:
       context: ./huggingface-api
-    depends_on:
-      - kafka
-      - mongo
     environment:
       HUGGINGFACE_MODEL_FILE: /app/model
       KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
@@ -60,7 +47,5 @@ services:
       MONGO_DB_DATABASE: ${MONGO_DB_DATABASE_NAME}
       MONGO_DB_USERNAME: ${MONGO_DB_USER}
       MONGO_DB_PASSWORD: ${MONGO_DB_PASSWORD}
-    networks:
-      - dungeon-net
     volumes:
       - ./model:/app/model
