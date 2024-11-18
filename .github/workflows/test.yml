@@ -21,4 +21,4 @@ jobs:
           docker run dungeon-prototype-app
       - name: Stop and remove container
         run: cd ${{vars.WORK_DIR}} &&
-          docker stop && docker container rm dungeon-prototype-app
+          docker stop dungeon-prototype-app && docker container rm dungeon-prototype-app
