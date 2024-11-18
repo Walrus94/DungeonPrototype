@@ -26,6 +26,8 @@ services:
       - cloudflared
     ports:
       - ${BOT_WEBHOOK_PORT}:${BOT_WEBHOOK_PORT}
+    expose:
+      - ${BOT_WEBHOOK_PORT}
     environment:
       SPRING_ACTIVE_PROFILE: ${ENV}
       BOT_USERNAME: ${BOT_USERNAME}
