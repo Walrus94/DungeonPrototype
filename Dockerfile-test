@@ -11,6 +11,4 @@ RUN gradle build --no-daemon || return 0  # Initial build to download dependenci
 # Copy the rest of the source code
 COPY . .
 
-RUN gradle dependencies --no-daemon
-
-RUN gradle test;
+CMD ["gradle", "test"]

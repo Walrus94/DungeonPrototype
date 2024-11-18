@@ -18,4 +18,4 @@ jobs:
       - name: Run tests
         run: cd ${{vars.WORK_DIR}} &&
           docker build -f Dockerfile-test -t dungeon-prototype-app . &&
-          docker run -rm dungeon-prototype-app
+          docker run dungeon-prototype-app
