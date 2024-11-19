@@ -26,16 +26,13 @@ limits_config:
   max_streams_per_user: 0         # No limit on streams per user
 
 storage_config:
-  boltdb_shipper:
-    active_index_directory: /loki/index # Active index directory
-    cache_location: /loki/cache # Cache directory for boltdb
-    shared_store: filesystem
+  gcs:
+    bucket_name: GCS_BUCKET_NAME
   filesystem:
     directory: /loki/chunks
 
 compactor:
   working_directory: /loki/compactor # Compactor's working directory
-  shared_store: filesystem
 
 ruler:
   storage:
@@ -49,8 +46,12 @@ schema_config:
   configs:
     - from: 2022-01-01
       store: boltdb-shipper
-      object_store: filesystem
+      object_store: gcs
       schema: v11
       index:
         prefix: index_
         period: 24h
+
+boltdb_shipper:
+  active_index_directory: /loki/index
+  cache_location: /loki/boltdb-cache
