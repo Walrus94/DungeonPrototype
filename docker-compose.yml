@@ -1,15 +1,5 @@
 services:
 
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    container_name: cloudflared-agent-${ENV}
-    restart: on-failure
-    network_mode: host
-    command:
-      tunnel run dungeon-bot-${ENV}
-    environment:
-      - TUNNEL_TOKEN=${CLOUDFLARE_TOKEN_PROD}
-
   dungeon-prototype-app:
     image: dungeon-prototype-app:latest
     container_name: dungeon-prototype-app-${ENV}
