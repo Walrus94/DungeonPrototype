@@ -48,7 +48,7 @@ schema_config:
     - from: 2022-01-01
       store: boltdb-shipper
       object_store: filesystem
-      schema: v13
+      schema: v11
       index:
         prefix: index_
         period: 24h
