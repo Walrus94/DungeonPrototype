@@ -26,15 +26,22 @@ limits_config:
   max_streams_per_user: 0         # No limit on streams per user
 
 storage_config:
-  gcs:
-    bucket_name: GCS_BUCKET_NAME
+  tsdb:
+    block_ranges_period: 2h          # Default block range duration
+    retention_period: 168h           # Retain data for 7 days
+    cache_location: /loki/cache      # Cache for indexes and other metadata
+    head_chunk_timeout: 1h           # How long TSDB keeps chunks in memory
   filesystem:
-    directory: /loki/chunks
+    directory: /loki/chunks          # Directory for chunk storage
+
 
 compactor:
-  delete_request_store:
-    key-prefix: /loki/deleted
   working_directory: /loki/compactor # Compactor's working directory
+  shared_store: filesystem
+
+table_manager:
+  retention_deletes_enabled: true
+  retention_period: 168h # Retain data for 7 days
 
 ruler:
   storage:
@@ -47,15 +54,9 @@ ruler:
 schema_config:
   configs:
     - from: 2022-01-01
-      store: boltdb-shipper
+      store: tsdb
       object_store: gcs
-      schema: v11
+      schema: v13
       index:
         prefix: index_
         period: 24h
-
-boltdb_shipper:
-  delete_request_store:
-    key-prefix: /loki/deleted
-  active_index_directory: /loki/index
-  cache_location: /loki/boltdb-cache
