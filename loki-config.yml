@@ -16,13 +16,11 @@ ingester:
     final_sleep: 0s
   chunk_idle_period: 5m       # Duration after which inactive chunks are flushed
   chunk_retain_period: 30s    # Retention time for old chunks before flushing
-  max_transfer_retries: 20    # Retry attempts for chunk transfers in HA setups\
   chunk_block_size: 262144    # Block size for chunks
   chunk_encoding: snappy
   chunk_target_size: 1572864
 
 limits_config:
-  enforce_metric_name: false
   reject_old_samples: true
   reject_old_samples_max_age: 168h # Maximum age of logs accepted (7 days)
   max_streams_per_user: 0         # No limit on streams per user
