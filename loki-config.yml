@@ -28,14 +28,12 @@ limits_config:
 storage_config:
   boltdb_shipper:
     active_index_directory: /loki/index # Active index directory
-    shared_store: filesystem # Shared storage backend for indexes
     cache_location: /loki/cache # Cache directory for boltdb
   filesystem:
     directory: /loki/chunks
 
 compactor:
   working_directory: /loki/compactor # Compactor's working directory
-  shared_store: filesystem # Shared storage backend for compactor
 
 ruler:
   storage:
