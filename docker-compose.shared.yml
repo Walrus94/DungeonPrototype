@@ -13,7 +13,7 @@ services:
     command: -config.file=/etc/loki/loki-config.yml
 
   promtail:
-    image: grafana/promtail:3.0.0
+    image: grafana/promtail:latest
     container_name: promtail
     restart: on-failure
     network_mode: host
@@ -25,7 +25,7 @@ services:
     command: -config.file=/etc/promtail/config.yml
 
   grafana:
-    image: grafana/grafana:3.0.0
+    image: grafana/grafana:latest
     container_name: grafana
     depends_on:
       - cloudflared
