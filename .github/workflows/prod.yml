@@ -22,6 +22,8 @@ jobs:
           BOT_WEBHOOK_PORT: ${{vars.BOT_WEBHOOK_PORT}}
           BOT_WEBHOOK_URL: ${{vars.BOT_WEBHOOK_URL}}
           CLOUDFLARE_TOKEN: ${{secrets.CLOUDFLARE_TOKEN}}
+          GRAFANA_USER: ${{secrets.GRAFANA_USER}}
+          GRAFANA_PASSWORD: ${{secrets.GRAFANA_PASSWORD}}
           KAFKA_BOOTSTRAP_SERVERS: ${{vars.KAFKA_BOOTSTRAP_SERVERS}}
           KAFKA_ITEM_NAMING_TOPIC: ${{vars.KAFKA_ITEM_NAMING_TOPIC}}
           MONGO_DB_DATABASE_NAME: ${{vars.MONGO_DB_DATABASE_NAME}}
@@ -37,6 +39,8 @@ jobs:
           echo "BOT_WEBHOOK_PORT=${BOT_WEBHOOK_PORT}" >> .env
           echo "BOT_WEBHOOK_URL=${BOT_WEBHOOK_URL}" >> .env
           echo "CLOUDFLARE_TOKEN=${CLOUDFLARE_TOKEN}" >> .env
+          echo "GRAFANA_USER=${GRAFANA_USER}" >> .env
+          echo "GRAFANA_PASSWORD=${GRAFANA_PASSWORD}" >> .env
           echo "KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}" >> .env
           echo "KAFKA_ITEM_NAMING_TOPIC=${KAFKA_ITEM_NAMING_TOPIC}" >> .env
           echo "MONGO_DB_DATABASE_NAME=${MONGO_DB_DATABASE_NAME}" >> .env
