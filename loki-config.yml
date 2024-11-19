@@ -10,6 +10,7 @@ server:
 ingester:
   lifecycler:
     ring:
+      instance_addr: 127.0.0.1
       kvstore:
         store: inmemory # Use "memberlist" or "consul" for HA setups
       replication_factor: 1 # Set to >1 for redundancy in HA setups
@@ -39,9 +40,9 @@ compactor:
   working_directory: /loki/compactor # Compactor's working directory
   shared_store: filesystem
 
-table_manager:
-  retention_deletes_enabled: true
-  retention_period: 168h # Retain data for 7 days
+#table_manager:
+#  retention_deletes_enabled: true
+#  retention_period: 168h # Retain data for 7 days
 
 ruler:
   storage:
@@ -55,7 +56,7 @@ schema_config:
   configs:
     - from: 2022-01-01
       store: tsdb
-      object_store: gcs
+      object_store: filesystem
       schema: v13
       index:
         prefix: index_
