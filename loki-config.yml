@@ -21,7 +21,6 @@ ingester:
   chunk_target_size: 1572864
 
 limits_config:
-  allow_structured_metadata: false
   reject_old_samples: true
   reject_old_samples_max_age: 168h # Maximum age of logs accepted (7 days)
   max_streams_per_user: 0         # No limit on streams per user
@@ -30,11 +29,13 @@ storage_config:
   boltdb_shipper:
     active_index_directory: /loki/index # Active index directory
     cache_location: /loki/cache # Cache directory for boltdb
+    shared_store: filesystem
   filesystem:
     directory: /loki/chunks
 
 compactor:
   working_directory: /loki/compactor # Compactor's working directory
+  shared_store: filesystem
 
 ruler:
   storage:

@@ -33,7 +33,7 @@ services:
     restart: on-failure
     network_mode: host
     environment:
-      - GF_SERVER_ROOT_URL = logs.dungeonprototypebot.xyz/dashboard
+      - GF_SERVER_ROOT_URL = dungeonprototypebot.xyz/logs
     ports:
         - 3000:3000
 
