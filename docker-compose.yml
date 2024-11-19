@@ -12,7 +12,7 @@ services:
     ports:
       - ${BOT_WEBHOOK_PORT}:${BOT_WEBHOOK_PORT}
     environment:
-      SPRING_ACTIVE_PROFILE: ${ENV}
+      SPRING_ACTIVE_PROFILE: ${ENV} #TODO: rename
       BOT_USERNAME: ${BOT_USERNAME}
       BOT_WEBHOOK_URL: ${BOT_WEBHOOK_URL}
       BOT_AUTH_TOKEN: ${BOT_AUTH_TOKEN}

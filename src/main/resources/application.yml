@@ -560,6 +560,6 @@ player:
 
 logging:
   file:
-    name: /logs/dungeon-prototype-${ENV}.log
+    name: /logs/dungeon-prototype-${SPRING_ACTIVE_PROFILE}.log
   level:
     root: debug
