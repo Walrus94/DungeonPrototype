@@ -21,6 +21,7 @@ ingester:
   chunk_target_size: 1572864
 
 limits_config:
+  allow_structured_metadata: false
   reject_old_samples: true
   reject_old_samples_max_age: 168h # Maximum age of logs accepted (7 days)
   max_streams_per_user: 0         # No limit on streams per user
