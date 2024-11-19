@@ -32,6 +32,8 @@ storage_config:
     directory: /loki/chunks
 
 compactor:
+  delete_request_store:
+    key-prefix: /loki/deleted
   working_directory: /loki/compactor # Compactor's working directory
 
 ruler:
@@ -53,5 +55,7 @@ schema_config:
         period: 24h
 
 boltdb_shipper:
+  delete_request_store:
+    key-prefix: /loki/deleted
   active_index_directory: /loki/index
   cache_location: /loki/boltdb-cache
