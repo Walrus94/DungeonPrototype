@@ -13,9 +13,13 @@ ingester:
       kvstore:
         store: inmemory # Use "memberlist" or "consul" for HA setups
       replication_factor: 1 # Set to >1 for redundancy in HA setups
+    final_sleep: 0s
   chunk_idle_period: 5m       # Duration after which inactive chunks are flushed
   chunk_retain_period: 30s    # Retention time for old chunks before flushing
-  max_transfer_retries: 20    # Retry attempts for chunk transfers in HA setups
+  max_transfer_retries: 20    # Retry attempts for chunk transfers in HA setups\
+  chunk_block_size: 262144    # Block size for chunks
+  chunk_encoding: snappy
+  chunk_target_size: 1572864
 
 limits_config:
   enforce_metric_name: false
@@ -35,10 +39,6 @@ compactor:
   working_directory: /loki/compactor # Compactor's working directory
   shared_store: filesystem # Shared storage backend for compactor
 
-table_manager:
-  retention_deletes_enabled: true # Enable log retention
-  retention_period: 168h         # Retain logs for 7 days
-
 ruler:
   storage:
     type: local
@@ -52,7 +52,7 @@ schema_config:
     - from: 2022-01-01
       store: boltdb-shipper
       object_store: filesystem
-      schema: v11
+      schema: v13
       index:
         prefix: index_
         period: 24h
