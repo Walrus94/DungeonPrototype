@@ -560,6 +560,6 @@ player:
 
 logging:
   file:
-    name: /logs/app.log
+    name: /logs/dungeon-prototype-${ENV}.log
   level:
-    root: info
+    root: debug
