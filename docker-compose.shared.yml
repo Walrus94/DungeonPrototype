@@ -9,7 +9,7 @@ services:
       - 3100:3100
     volumes:
       - ./loki-config.yml:/etc/loki/loki-config.yml
-      - loki-data:/loki
+      - ./loki-data:/loki
     command: -config.file=/etc/loki/loki-config.yml
   promtail:
     image: grafana/promtail:latest
