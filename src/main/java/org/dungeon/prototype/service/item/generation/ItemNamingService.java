@@ -30,7 +30,7 @@ public class ItemNamingService {
      * @param item to be named
      */
     public void requestNameGeneration(Item item) {
-        log.debug("Preparing item {} for naming request...", item.getId());
+        log.info("Preparing item {} for naming request...", item.getId());
         kafkaProducer.sendItemNamingRequest(topic,
                 new ItemNameRequestDto(item.getChatId(), item.getId(), generatePrompt(item)));
     }

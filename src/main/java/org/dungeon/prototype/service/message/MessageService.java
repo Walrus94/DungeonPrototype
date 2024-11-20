@@ -209,7 +209,7 @@ public class MessageService {
     @ChatStateUpdate(from = ChatState.GENERATING_LEVEL, to = GAME)
     public void sendNewLevelMessage(Long chatId, Player player, Level level, int number) {
         if (nonNull(level)) {
-            log.debug("Player started level {}, current point: {}\n\nPlayer: {}", number, level.getStart(), player);
+            log.info("Player started level {}, current point: {}\n\nPlayer: {}", number, level.getStart(), player);
             sendRoomMessage(chatId, player, level.getRoomsMap().get(level.getStart()));
         } else {
             throw new EntityNotFoundException(chatId, "level", MENU_BACK);

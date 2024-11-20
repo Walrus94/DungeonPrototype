@@ -15,7 +15,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static java.util.Objects.nonNull;
 import static org.dungeon.prototype.bot.state.ChatState.AWAITING_NICKNAME;
 import static org.dungeon.prototype.bot.state.ChatState.BATTLE;
 import static org.dungeon.prototype.bot.state.ChatState.GAME;
@@ -56,29 +55,24 @@ public class ChatStateService {
      */
     public void updateChatState(Long chatId, ChatState to, ChatState... from) throws ChatStateUpdateException {
         if (chatStateByIdMap.containsKey(chatId) && Arrays.asList(from).contains(chatStateByIdMap.get(chatId).getChatState())) {
-            log.debug("Current chat state: {}", chatStateByIdMap.get(chatId).getChatState());
+            log.info("Current chat state: {}", chatStateByIdMap.get(chatId).getChatState());
             chatStateByIdMap.get(chatId).setChatState(to);
-            log.debug("Updated chat state: {}", chatStateByIdMap.get(chatId).getChatState());
+            log.info("Updated chat state: {}", chatStateByIdMap.get(chatId).getChatState());
         } else {
             throw new ChatStateUpdateException(chatId, to, from);
         }
     }
 
     public Optional<Integer> updateLastMessage(Long chatId, int messageId) {
-        if (chatStateByIdMap.containsKey(chatId) && nonNull(chatStateByIdMap.get(chatId).getLastMessageId())) {
+        if (chatStateByIdMap.containsKey(chatId)) {
             val lastMessageId = chatStateByIdMap.get(chatId).getLastMessageId();
             chatStateByIdMap.get(chatId).setLastMessageId(messageId);
             chatStateByIdMap.get(chatId).setLastActiveTime(System.currentTimeMillis());
             return Optional.of(lastMessageId);
         } else {
-            if (!chatStateByIdMap.containsKey(chatId)) {
-                val chatState = new ChatContext();
-                chatState.setLastMessageId(messageId);
-                chatStateByIdMap.put(chatId, new ChatContext());
-            } else {
-                chatStateByIdMap.get(chatId).setLastMessageId(messageId);
-                chatStateByIdMap.get(chatId).setLastActiveTime(System.currentTimeMillis());
-            }
+            val chatState = new ChatContext();
+            chatState.setLastMessageId(messageId);
+            chatStateByIdMap.put(chatId, new ChatContext());
             return Optional.empty();
         }
     }

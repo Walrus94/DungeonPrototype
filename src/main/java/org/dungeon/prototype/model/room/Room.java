@@ -44,7 +44,7 @@ public class Room {
 
     public void addAdjacentRoom(Direction direction) {
         adjacentRooms.put(direction, true);
-        log.debug("Added adjacent room to {} in {} direction", point, direction);
+        log.info("Added adjacent room to {} in {} direction", point, direction);
     }
 
     @Override

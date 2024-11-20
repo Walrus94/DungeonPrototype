@@ -145,7 +145,7 @@ public class PlayerService {
         val player = generatePlayer(chatId, nickname);
         val playerDocument = PlayerMapper.INSTANCE.mapToDocument(player);
         val savedPlayer = playerRepository.save(playerDocument);
-        log.debug("Player generated: {}", player);
+        log.info("Player generated: {}", player);
         return PlayerMapper.INSTANCE.mapToPlayer(savedPlayer);
     }
 
@@ -170,7 +170,7 @@ public class PlayerService {
         } else {
             player.setChanceToDodge(0.0);
         }
-        log.debug("Player default inventory initialized: {}", player);
+        log.info("Player default inventory initialized: {}", player);
         val playerDocument = PlayerMapper.INSTANCE.mapToDocument(player);
         playerRepository.save(playerDocument);
     }

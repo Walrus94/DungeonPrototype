@@ -2,7 +2,6 @@ package org.dungeon.prototype.util;
 
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.math3.util.Pair;
 import org.dungeon.prototype.model.Direction;
 import org.dungeon.prototype.model.Point;
 import org.dungeon.prototype.model.level.generation.LevelGridCluster;
@@ -13,7 +12,6 @@ import org.dungeon.prototype.model.room.RoomType;
 import org.dungeon.prototype.properties.CallbackType;
 
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -22,7 +20,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.Objects.nonNull;
-import static org.apache.commons.math3.util.FastMath.toIntExact;
 import static org.dungeon.prototype.model.Direction.E;
 import static org.dungeon.prototype.model.Direction.N;
 import static org.dungeon.prototype.model.Direction.S;
@@ -70,13 +67,13 @@ public class LevelUtil {
     }
 
     public static void setMutualAdjacency(Room room, Room previousRoom) {
-        log.debug("Setting mutual adjacency of {} and {}", room, previousRoom);
+        log.info("Setting mutual adjacency of {} and {}", room, previousRoom);
         if (room.getPoint().equals(previousRoom.getPoint())) {
-            log.debug("Same rooms passed as arguments. unable to set adjacency");
+            log.warn("Same rooms passed as arguments. unable to set adjacency");
             return;
         }
         var direction = getDirection(room, previousRoom);
-        log.debug("Direction: {}", direction);
+        log.info("Direction: {}", direction);
         if (nonNull(direction)) {//TODO: investigate NPE
             previousRoom.addAdjacentRoom(direction);
             room.addAdjacentRoom(getOppositeDirection(direction));
@@ -141,62 +138,6 @@ public class LevelUtil {
         };
     }
 
-    /**
-     * Selects random direction with probability depending on
-     * already filled sections or, if none present, by length from grid border
-     * @param directions available directions
-     * @param currentPoint room from where direction selected
-     * @param visitedRooms grid section already filled with rooms
-     * @param gridSize size of level grid
-     * @return present if random direction available
-     */
-    private static Optional<Direction> getRandomDirection(List<Direction> directions, Point currentPoint, Set<GridSection> visitedRooms, int gridSize) {
-        double s, n, w, e;
-        log.debug("Randomizing direction...");
-        var nCount = toIntExact(visitedRooms.stream()
-                .map(GridSection::getPoint)
-                .filter(point -> point.getY() > currentPoint.getY())
-                .count());
-        var sCount = toIntExact(visitedRooms.stream()
-                .map(GridSection::getPoint)
-                .filter(point -> point.getY() < currentPoint.getY())
-                .count());
-        var wCount = toIntExact(visitedRooms.stream()
-                .map(GridSection::getPoint)
-                .filter(point -> point.getX() > currentPoint.getX())
-                .count());
-        var eCount = toIntExact(visitedRooms.stream()
-                .map(GridSection::getPoint)
-                .filter(point -> point.getX() < currentPoint.getX())
-                .count());
-        if (directions.contains(S)) {
-            s = nCount == 0 && sCount == 0 ?
-                    currentPoint.getY().doubleValue() / gridSize :
-                    (double) nCount / visitedRooms.size();
-        } else {
-            s = 0.0;
-        }
-        n = directions.contains(N) ? 1.0 - s : 0.0;
-
-        if (directions.contains(W)) {
-            w = eCount == 0 && wCount == 0 ?
-                    currentPoint.getX().doubleValue() / gridSize :
-                    (double) eCount / visitedRooms.size();
-        } else {
-            w = 0.0;
-        }
-        e = directions.contains(E) ? 1.0 - w : 0.0;
-        if (s + n + w + e > 0.0) {
-            return Optional.of(RandomUtil.getRandomDirection(List.of(
-                    Pair.create(S, s),
-                    Pair.create(N, n),
-                    Pair.create(W, w),
-                    Pair.create(E, e))));
-        } else {
-            return Optional.empty();
-        }
-    }
-
     public static boolean isPointOnGrid(Point point, int gridSize) {
         return point.getY() < gridSize && point.getY() > -1 &&
                 point.getX() < gridSize && point.getX() > -1;
@@ -214,7 +155,7 @@ public class LevelUtil {
     }
 
     public static Set<GridSection> getAdjacentSectionsInCluster(Point currentPoint, GridSection[][] grid, LevelGridCluster cluster) {
-        log.debug("Getting adjacent sections for {} in cluster {}", currentPoint, cluster);
+        log.info("Getting adjacent sections for {} in cluster {}", currentPoint, cluster);
         return getAdjacentSections(currentPoint, grid).stream()
                 .filter(section -> isPointInCluster(section.getPoint(), cluster))
                 .collect(Collectors.toSet());

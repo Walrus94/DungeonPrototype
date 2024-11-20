@@ -40,7 +40,7 @@ public class WalkerDistributor {
     private Status status;
 
     public NextRoomDto nextStep(GridSection[][] grid, Map<Point, Room> roomsMap) {
-        log.debug("Distribute walker id{}, status:{} next step...", id, status);
+        log.info("Distribute walker id{}, status:{} next step...", id, status);
         log.debug("Current step: {}, total steps: {}, main path length:{}", currentStep, totalSteps, mainPathLength);
         log.debug("Current section: {}, cluster: {}", currentSection, cluster);
         val adjacentSections = getAdjacentSectionsInCluster(currentSection.getPoint(), grid, cluster);
@@ -50,19 +50,19 @@ public class WalkerDistributor {
         adjacentSections.removeIf(section -> roomsMap.containsKey(section.getPoint()) || section.getStepsFromStart() == 0);
         GridSection nextSection = null;
         if (adjacentSections.size() > 1 && !runSubWalkerOnRouteFork && !currentSection.isConnectionPoint()) {
-            log.debug("Running sub-walker on route fork disabled...");
-            log.debug("Finishing walker. Running sub-walkers remaining: {}", subWalkers.size());
+            log.info("Running sub-walker on route fork disabled...");
+            log.info("Finishing walker. Running sub-walkers remaining: {}", subWalkers.size());
             finishWalker(grid, roomsMap);
         } else {
-            log.debug("Assigning next section...");
+            log.info("Assigning next section...");
             Optional<GridSection> nextSectionOptional = adjacentSections.stream()
                     .filter(section -> section.getStepsFromStart() == currentStep)
                     .min(Comparator.comparing(section -> getAdjacentSectionsInCluster(section.getPoint(), grid, cluster).size()));
             if (nextSectionOptional.isPresent()) {
                 nextSection = nextSectionOptional.get();
-                log.debug("Next section: {}", nextSection);
+                log.info("Next section: {}", nextSection);
             } else {
-                log.debug("Finishing walker...");
+                log.info("Finishing walker...");
                 finishWalker(grid, roomsMap);
                 return null;
             }
@@ -72,7 +72,7 @@ public class WalkerDistributor {
             var room = buildRoom(nextSection, chatId);
             setMutualAdjacency(room, previousRoom);
             if (runSubWalkerOnRouteFork && adjacentSections.size() > 1) {
-                log.debug("Running sub-walker on route fork...");
+                log.info("Running sub-walker on route fork...");
                 for (GridSection section : adjacentSections) {
                     if (!section.getPoint().equals(nextSection.getPoint()) && !roomsMap.containsKey(section.getPoint())) {
                         if (currentSection.isConnectionPoint() || section.getStepsFromStart() == currentStep) {
@@ -95,13 +95,13 @@ public class WalkerDistributor {
             previousRoom = room;
             currentStep--;
             if (currentStep == 0) {
-                log.debug("Current step equals 0, finishing walker");
+                log.info("Current step equals 0, finishing walker");
                 if (subWalkers.isEmpty()) {
-                    log.debug("No sub-walkers present, finishing walker...");
+                    log.info("No sub-walkers present, finishing walker...");
                     status = Status.FINISHED;
                 } else {
                     status = Status.WAITING;
-                    log.debug("Sub-walkers left: {}", subWalkers.size());
+                    log.info("Sub-walkers left: {}", subWalkers.size());
                 }
             }
             return NextRoomDto.builder()
@@ -121,16 +121,16 @@ public class WalkerDistributor {
                 .findFirst().ifPresent(section ->
                         setMutualAdjacency(roomsMap.get(section.getPoint()), previousRoom));
         if (subWalkers.isEmpty()) {
-            log.debug("No sub-walkers present, finishing walker...");
+            log.info("No sub-walkers present, finishing walker...");
             status = Status.FINISHED;
         } else {
             status = Status.WAITING;
-            log.debug("Sub-walkers left: {}", subWalkers.size());
+            log.info("Sub-walkers left: {}", subWalkers.size());
         }
     }
 
     private Room buildRoom(GridSection section, Long chatId) {
-        log.debug("Building room on {}", section.getPoint());
+        log.info("Building room on {}", section.getPoint());
         val room = new Room();
         room.setChatId(chatId);
         room.setPoint(section.getPoint());

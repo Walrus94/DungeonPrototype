@@ -78,11 +78,11 @@ public class ItemService {
         var document = documents.getFirst();
         if (nonNull(document) && isNull(document.getName())) {
             itemNamingService.requestNameGeneration(itemMapper.mapToWearable(document));
-            log.debug("Waiting for name generation of item {} for chat {}...", document.getId(), chatId);
+            log.info("Waiting for name generation of item {} for chat {}...", document.getId(), chatId);
             while (isNull(document.getName())) {
                 document = itemRepository.findByChatIdAndId(document.getChatId(), document.getId()).orElse(null);
             }
-            log.debug("Name for item id:{} acquired: {}", document.getId(), document.getName());
+            log.info("Name for item id:{} acquired: {}", document.getId(), document.getName());
         }
         return itemMapper.mapToWearable(document);
     }
@@ -106,11 +106,11 @@ public class ItemService {
         var document = documents.getFirst();
         if (nonNull(document) && isNull(document.getName())) {
             itemNamingService.requestNameGeneration(itemMapper.mapToWeapon(document));
-            log.debug("Waiting for name generation of item {} for chat {}...", document.getId(), chatId);
+            log.info("Waiting for name generation of item {} for chat {}...", document.getId(), chatId);
             while (isNull(document.getName())) {
                 document = itemRepository.findByChatIdAndId(document.getChatId(), document.getId()).orElse(null);
             }
-            log.debug("Name for item id:{} acquired: {}", document.getId(), document.getName());
+            log.info("Name for item id:{} acquired: {}", document.getId(), document.getName());
         }
         return itemMapper.mapToWeapon(document);
     }
@@ -159,8 +159,8 @@ public class ItemService {
      * @return found items
      */
     public Set<Item> getExpectedWeightItems(long chatId, Weight expectedWeight, Integer maxItems, Set<String> usedItemIds) {
-        log.debug("Collecting items...");
-        log.debug("Expected weight: {}, max items amount: {}", expectedWeight, maxItems);
+        log.info("Collecting items...");
+        log.info("Expected weight: {}, max items amount: {}", expectedWeight, maxItems);
 
         var weightsAbs = itemRepository.findClosestLesserWeight(chatId,
                         expectedWeight.toVector().getNorm(),

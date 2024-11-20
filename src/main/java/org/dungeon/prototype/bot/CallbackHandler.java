@@ -218,12 +218,12 @@ public class CallbackHandler {
         } catch (InterruptedException | ExecutionException e) {
             throw new ItemGenerationException(chatId, e.getMessage(), START_GAME);
         }
-        log.debug("Item generation completed for chat {}!", chatId);
+        log.info("Item generation completed for chat {}!", chatId);
         val defaultInventory = inventoryService.getDefaultInventory(chatId);
         var player = playerService.getPlayerPreparedForNewGame(chatId, defaultInventory);
         player = effectService.updatePlayerEffects(player);
         player = effectService.updateArmorEffect(player);
-        log.debug("Player loaded: {}", player);
+        log.info("Player loaded: {}", player);
         levelService.startNewGame(chatId, player);
     }
 
@@ -268,7 +268,7 @@ public class CallbackHandler {
             throw new RestrictedOperationException(chatId, "move to room", getErrorMessageByCallBackData(callBackData), MENU_BACK);
         }
         val nextRoom = levelService.getRoomByChatIdAndCoordinates(chatId, getNextPointInDirection(currentRoom.getPoint(), newDirection));
-        log.debug("Moving to {} door: {}", callBackData.toString().toLowerCase(), nextRoom.getPoint());
+        log.info("Moving to {} door: {}", callBackData.toString().toLowerCase(), nextRoom.getPoint());
         levelService.moveToRoom(chatId, player, nextRoom, newDirection);
     }
 

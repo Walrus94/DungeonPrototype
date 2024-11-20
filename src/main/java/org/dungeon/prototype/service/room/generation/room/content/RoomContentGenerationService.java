@@ -44,20 +44,23 @@ public class RoomContentGenerationService {
 
     /**
      * Generates random room content of expected weight
-     * @param clusters current level clusters container
-     * @param expectedWeight of next room content
+     *
+     * @param expectedWeight of generated content
+     * @param chatId of player
+     * @param roomType expected type
+     * @param usedItemIds items already used on the level
      * @return generated room content
      */
     public RoomContent getNextRoomContent(Weight expectedWeight, long chatId, RoomType roomType, Set<String> usedItemIds) {
-        log.debug("Generating next room: {}...", roomType);
+        log.info("Generating next room: {}...", roomType);
 
         if (expectedWeight.toVector().getNorm() == 0.0) {//TODO: consider configuring threshold
-            log.debug("Weight is below threshold, generating normal room");
+            log.info("Weight is below threshold, generating normal room");
             return new NormalRoom();
         }
-        log.debug("Generating {} of expected weight: {}", roomType, expectedWeight);
+        log.info("Generating {} of expected weight: {}", roomType, expectedWeight);
 
-        log.debug("Generating room content with type {}, expected weight: {}, used items ids: {}", roomType, expectedWeight, usedItemIds);
+        log.info("Generating room content with type {}, expected weight: {}, used items ids: {}", roomType, expectedWeight, usedItemIds);
         return switch (roomType) {
             case WEREWOLF, VAMPIRE, SWAMP_BEAST, DRAGON, ZOMBIE -> getMonster(expectedWeight, roomType);
             case TREASURE -> getTreasure(chatId, expectedWeight, usedItemIds);
@@ -88,7 +91,7 @@ public class RoomContentGenerationService {
     }
 
     private Merchant getMerchant(Long chatId, Weight expectedWeight, Set<String> usedItemIds) {
-        log.debug("Generating Merchant...");
+        log.info("Generating Merchant...");
         val merchant = new Merchant();
         val items = itemService.getExpectedWeightItems(chatId, expectedWeight, MERCHANT_MAX_ITEMS, usedItemIds);
         merchant.setItems(items);
@@ -96,11 +99,11 @@ public class RoomContentGenerationService {
     }
 
     private Treasure getTreasure(long chatId, Weight expectedWeight, Set<String> usedItemIds) {
-        log.debug("Generating treasure...");
-        log.debug("Expected weight: {}", expectedWeight);
+        log.info("Generating treasure...");
+        log.info("Expected weight: {}", expectedWeight);
         int gold;
         val itemsCount = getRandomInt(0, MAX_TREASURE_ITEMS);
-        log.debug("Treasure items amount: {}", itemsCount);
+        log.info("Treasure items amount: {}", itemsCount);
         Set<Item> items = itemsCount > 0 ? itemService.getExpectedWeightItems(chatId, expectedWeight, itemsCount, usedItemIds) : Collections.emptySet();
         if (!items.isEmpty()) {
             if (expectedWeight.toVector().getNorm() > items.stream().map(Item::getWeight).reduce(Weight::add).orElse(new Weight()).toVector().getNorm()) {
@@ -108,16 +111,16 @@ public class RoomContentGenerationService {
             } else {
                 gold = 0;
             }
-            log.debug("Gold: {}", gold);
-            log.debug("Items: {}", items);
+            log.info("Gold: {}", gold);
+            log.info("Items: {}", items);
             val treasure = new Treasure();
             treasure.setGold(gold);
             treasure.setItems(items);
             return treasure;
         } else {
             gold = getRandomGoldAmount(expectedWeight.toVector().getNorm());
-            log.debug("Gold: {}", gold);
-            log.debug("No treasures");
+            log.info("Gold: {}", gold);
+            log.info("No treasures");
             val treasure = new Treasure();
             treasure.setGold(gold);
             treasure.setItems(items);
@@ -139,7 +142,7 @@ public class RoomContentGenerationService {
 
     private MonsterRoom getMonster(Weight expectedWeight, RoomType roomType) {
         val monsterClass = convertToMonsterClass(roomType);
-        log.debug("Generating monster of type {} and weight {}", roomType, expectedWeight);
+        log.info("Generating monster of type {} and weight {}", roomType, expectedWeight);
         Monster monster = monsterFactory.generateMonsterByExpectedWeight(expectedWeight, monsterClass);
         val monsterRoom = new MonsterRoom();
         val monsterDocument = MonsterMapper.INSTANCE.mapToDocument(monster);

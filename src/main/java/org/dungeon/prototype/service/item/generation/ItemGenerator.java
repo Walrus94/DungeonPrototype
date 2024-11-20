@@ -198,10 +198,10 @@ public class ItemGenerator {
                 .collect(Collectors.toList());
         val savedItems = itemService.saveItems(vanillaWeapons);
 
-        log.debug("{} weapons without effects generated.", savedItems.size());
+        log.info("{} weapons without effects generated.", savedItems.size());
         awaitBarrier(chatId);
 
-        log.debug("Adding effects to weapons...");
+        log.info("Adding effects to weapons...");
         addEffects(chatId, savedItems, weaponPerGame);
     }
 
@@ -262,10 +262,10 @@ public class ItemGenerator {
                 .flatMap(attributes -> Stream.of(generateVanillaWearable(attributes, chatId)))
                 .collect(Collectors.toList());
         val savedItems = itemService.saveItems(vanillaWearables);
-        log.debug("{} wearables without effects generated.", savedItems.size());
+        log.info("{} wearables without effects generated.", savedItems.size());
         awaitBarrier(chatId);
 
-        log.debug("Adding effects to wearables...");
+        log.info("Adding effects to wearables...");
         addEffects(chatId, savedItems, wearablesPerGame);
     }
 
@@ -274,7 +274,7 @@ public class ItemGenerator {
                 .map(item -> Pair.create(item.getId(), item.getWeight().toVector().getNorm()))
                 .sorted(Comparator.comparing(Pair::getValue))
                 .collect(Collectors.toCollection(ArrayList::new));
-        log.debug("Adding effects to generated items, amount: {}", savedItems.size());
+        log.info("Adding effects to generated items, amount: {}", savedItems.size());
         double largestSegment = 0.0;
         int startSegmentIndex = 0;
         val vanillaItemsIds = weightScale.stream().map(Pair::getKey).toList();
@@ -321,7 +321,7 @@ public class ItemGenerator {
     }
 
     private Weapon generateVanillaWeapon(WeaponAttributes weaponAttributes, Long chatId) {
-        log.debug("Generating weapon...");
+        log.info("Generating weapon...");
         val weapon = new Weapon();
         weapon.setAttributes(weaponAttributes);
         weapon.setChatId(chatId);
@@ -330,7 +330,7 @@ public class ItemGenerator {
     }
 
     private Weapon calculateParameters(Weapon weapon) {
-        log.debug("Calculating weapon params...");
+        log.info("Calculating weapon params...");
         val properties = generationProperties.getItems().getWeapon();
         val defaultAttributesMap = properties.getDefaultAttributes();
         val defaultAttributes = defaultAttributesMap.get(weapon.getAttributes().getWeaponType());
@@ -352,7 +352,7 @@ public class ItemGenerator {
             weapon.setMagicType(getRandomMagicType());
         }
         if (DRAGON_BONE.equals(weapon.getAttributes().getWeaponMaterial()) && WeaponHandlerMaterial.DRAGON_BONE.equals(weapon.getAttributes().getWeaponHandlerMaterial())) {
-            log.debug("Complete Dragon bone!");
+            log.info("Complete Dragon bone!");
             weapon.setIsCompleteDragonBone(true);
             weapon.setMagicType(MagicType.of(0.0, 1.0));
         } else {
@@ -362,11 +362,11 @@ public class ItemGenerator {
         val completeMaterialAdjustmentAttributes = properties.getCompleteMaterialAdjustmentAttributes();
         val handlerMaterial = getEqualWeaponHandlerMaterial(weapon);
         if (handlerMaterial.isPresent() && completeMaterialAdjustmentAttributes.containsKey(handlerMaterial.get())) {
-            log.debug("Weapon and handler materials matched, {}", handlerMaterial.get());
+            log.info("Weapon and handler materials matched, {}", handlerMaterial.get());
             val completeMaterialAdjustment = completeMaterialAdjustmentAttributes.get(handlerMaterial.get());
             applyAdjustment(weapon, completeMaterialAdjustment);
         } else {
-            log.debug("Weapon and handler materials differs!");
+            log.info("Weapon and handler materials differs!");
             val weaponHandlerAdjustment = properties.getWeaponHandlerMaterialAdjustmentAttributes().get(weapon.getAttributes().getWeaponHandlerMaterial());
             applyAdjustment(weapon, weaponHandlerAdjustment);
         }
@@ -400,7 +400,7 @@ public class ItemGenerator {
     }
 
     private Wearable generateVanillaWearable(WearableAttributes wearableAttributes, Long chatId) {
-        log.debug("Generating wearable...");
+        log.info("Generating wearable...");
         val wearable = new Wearable();
         wearable.setAttributes(wearableAttributes);
         wearable.setChatId(chatId);
@@ -409,7 +409,7 @@ public class ItemGenerator {
     }
 
     private Wearable calculateParameters(Wearable wearable) {
-        log.debug("Calculating wearable params...");
+        log.info("Calculating wearable params...");
         if (wearable.getAttributes().getWearableMaterial().equals(WearableMaterial.ENCHANTED_LEATHER)) {
             wearable.setMagicType(getRandomMagicType());
         } else {

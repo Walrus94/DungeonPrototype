@@ -25,7 +25,7 @@ public class KafkaProducer {
         } catch (JsonProcessingException e) {
             throw new KafkaMessageException(dto, CallbackType.MENU_BACK);
         }
-        log.debug("Sending message to kafka stream, topic: {}, message: {}", topic, message);
+        log.info("Sending message to kafka stream, topic: {}, message: {}", topic, message);
         kafkaTemplate.send(topic, message);
     }
 }

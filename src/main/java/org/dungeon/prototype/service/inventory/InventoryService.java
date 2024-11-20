@@ -48,7 +48,7 @@ public class InventoryService {
      * @return inventory, containing primary weapon and vest
      */
     public Inventory getDefaultInventory(Long chatId) {
-        log.debug("Setting default inventory");
+        log.info("Setting default inventory");
         messageService.sendPlayerGeneratingInfoMessage(chatId);
         Inventory inventory = new Inventory();
         inventory.setItems(new ArrayList<>());
@@ -168,10 +168,10 @@ public class InventoryService {
      * @param chatId id of chat where message sent
      * @param itemId id of item
      * @param inventoryType from what menu message info requested,
-     *                      {@link CallbackType.INVENTORY} or {@link CallbackType.MERCHANT_SELL_MENU}
+     *                      {@link CallbackType#INVENTORY} or {@link CallbackType#MERCHANT_SELL_MENU}
      * @param callbackType optional value, present if item equipped, permitted values:
-     *                     {@link CallbackType.HEAD}, {@link CallbackType.VEST}, {@link CallbackType.GLOVES},
-     *                     {@link CallbackType.BOOTS}, {@link CallbackType.LEFT_HAND}, {@link CallbackType.RIGHT_HAND}
+     *                     {@link CallbackType#HEAD}, {@link CallbackType#VEST}, {@link CallbackType#GLOVES},
+     *                     {@link CallbackType#BOOTS}, {@link CallbackType#LEFT_HAND}, {@link CallbackType#RIGHT_HAND}
      */
     public void openInventoryItemInfo(Long chatId, String itemId, CallbackType inventoryType, Optional<CallbackType> callbackType) {
         val item = itemService.findItem(chatId, itemId);

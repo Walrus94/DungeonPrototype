@@ -61,7 +61,7 @@ public class LevelService {
      */
     public void startNewGame(Long chatId, Player player) {
         val level = startNewLevel(chatId, player, 1);
-        log.debug("Starting new game...");
+        log.info("Starting new game...");
         messageService.sendNewLevelMessage(chatId, player, level, 1);
     }
 
@@ -88,7 +88,7 @@ public class LevelService {
     @ChatStateUpdate(from = ChatState.PRE_GAME_MENU, to = GAME)
     public void continueGame(Long chatId, Player player, Room currentRoom) {
         val levelNumber = getLevelNumber(chatId);
-        log.debug("Player continued level {}, current point: {}", levelNumber, player.getCurrentRoom());
+        log.info("Player continued level {}, current point: {}", levelNumber, player.getCurrentRoom());
         if (currentRoom.getRoomContent() instanceof MonsterRoom) {
             messageService.sendMonsterRoomMessage(chatId, player, currentRoom);
         } else {
@@ -241,8 +241,7 @@ public class LevelService {
             levelRepository.removeByChatId(chatId);
         }
         level = saveOrUpdateLevel(level);
-        log.debug("Level: {}", level);
-        log.debug("Level {} generated", level.getNumber());
+        log.info("Level generated: {}", level);
         val direction = level.getRoomsMap().get(level.getStart()).getAdjacentRooms().entrySet().stream()
                 .filter(entry -> Objects.nonNull(entry.getValue()) && entry.getValue())
                 .map(Map.Entry::getKey)

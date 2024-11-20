@@ -49,7 +49,7 @@ public class RoomService {
      */
     public void sendRoomMessage(Long chatId, Player player) {
         val room = getRoomByIdAndChatId(chatId, player.getCurrentRoomId());
-        log.debug("Sending room message: {}", room);
+        log.info("Sending room message: {}", room);
         if (room.getRoomContent() instanceof MonsterRoom) {
             messageService.sendMonsterRoomMessage(chatId, player, room);
         } else {

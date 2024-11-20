@@ -50,10 +50,10 @@ public class Player {
     public boolean addXp(Integer xpReward) {
         double reward = xpReward * xpBonus;
         xp = xp + (int) reward;
-        log.debug("Rewarded xp: {}, total: {}", xpReward, xp);
+        log.info("Rewarded xp: {}, total: {}", xpReward, xp);
         if (xp > nextLevelXp) {
             playerLevel++;
-            log.debug("Level {} achieved!", playerLevel);
+            log.info("Level {} achieved!", playerLevel);
             refillHp();
             refillMana();
             nextLevelXp = PlayerLevelService.calculateXPForLevel(playerLevel);

@@ -557,9 +557,3 @@ player:
   attribute-hp-factor: 10
   base-mana: 6
   attribute-mana-factor: 1
-
-logging:
-  file:
-    name: /logs/dungeon-prototype-${SPRING_ACTIVE_PROFILE}.log
-  level:
-    root: info

@@ -40,7 +40,7 @@ public class WalkerBuilder {
     private LevelGridCluster cluster;
 
     public void nextStep(GridSection[][] grid) {
-        log.debug("Walker id:{} (reversed:{}, overriding:{}, border path:{}) next step...",
+        log.info("Walker id:{} (reversed:{}, overriding:{}, border path:{}) next step...",
                 id, isReversed, overridingReversedPath, longestPathDefault);
         GridSection currentSection = grid[currentPoint.getX()][currentPoint.getY()];
         log.debug("Current section: {}", currentSection);
@@ -51,10 +51,10 @@ public class WalkerBuilder {
             log.debug("Next grid section: {}", nextGridSection);
             previousPoint = currentPoint;
             currentPoint = nextGridSection.getPoint();
-            log.debug("Adding grid section to point {}", currentPoint);
+            log.info("Adding grid section to point {}", currentPoint);
             if (!isReversed && !overridingReversedPath) {
                 if (nextGridSection.getStepsFromStart() < 0) {
-                    log.debug("Reversed walker trace met, switching to overriding reversed path mode...");
+                    log.info("Reversed walker trace met, switching to overriding reversed path mode...");
                     overridingReversedPath = true;
                     pathToFinish = nextGridSection.getStepsFromStart();
                 }
@@ -66,38 +66,38 @@ public class WalkerBuilder {
                     pathFromStart--;
                     nextGridSection.setStepsFromStart(pathFromStart);
                     cluster.incrementNegativeRoomsCount();
-                    log.debug("Setting next point in reversed mode...");
+                    log.info("Setting next point in reversed mode...");
                 } else {
                     cluster.decrementNegativeRoomsCount();
                     pathToFinish++;
                     pathFromStart++;
                     nextGridSection.setStepsFromStart(pathFromStart);
                     cluster.incrementSize();
-                    log.debug("Setting next point, path from start: {}", pathFromStart);
+                    log.info("Setting next point, path from start: {}", pathFromStart);
                 }
             }
             grid[currentPoint.getX()][currentPoint.getY()] = nextGridSection;
         } else {
             stopped = true;
-            log.debug("Stopped walker id:{}", this.id);
+            log.info("Stopped walker id:{}", this.id);
             if (!isReversed && !overridingReversedPath) {
                 if (getAdjacentSectionsInCluster(currentPoint, grid, cluster).stream()
                         .noneMatch(section -> cluster.getEndConnectionPoint().equals(section.getPoint()))) {
                     currentSection.setDeadEnd(true);
                     cluster.addDeadEnd(currentSection);
                 }
-                log.debug("Stopped walker, setting dead end to {}", currentSection);
+                log.info("Stopped walker, setting dead end to {}", currentSection);
             }
         }
     }
 
     private Optional<GridSection> selectNextStep(GridSection[][] grid) {
-        log.debug("Choosing next step...");
+        log.info("Choosing next step...");
         Set<GridSection> adjacentSections = getAdjacentSectionsInCluster(currentPoint, grid, cluster);
-        log.debug("{} adjacent sections in cluster {}: {}", currentPoint, cluster, adjacentSections);
+        log.info("{} adjacent sections in cluster {}: {}", currentPoint, cluster, adjacentSections);
         if (isReversed) {
             if (adjacentSections.stream().anyMatch(section -> cluster.getStartConnectionPoint().equals(section.getPoint()))) {
-                log.debug("Reversed walker reached start of cluster, switching to overriding mode");
+                log.info("Reversed walker reached start of cluster, switching to overriding mode");
                 overridingReversedPath = true;
                 isReversed = false;
                 pathFromStart = 0;
@@ -108,7 +108,7 @@ public class WalkerBuilder {
             if (adjacentSections.stream().anyMatch(section -> section.getStepsFromStart() > 0 &&
                     !currentPoint.equals(section.getPoint()) &&
                     !cluster.getEndConnectionPoint().equals(section.getPoint()))) {
-                log.debug("Reversed walker have adjacent section visited, switching to override mode");
+                log.info("Reversed walker have adjacent section visited, switching to override mode");
                 overridingReversedPath = true;
                 isReversed = false;
                 val foundSection = adjacentSections.stream().filter(section -> section.getStepsFromStart() > 0 &&
@@ -140,17 +140,17 @@ public class WalkerBuilder {
             if (overridingReversedPath) {
                 if (pathToFinish == 0 && adjacentSections.stream()
                         .anyMatch(section -> cluster.getEndConnectionPoint().equals(section.getPoint()))) {
-                    log.debug("Cluster end reached");
+                    log.info("Cluster end reached");
                     return Optional.empty();
                 }
-                log.debug("Overriding reversed path, current step:{}, path to finish:{}...", pathFromStart, pathToFinish);
+                log.info("Overriding reversed path, current step:{}, path to finish:{}...", pathFromStart, pathToFinish);
                 return adjacentSections.stream()
                         .filter(gridSection -> gridSection.getStepsFromStart() == pathToFinish &&
                                 !currentPoint.equals(gridSection.getPoint()))
                         .findFirst();
             } else {
                 if (adjacentSections.stream().anyMatch(section -> cluster.getEndConnectionPoint().equals(section.getPoint()))) {
-                    log.debug("Cluster end reached");
+                    log.info("Cluster end reached");
                     return Optional.empty();
                 }
                 if (longestPathDefault) {

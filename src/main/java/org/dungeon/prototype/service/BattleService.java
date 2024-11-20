@@ -51,11 +51,11 @@ public class BattleService {
     @BattleTurnUpdate
     public void attack(Long chatId, Player player, Room currentRoom, CallbackType attackType) {
         var monster = ((MonsterRoom) currentRoom.getRoomContent()).getMonster();
-        log.debug("Attacking monster: {}", monster);
+        log.info("Attacking monster: {}", monster);
         playerAttacks(monster, player, attackType);
 
         if (monster.getHp() < 1) {
-            log.debug("Monster killed!");
+            log.info("Monster killed!");
             levelService.updateAfterMonsterKill(currentRoom);
             val newLevelAchieved = player.addXp(monster.getXpReward());
             if (newLevelAchieved) {
@@ -83,13 +83,13 @@ public class BattleService {
         val monsterAttack = monster.getCurrentAttack();
         val inventory = player.getInventory();
         val chanceToDodge = player.getChanceToDodge();
-        log.debug("Chance to dodge: {}", chanceToDodge);
+        log.info("Chance to dodge: {}", chanceToDodge);
         if (RandomUtil.flipAdjustedCoin(chanceToDodge)) {
-            log.debug("Monster attack dodged!");
+            log.info("Monster attack dodged!");
             return;
         }
         val attackTypeMap = battleProperties.getPlayerDefenseRatioMatrix().get(monsterAttack.getAttackType()).getMaterialDefenseRatioMap();
-        log.debug("Monster attack: {}", monsterAttack.getAttackType());
+        log.info("Monster attack: {}", monsterAttack.getAttackType());
         val diff = switch (monsterAttack.getAttackType()) {
             case SLASH, GROWL ->
                     (int) (monsterAttack.getAttack() * (inventory.getHelmet() == null ? 1.0 : attackTypeMap.get(inventory.getHelmet().getAttributes().getWearableMaterial())));
@@ -99,10 +99,10 @@ public class BattleService {
 
         if (player.getDefense() > 0) {
             player.decreaseDefence(diff);
-            log.debug("Player's armor decreased by: {}", 1);
+            log.info("Player's armor decreased by: {}", 1);
         } else {
             player.decreaseHp(diff);
-            log.debug("Player's health decreased by: {}", diff);
+            log.info("Player's health decreased by: {}", diff);
         }
         monsterService.updateMonster(monster);
     }
@@ -111,21 +111,21 @@ public class BattleService {
         val attack = ATTACK.equals(attackType) ? player.getPrimaryAttack() :
                 player.getSecondaryAttack();
         val chanceToMiss = attack.getChanceToMiss();
-        log.debug("Chance to miss: {}", chanceToMiss);
+        log.info("Chance to miss: {}", chanceToMiss);
         if (RandomUtil.flipAdjustedCoin(chanceToMiss)) {
-            log.debug("Player missed!");
+            log.info("Player missed!");
             return;
         }
         var attackPower = attack.getAttack();
         val criticalHitChance = attack.getCriticalHitChance();
-        log.debug("Critical hit chance: {}", criticalHitChance);
+        log.info("Critical hit chance: {}", criticalHitChance);
 
         if (RandomUtil.flipAdjustedCoin(criticalHitChance)) {
-            log.debug("Critical hit by player");
+            log.info("Critical hit by player");
             attackPower = (int) (attackPower * attack.getCriticalHitMultiplier());
         }
         val knockOutChance = attack.getChanceToKnockOut();
-        log.debug("Knock out chance: {}", knockOutChance);
+        log.info("Knock out chance: {}", knockOutChance);
         if (RandomUtil.flipAdjustedCoin(knockOutChance)) {
             val knockOut = ExpirableAdditionEffect.builder()
                     .attribute(MOVING)
@@ -133,10 +133,10 @@ public class BattleService {
                     .build();
             monster.addEffect(knockOut);
         }
-        log.debug("Player attacks with attack type: {}", attack.getAttackType());
+        log.info("Player attacks with attack type: {}", attack.getAttackType());
         val monsterDefenseRatioMap = battleProperties.getMonsterDefenseRatioMatrix().get(attack.getAttackType()).getMonsterDefenseRatioMap();
         val decreaseAmount = (int) (attackPower * monsterDefenseRatioMap.get(monster.getMonsterClass()));
         monster.decreaseHp(decreaseAmount);
-        log.debug("Monster health decreased by {}", decreaseAmount);
+        log.info("Monster health decreased by {}", decreaseAmount);
     }
 }

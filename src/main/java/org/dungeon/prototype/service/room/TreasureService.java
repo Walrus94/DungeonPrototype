@@ -72,7 +72,7 @@ public class TreasureService {
 
     public void collectAllTreasure(Long chatId, Player player, Room currentRoom) {
         val treasure = (Treasure) currentRoom.getRoomContent();
-        log.debug("Treasure contents - gold: {}, items: {}", treasure.getGold(), treasure.getItems());
+        log.info("Treasure contents - gold: {}, items: {}", treasure.getGold(), treasure.getItems());
         val items = treasure.getItems();
         val gold = treasure.getGold();
 
@@ -133,7 +133,7 @@ public class TreasureService {
 
         val treasure = (Treasure) room.getRoomContent();
         if (treasure.getGold() == 0 && treasure.getItems().isEmpty()) {
-            log.debug("Treasure looted!");
+            log.info("Treasure looted!");
             levelService.updateAfterTreasureLooted(room);
             return Optional.empty();
         }
