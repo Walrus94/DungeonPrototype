@@ -15,8 +15,10 @@ scrape_configs:
           - localhost
         labels:
           job: varlogs
+          environment: system
+          service: system
           __path__: /var/log/**/*.log
-  - job_name: spring_boot
+  - job_name: dungeon-prototype-app-prod
     static_configs:
       - targets:
           - localhost

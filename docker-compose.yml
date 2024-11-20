@@ -3,7 +3,7 @@ services:
   dungeon-prototype-app:
     image: dungeon-prototype-app:latest
     container_name: dungeon-prototype-app-${ENV}
-    restart: on-failure
+    restart: unless-stopped
     network_mode: host
     build:
       context: .
@@ -26,7 +26,7 @@ services:
   huggingface-api:
     image: huggingface-api:latest
     container_name: huggingface-api-${ENV}
-    restart: on-failure
+    restart: unless-stopped
     network_mode: host
     build:
       context: ./huggingface-api
