@@ -36,10 +36,11 @@ services:
     image: bitnami/mongodb-exporter:latest
     container_name: mongodb-exporter
     environment:
-      MONGODB_URI: mongodb://${MONGO_DB_USER}:${MONGO_DB_PASSWORD}@localhost:${MONGO_DB_PORT}/admin
+      MONGODB_URI: mongodb://${MONGO_DB_USER}:${MONGO_DB_PASSWORD}@localhost:${MONGO_DB_PORT}/?authMechanism=SCRAM-SHA-1
     ports:
       - "9216:9216"
     restart: unless-stopped
+    network_mode: host
     depends_on:
      - mongo
 
