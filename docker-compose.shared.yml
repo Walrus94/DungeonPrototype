@@ -40,7 +40,8 @@ services:
     ports:
       - "9216:9216"
     restart: unless-stopped
-    depends_on: mongo
+    depends_on:
+     - mongo
 
   grafana:
     environment:
