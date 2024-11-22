@@ -53,7 +53,7 @@ services:
       - ./grafana.ini:/etc/grafana/grafana.ini
       - ./grafana.sh:/grafana.sh
     entrypoint:
-      - /grafana-entrypoint.sh
+      - /grafana.sh
     image: grafana/grafana:latest
     container_name: grafana
     ports:
