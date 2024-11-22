@@ -26,4 +26,4 @@ scrape_configs:
           job: springboot
           environment: production
           service: dungeon-prototype-app
-          __path__: /logs/dungeon-prototype-prod.log
+          __path__: /logs/dungeon-prototype-app-prod/*.log
