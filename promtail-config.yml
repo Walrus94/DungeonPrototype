@@ -9,38 +9,21 @@ positions:
   filename: /tmp/positions.yaml
 
 scrape_configs:
-  - job_name: docker
-    docker_sd_configs:
-      - host: unix:///var/run/docker.sock
-        refresh_interval: 5s
-        filters:
-          - name: label
-            values: ["logging=promtail"]
-    relabel_configs:
-      - source_labels: ['__meta_docker_container_name']
-        regex: '/(.*)'
-        target_label: 'container'
-      - source_labels: ['__meta_docker_container_log_stream']
-        target_label: 'logstream'
-      - source_labels: ['__meta_docker_container_label_logging_jobname']
-        target_label: 'job'
-
-#scrape_configs:
-#  - job_name: system
-#    static_configs:
-#      - targets:
-#          - localhost
-#        labels:
-#          job: varlogs
-#          environment: system
-#          service: system
-#          __path__: /var/log/**/*.log
-#  - job_name: dungeon-prototype-app-prod
-#    static_configs:
-#      - targets:
-#          - localhost
-#        labels:
-#          job: springboot
-#          environment: production
-#          service: dungeon-prototype-app
-#          __path__: /logs/dungeon-prototype-app-prod/*.log
+  - job_name: system
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: varlogs
+          environment: system
+          service: system
+          __path__: /var/log/**/*.log
+  - job_name: dungeon-prototype-app-prod
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: springboot
+          environment: production
+          service: dungeon-prototype-app
+          __path__: /logs/dungeon-prototype-app-prod/*.log
