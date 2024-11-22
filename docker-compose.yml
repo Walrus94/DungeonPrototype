@@ -5,6 +5,10 @@ services:
     container_name: dungeon-prototype-app-${ENV}
     restart: unless-stopped
     network_mode: host
+    labels:
+      logging: "promtail"
+      environment: ${ENV}
+      logging_jobname: "dungeon-prototype-app"
     build:
       context: .
     volumes:
