@@ -6,13 +6,12 @@ scrape_configs:
   - job_name: 'springboot-app'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['localhost:8081']
+      - targets: ['localhost:9090']
 
   - job_name: 'loki'
     metrics_path: '/metrics'
     static_configs:
       - targets: ['localhost:3100']
-
 
   - job_name: 'mongodb'
     static_configs:
@@ -21,4 +20,4 @@ scrape_configs:
   - job_name: 'prometheus'
     metrics_path: '/metrics'
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ['localhost:9190']
