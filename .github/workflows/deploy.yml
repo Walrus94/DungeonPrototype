@@ -34,7 +34,9 @@ jobs:
         run: |
           cd ${{vars.WORK_DIR}} &&
           echo "ENV=${ENV}" >> .env
-          echo "JAVA_OPTIONS=${JAVA_OPTIONS:-""}" >> .env
+          if [${JAVA_OPTIONS} ne ""]; then 
+            echo "JAVA_OPTIONS=${JAVA_OPTIONS}" >> .env
+          fi
           echo "BOT_AUTH_TOKEN=${BOT_AUTH_TOKEN}" >> .env
           echo "BOT_USERNAME=${BOT_USERNAME}" >> .env
           echo "BOT_WEBHOOK_PORT=${BOT_WEBHOOK_PORT}" >> .env
