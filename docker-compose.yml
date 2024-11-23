@@ -14,10 +14,10 @@ services:
     labels:
       environment: ${ENV}
       service: dungeon-prototype-app
-      logging:
-        driver: "json-file"
-        options:
-          labels: environment,service
+    logging:
+      driver: "json-file"
+      options:
+        labels: environment,service
     environment:
       SPRING_ACTIVE_PROFILE: ${ENV}
       BOT_USERNAME: ${BOT_USERNAME}
