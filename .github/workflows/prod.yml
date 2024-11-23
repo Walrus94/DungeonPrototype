@@ -2,7 +2,7 @@ name: Deploy to production
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master", "develop" ]
 
 jobs:
   build-and-run:
@@ -13,11 +13,12 @@ jobs:
 
     steps:
       - name: Update repository
-        run : cd ${{vars.WORK_DIR}} && git fetch origin master && git checkout && git pull
+        run : cd ${{vars.WORK_DIR}} && git fetch origin ${{ github.ref_name }} && git checkout && git pull
       - name: Set environment variables
         env:
           ENV: ${{vars.ENV}}
-          BOT_AUTH_TOKEN: ${{ secrets.BOT_TOKEN_PROD }}
+          JAVA_OPTIONS: ${JAVA_OPTIONS}
+          BOT_AUTH_TOKEN: ${{ secrets.BOT_TOKEN }}
           BOT_USERNAME: ${{vars.BOT_USERNAME}}
           BOT_WEBHOOK_PORT: ${{vars.BOT_WEBHOOK_PORT}}
           BOT_WEBHOOK_URL: ${{vars.BOT_WEBHOOK_URL}}
@@ -33,6 +34,7 @@ jobs:
         run: |
           cd ${{vars.WORK_DIR}} &&
           echo "ENV=${ENV}" >> .env
+          echo "JAVA_OPTIONS=${JAVA_OPTIONS}" >> .env
           echo "BOT_AUTH_TOKEN=${BOT_AUTH_TOKEN}" >> .env
           echo "BOT_USERNAME=${BOT_USERNAME}" >> .env
           echo "BOT_WEBHOOK_PORT=${BOT_WEBHOOK_PORT}" >> .env

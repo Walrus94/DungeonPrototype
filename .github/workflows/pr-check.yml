@@ -1,0 +1,18 @@
+name: Enforce PR Rules
+
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  check-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR Source
+        run: |
+          if [ "${{ github.base_ref }}" = "master" ] && [ "${{ github.head_ref }}" != "develop" ]; then
+            echo "Pull requests to master are only allowed from develop!";
+            exit 1;
+          fi
+        shell: bash
