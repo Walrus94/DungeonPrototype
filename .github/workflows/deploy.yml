@@ -23,9 +23,7 @@ jobs:
         run: |
           cd ${{vars.WORK_DIR}} &&
           echo "ENV=${{vars.ENV}}" >> .env
-          if [${{vars.JAVA_OPTIONS}} != '']; then
-            echo "JAVA_OPTIONS=${{vars.JAVA_OPTIONS}}" >> .env
-          fi
+          echo "JAVA_OPTIONS=${{vars.JAVA_OPTIONS}}" >> .env
           echo "BOT_AUTH_TOKEN=${{ secrets.BOT_TOKEN }}" >> .env
           echo "BOT_USERNAME=${{vars.BOT_USERNAME}}" >> .env
           echo "BOT_WEBHOOK_PORT=${{vars.BOT_WEBHOOK_PORT}}" >> .env
