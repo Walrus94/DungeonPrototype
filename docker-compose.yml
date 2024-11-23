@@ -1,10 +1,15 @@
+networks:
+  ${ENV}_net:
+    driver: bridge
+
 services:
 
   dungeon-prototype-app:
     image: dungeon-prototype-app:latest
     container_name: dungeon-prototype-app-${ENV}
     restart: unless-stopped
-    network_mode: host
+    networks:
+      - ${ENV}_net
     build:
       context: .
     ports:
@@ -35,7 +40,8 @@ services:
     image: huggingface-api:latest
     container_name: huggingface-api-${ENV}
     restart: unless-stopped
-    network_mode: host
+    networks:
+      - ${ENV}_net
     build:
       context: ./huggingface-api
     labels:
