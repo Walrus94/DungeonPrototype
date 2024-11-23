@@ -38,6 +38,13 @@ services:
     network_mode: host
     build:
       context: ./huggingface-api
+    labels:
+      environment: ${ENV}
+      service: huggingface-api
+    logging:
+      driver: "json-file"
+      options:
+        labels: environment,service
     environment:
       HUGGINGFACE_MODEL_FILE: /app/model
       KAFKA_BOOTSTRAP_SERVERS: localhost:${KAFKA_PORT}
