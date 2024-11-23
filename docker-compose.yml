@@ -7,8 +7,6 @@ services:
     network_mode: host
     build:
       context: .
-    volumes:
-      - ./logs/dungeon-prototype-app-${ENV}:/logs
     ports:
       - ${BOT_WEBHOOK_PORT}:${BOT_WEBHOOK_PORT}
     labels:
@@ -49,6 +47,7 @@ services:
         labels: environment,service
     environment:
       HUGGINGFACE_MODEL_FILE: /app/model
+      COMPOSE_PROJECT_NAME: ${ENV}
       KAFKA_BOOTSTRAP_SERVERS: localhost:${KAFKA_PORT}
       KAFKA_TOPIC_NAME: ${KAFKA_ITEM_NAMING_TOPIC}
       MONGO_DB_PORT: ${MONGO_DB_PORT}
