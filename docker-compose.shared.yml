@@ -68,6 +68,13 @@ services:
     network_mode: host
     command:
       tunnel run dungeon-bot-tunnel
+    labels:
+      environment: shared
+      service: cloudflared
+    logging:
+      driver: "json-file"
+      options:
+        labels: environment,service
     environment:
       - TUNNEL_TOKEN=${CLOUDFLARE_TOKEN}
 
@@ -79,6 +86,13 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    labels:
+      environment: shared
+      service: zookeeper
+    logging:
+      driver: "json-file"
+      options:
+        labels: environment,service
     ports:
       - '2181:2181'
 
@@ -91,6 +105,13 @@ services:
       - zookeeper
     ports:
       - ${KAFKA_PORT}:${KAFKA_PORT}
+    labels:
+      environment: shared
+      service: kafka
+    logging:
+      driver: "json-file"
+      options:
+        labels: environment,service
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: localhost:2181
@@ -110,6 +131,13 @@ services:
     network_mode: host
     ports:
       - ${MONGO_DB_PORT}:${MONGO_DB_PORT}
+    labels:
+      environment: shared
+      service: mongo
+    logging:
+      driver: "json-file"
+      options:
+        labels: environment,service
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_DB_USER}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_DB_PASSWORD}
