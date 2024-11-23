@@ -1,4 +1,4 @@
-name: Deploy to production
+name: Deploy on push
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 jobs:
   build-and-run:
     runs-on: self-hosted
-    environment: prod
+    environment: ${{vars.ENV}}
     permissions:
       contents: read
 
