@@ -17,7 +17,7 @@ jobs:
       - name: Set environment variables
         env:
           ENV: ${{vars.ENV}}
-          JAVA_OPTIONS: ${{vars.JAVA_OPTIONS:-""}}
+          JAVA_OPTIONS: ${{vars.JAVA_OPTIONS || ""}}
           BOT_AUTH_TOKEN: ${{ secrets.BOT_TOKEN }}
           BOT_USERNAME: ${{vars.BOT_USERNAME}}
           BOT_WEBHOOK_PORT: ${{vars.BOT_WEBHOOK_PORT}}
