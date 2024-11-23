@@ -40,7 +40,7 @@ jobs:
           docker-compose -f docker-compose.shared.yml --env-file .env up --build -d
       - name: Run Environment specific services
         run: cd ${{vars.WORK_DIR}} &&
-          docker-compose --env-file .env up --build --no-recreate -d
+          docker-compose --env-file .env up --build -d
       - name: Clean up environment file
         run: cd ${{vars.WORK_DIR}} && rm -f .env
       - name: Cleanup Docker Data
