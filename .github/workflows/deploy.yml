@@ -2,7 +2,9 @@ name: Deploy on push
 
 on:
   push:
-    branches: [ "master", "develop" ]
+    branches:
+    - "master"
+    - "develop"
 
 jobs:
   build-and-run:
@@ -14,8 +16,8 @@ jobs:
     steps:
       - name: Update repository
         run : cd ${{vars.WORK_DIR}} && 
-          git fetch origin ${{ github.ref_name }} && 
-          git checkout && git pull
+          git checkout origin ${{ github.ref_name }} && 
+          git pull
       - name: Set environment variables
         run: |
           cd ${{vars.WORK_DIR}} &&
