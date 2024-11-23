@@ -33,7 +33,7 @@ jobs:
         run: |
           cd ${{vars.WORK_DIR}} &&
           echo "ENV=${ENV}" >> .env
-          if [${{vars.JAVA_OPTIONS}} != '']; then 
+          if [${{vars.JAVA_OPTIONS}} != null]; then 
             echo "JAVA_OPTIONS=${{vars.JAVA_OPTIONS}}" >> .env
           fi
           echo "BOT_AUTH_TOKEN=${BOT_AUTH_TOKEN}" >> .env
