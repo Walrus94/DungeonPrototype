@@ -16,7 +16,8 @@ jobs:
     steps:
       - name: Update repository
         run : cd ${{vars.WORK_DIR}} && 
-          git checkout origin ${{ github.ref_name }} && 
+          git fetch origin ${{ github.ref_name }} &&
+          git checkout &&
           git pull
       - name: Set environment variables
         run: |
