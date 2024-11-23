@@ -1,22 +1,20 @@
-name: Deploy on push
+name: Deploy to prod
 
 on:
   push:
-    branches:
-    - "master"
-    - "develop"
+    branches: ["master"]
 
 jobs:
   build-and-run:
     runs-on: self-hosted
-    environment: ${{vars.ENV}}
+    environment: prod
     permissions:
       contents: read
 
     steps:
       - name: Update repository
         run : cd ${{vars.WORK_DIR}} && 
-          git fetch origin ${{ github.ref_name }} &&
+          git fetch origin master &&
           git checkout &&
           git pull
       - name: Set environment variables
