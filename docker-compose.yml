@@ -1,10 +1,17 @@
+networks:
+  prod_net:
+    external: true
+  dev_net:
+    external: true
+
 services:
 
   dungeon-prototype-app:
     image: dungeon-prototype-app:latest
     container_name: dungeon-prototype-app-${ENV}
     restart: unless-stopped
-    network_mode: host
+    networks:
+      - ${ENV}_net
     build:
       context: .
     ports:
@@ -19,7 +26,6 @@ services:
     environment:
       JAVA_OPTIONS: ${JAVA_OPTIONS:-""}
       SPRING_ACTIVE_PROFILE: ${ENV}
-      COMPOSE_PROJECT_NAME: ${ENV}
       BOT_USERNAME: ${BOT_USERNAME}
       BOT_WEBHOOK_URL: ${BOT_WEBHOOK_URL}
       BOT_AUTH_TOKEN: ${BOT_AUTH_TOKEN}
@@ -35,7 +41,8 @@ services:
     image: huggingface-api:latest
     container_name: huggingface-api-${ENV}
     restart: unless-stopped
-    network_mode: host
+    networks:
+      - ${ENV}_net
     build:
       context: ./huggingface-api
     labels:
@@ -47,7 +54,6 @@ services:
         labels: environment,service
     environment:
       HUGGINGFACE_MODEL_FILE: /app/model
-      COMPOSE_PROJECT_NAME: ${ENV}
       KAFKA_BOOTSTRAP_SERVERS: localhost:${KAFKA_PORT}
       KAFKA_TOPIC_NAME: ${KAFKA_ITEM_NAMING_TOPIC}
       MONGO_DB_PORT: ${MONGO_DB_PORT}
