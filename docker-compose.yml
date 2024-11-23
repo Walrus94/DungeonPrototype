@@ -1,6 +1,6 @@
 networks:
   ${ENV}_net:
-    driver: bridge
+    external: true
 
 services:
 
