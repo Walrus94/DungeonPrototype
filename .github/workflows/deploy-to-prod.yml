@@ -36,11 +36,12 @@ jobs:
           echo "MONGO_DB_USER=${{ secrets.MONGO_DB_USER }}" >> .env
           echo "MONGO_DB_PASSWORD=${{ secrets.MONGO_DB_PASSWORD }}" >> .env
       - name: Create shared network
-        run: if [ ! "$(docker network ls | grep shared_net)" ]; then
-            echo "Creating shared_net network ..."
-            docker network create nginx-proxy
+        run: |
+            if [ ! "$(docker network ls | grep shared_net)" ]; then
+              echo "Creating shared_net network ..."
+              docker network create nginx-proxy
             else
-            echo "shared_net network exists."
+              echo "shared_net network exists."
             fi
       - name: Run Shared services
         run: cd ${{vars.WORK_DIR}} &&
