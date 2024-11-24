@@ -1,6 +1,6 @@
 networks:
   ${ENV}_net:
-    driver: bridge
+    external: true
   shared_net:
     external: true
 
