@@ -1,8 +1,6 @@
 networks:
-  prod_net:
-    external: true
-  dev_net:
-    external: true
+  shared-net:
+    driver: bridge
 
 services:
 
