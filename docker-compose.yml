@@ -1,6 +1,6 @@
 networks:
   ${ENV}_net:
-    external: true
+    driver: bridge
   shared_net:
     external: true
 
@@ -8,7 +8,6 @@ services:
 
   dungeon-prototype-app:
     image: dungeon-prototype-app:latest
-    container_name: dungeon-prototype-app
     restart: unless-stopped
     networks:
       - ${ENV}_net
@@ -41,7 +40,6 @@ services:
 
   huggingface-api:
     image: huggingface-api:latest
-    container_name: huggingface-api
     restart: unless-stopped
     networks:
       - ${ENV}_net
