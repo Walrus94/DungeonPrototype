@@ -3,7 +3,7 @@ server:
   grpc_listen_port: 0
 
 clients:
-  - url: http://localhost:3100/loki/api/v1/push
+  - url: http://loki:3100/loki/api/v1/push
 
 positions:
   filename: /tmp/positions.yaml
@@ -31,6 +31,9 @@ scrape_configs:
       # Use container name as job label
       - source_labels: [__meta_docker_container_name]
         target_label: job
+      # Relabel log stream to include the `instance` label
+      - source_labels: [ __address__ ]
+        target_label: instance
       # Remove internal Docker Compose metadata
       - source_labels: [__meta_docker_container_label_com_docker_compose_service]
         target_label: __discarded__
