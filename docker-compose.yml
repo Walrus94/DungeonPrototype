@@ -1,6 +1,7 @@
 networks:
-  ${ENV}_net:
+  env_net:
     external: true
+    name: ${ENV}_net
   shared_net:
     external: true
 
@@ -10,7 +11,7 @@ services:
     image: dungeon-prototype-app:latest
     restart: unless-stopped
     networks:
-      - ${ENV}_net
+      - env_net
       - shared_net
     build:
       context: .
@@ -42,7 +43,7 @@ services:
     image: huggingface-api:latest
     restart: unless-stopped
     networks:
-      - ${ENV}_net
+      - env_net
       - shared_net
     build:
       context: ./huggingface-api
