@@ -36,12 +36,24 @@ jobs:
           echo "MONGO_DB_USER=${{ secrets.MONGO_DB_USER }}" >> .env
           echo "MONGO_DB_PASSWORD=${{ secrets.MONGO_DB_PASSWORD }}" >> .env
       - name: Create shared network
-        run: docker network create shared_net
+        run: |
+          if [ ! "$(docker network ls | grep shared_net)" ]; then
+            echo "Creating shared_net network ..."
+            docker network create shared_net
+          else
+            echo "shared_net network exists."
+          fi
       - name: Run Shared services
         run: cd ${{vars.WORK_DIR}} &&
           docker-compose -p shared -f docker-compose.shared.yml --env-file .env up --build -d
       - name: Create network
-        run: docker network create dev_net
+        run: |
+          if [ ! "$(docker network ls | grep dev_net)" ]; then
+            echo "Creating dev_net network ..."
+            docker network create dev_net
+          else
+            echo "dev_net network exists."
+          fi
       - name: Run Environment specific services
         run: cd ${{vars.WORK_DIR}} &&
           docker-compose -p dev --env-file .env up --build -d
