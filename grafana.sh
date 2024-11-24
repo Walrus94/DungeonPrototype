@@ -12,7 +12,7 @@ datasources:
   type: loki
   access: proxy
   orgId: 1
-  url: http://localhost:3100
+  url: http://loki:3100
   basicAuth: false
   isDefault: true
   version: 1
@@ -21,7 +21,7 @@ datasources:
   type: prometheus
   access: proxy
   orgId: 1
-  url: http://localhost:9090
+  url: http://prometheus:9090
   basicAuth: false
   isDefault: false
   version: 1
