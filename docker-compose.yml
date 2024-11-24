@@ -1,7 +1,5 @@
 networks:
-  prod_net:
-    external: true
-  dev_net:
+  ${ENV}_net:
     external: true
 
 services:
