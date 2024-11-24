@@ -35,12 +35,16 @@ jobs:
           echo "MONGO_DB_PORT=${{vars.MONGO_DB_PORT}}" >> .env
           echo "MONGO_DB_USER=${{ secrets.MONGO_DB_USER }}" >> .env
           echo "MONGO_DB_PASSWORD=${{ secrets.MONGO_DB_PASSWORD }}" >> .env
+      - name: Create shared network
+        run: docker network create shared_net
       - name: Run Shared services
         run: cd ${{vars.WORK_DIR}} &&
-          docker-compose -f docker-compose.shared.yml --env-file .env up --build -d
+          docker-compose -p shared -f docker-compose.shared.yml --env-file .env up --build -d
+      - name: Create network
+        run: docker network create prod_net
       - name: Run Environment specific services
         run: cd ${{vars.WORK_DIR}} && 
-          docker-compose --env-file .env up --build -d
+          docker-compose -p prod --env-file .env up --build -d
       - name: Clean up environment file
         run: cd ${{vars.WORK_DIR}} && rm -f .env
       - name: Cleanup Docker Data
