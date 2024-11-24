@@ -1,7 +1,7 @@
 networks:
   ${ENV}_net:
     external: true
-  shared-net:
+  shared_net:
     external: true
 
 services:
@@ -12,7 +12,7 @@ services:
     restart: unless-stopped
     networks:
       - ${ENV}_net
-      - shared-net
+      - shared_net
     build:
       context: .
     ports:
@@ -45,7 +45,7 @@ services:
     restart: unless-stopped
     networks:
       - ${ENV}_net
-      - shared-net
+      - shared_net
     build:
       context: ./huggingface-api
     labels:

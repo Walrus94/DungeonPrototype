@@ -1,5 +1,5 @@
 networks:
-  shared-net:
+  shared_net:
     external: true
 
 services:
@@ -14,7 +14,7 @@ services:
       - ./loki-config.yml:/etc/loki/local-config.yml
     restart: unless-stopped
     networks:
-      - shared-net
+      - shared_net
 
   promtail:
     image: grafana/promtail:2.9.2
@@ -26,7 +26,7 @@ services:
     command: -config.file=/etc/promtail/config.yml
     restart: unless-stopped
     networks:
-      - shared-net
+      - shared_net
 
   prometheus:
     image: prom/prometheus:latest
@@ -37,7 +37,7 @@ services:
         - ./prometheus.yml:/etc/prometheus/prometheus.yml
     restart: unless-stopped
     networks:
-      - shared-net
+      - shared_net
 
   mongodb-exporter:
     image: crobox/mongodb-exporter:latest
@@ -48,7 +48,7 @@ services:
       - "9216:9216"
     restart: unless-stopped
     networks:
-      - shared-net
+      - shared_net
     depends_on:
      - mongo
 
@@ -68,7 +68,7 @@ services:
       - "3000:3000"
     restart: unless-stopped
     networks:
-      - shared-net
+      - shared_net
 
   cloudflared:
     image: cloudflare/cloudflared:latest
@@ -92,7 +92,7 @@ services:
     container_name: zookeeper
     restart: always
     networks:
-      - shared-net
+      - shared_net
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -111,7 +111,7 @@ services:
     container_name: kafka
     restart: unless-stopped
     networks:
-      - shared-net
+      - shared_net
     depends_on:
       - zookeeper
     ports:
@@ -140,7 +140,7 @@ services:
     container_name: mongo
     restart: unless-stopped
     networks:
-      - shared-net
+      - shared_net
     ports:
       - ${MONGO_DB_PORT}:${MONGO_DB_PORT}
     labels:
