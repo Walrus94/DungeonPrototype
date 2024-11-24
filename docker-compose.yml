@@ -27,7 +27,6 @@ services:
         labels: environment,service
     environment:
       JAVA_OPTIONS: ${JAVA_OPTIONS:-""}
-      COMPOSE_PROJECT_NAME: ${ENV}
       SPRING_ACTIVE_PROFILE: ${ENV}
       BOT_USERNAME: ${BOT_USERNAME}
       BOT_WEBHOOK_URL: ${BOT_WEBHOOK_URL}
@@ -57,7 +56,6 @@ services:
       options:
         labels: environment,service
     environment:
-      COMPOSE_PROJECT_NAME: ${ENV}
       HUGGINGFACE_MODEL_FILE: /app/model
       KAFKA_BOOTSTRAP_SERVERS: localhost:${KAFKA_PORT}
       KAFKA_TOPIC_NAME: ${KAFKA_ITEM_NAMING_TOPIC}
