@@ -1,4 +1,18 @@
+networks:
+  prod_net:
+    external: true
+  dev_net:
+    external: true
+
 services:
+
+#  TODO: needs to be removed after refactoring
+  network-keeper:
+    image: alpine:latest
+    command: sleep infinity
+    networks:
+      - dev_net
+      - prod_net
 
   loki:
     image: grafana/loki:2.9.2
