@@ -75,7 +75,7 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
     private static String createConnectionString(String port, String username, String password) {
         return "mongodb://" + username + ":" + password +
                 "@" +
-                "localhost:" + port +
+                "mongo:" + port +
                 "/?authMechanism=SCRAM-SHA-1";
     }
 }

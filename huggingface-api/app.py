@@ -39,7 +39,7 @@ kafka_consumer.subscribe([kafka_topic_name])
 # Configure MongoDB Connection
 mongo_client = MongoClient("mongodb://" + mongo_database_user + ":" + mongo_database_password +
                            "@" +
-                           "localhost:" + mongo_database_port +
+                           "mongo:" + mongo_database_port +
                            "/?authMechanism=SCRAM-SHA-1")
 db = mongo_client[mongo_database_name]
 collection = db['items']
