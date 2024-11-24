@@ -43,7 +43,7 @@ services:
     image: crobox/mongodb-exporter:latest
     container_name: mongodb-exporter
     environment:
-      MONGODB_URI: mongodb://${MONGO_DB_USER}:${MONGO_DB_PASSWORD}@localhost:${MONGO_DB_PORT}/admin
+      MONGODB_URI: mongodb://${MONGO_DB_USER}:${MONGO_DB_PASSWORD}@mongo:${MONGO_DB_PORT}/admin
     ports:
       - "9216:9216"
     restart: unless-stopped
@@ -125,8 +125,8 @@ services:
         labels: environment,service
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: localhost:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:${KAFKA_PORT}
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:${KAFKA_PORT}
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
       KAFKA_DEFAULT_PARTITIONS: 3
