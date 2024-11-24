@@ -36,12 +36,12 @@ jobs:
           echo "MONGO_DB_USER=${{ secrets.MONGO_DB_USER }}" >> .env
           echo "MONGO_DB_PASSWORD=${{ secrets.MONGO_DB_PASSWORD }}" >> .env
       - name: Create shared network
-        run: docker create network shared_net
+        run: docker network create shared_net
       - name: Run Shared services
         run: cd ${{vars.WORK_DIR}} &&
           docker-compose -p shared -f docker-compose.shared.yml --env-file .env up --build -d
       - name: Create network
-        run: docker create network prod_net
+        run: docker network create prod_net
       - name: Run Environment specific services
         run: cd ${{vars.WORK_DIR}} && 
           docker-compose -p prod --env-file .env up --build -d
