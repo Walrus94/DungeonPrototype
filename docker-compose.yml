@@ -16,6 +16,10 @@ services:
       - shared_net
     build:
       context: .
+      args:
+        BOT_WEBHOOK_URL: ${BOT_WEBHOOK_URL}
+        BOT_AUTH_TOKEN: ${BOT_AUTH_TOKEN}
+        BOT_WEBHOOK_PATH: ${BOT_WEBHOOK_PATH}
     ports:
       - ${BOT_WEBHOOK_PORT}:${BOT_WEBHOOK_PORT}
     labels:
