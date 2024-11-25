@@ -14,11 +14,10 @@ ENV BOT_WEBHOOK_PATH=$BOT_WEBHOOK_PATH
 # Set webhook url
 RUN echo "Initializing webhook..." && \
     if [ -n "$BOT_WEBHOOK_URL" ] && [-n "$BOT_WEBHOOK_PATH"]; then \
-      echo "Setting webhook for Telegram bot at $FULL_WEBHOOK_URL..." && \
+      echo "Setting webhook for Telegram bot..." && \
       echo "Telegram API Response: "$(curl -F 'url=${BOT_WEBHOOK_URL}${BOT_WEBHOOK_PATH}' https://api.telegram.org/bot$BOT_AUTH_TOKEN/setWebhook); \
     else \
       echo "BOT_TOKEN, WEBHOOK_URL, or WEBHOOK_PATH is missing. Skipping webhook setup."; \
-      return -1 \
     fi
 
 # Copy the Gradle project files (to use the build cache when possible)
