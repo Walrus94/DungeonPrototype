@@ -3,12 +3,12 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  - job_name: 'dungeon-prototype-app-prod'
+  - job_name: 'prod-dungeon-prototype-app'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['prod-dungeon-prototype-app:8080']
 
-  - job_name: 'dungeon-prototype-app-dev'
+  - job_name: 'dev-dungeon-prototype-app'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: [ 'dev-dungeon-prototype-app:8081' ]
@@ -19,6 +19,7 @@ scrape_configs:
       - targets: ['loki:3100']
 
   - job_name: 'mongodb'
+    metrics_path: '/metrics'
     static_configs:
       - targets: [ 'mongodb-exporter:9216' ]
 
