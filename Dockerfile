@@ -40,4 +40,4 @@ ENTRYPOINT java -jar app/DungeonPrototype.jar && \
       echo "Telegram API Response: $RESPONSE"; \
     else \
       echo "BOT_TOKEN, WEBHOOK_URL, or WEBHOOK_PATH is missing. Skipping webhook setup."; \
-    fi &&
+    fi
