@@ -14,10 +14,8 @@ ENV BOT_WEBHOOK_PATH=$BOT_WEBHOOK_PATH
 # Set webhook url
 RUN echo "Initializing webhook..." && \
     if [ -n "$BOT_AUTH_TOKEN" ] && [ -n "$BOT_WEBHOOK_URL" ] && [-n "$BOT_WEBHOOK_PATH"]; then \
-      FULL_WEBHOOK_URL="${BOT_WEBHOOK_URL}${BOT_WEBHOOK_PATH}" && \
       echo "Setting webhook for Telegram bot at $FULL_WEBHOOK_URL..." && \
-      RESPONSE=$(curl -F "url=$FULL_WEBHOOK_URL" https://api.telegram.org/bot$BOT_AUTH_TOKEN/setWebhook) && \
-      echo "Telegram API Response: $RESPONSE"; \
+      echo "Telegram API Response: "$(curl -F 'url=${BOT_WEBHOOK_URL}${BOT_WEBHOOK_PATH}' https://api.telegram.org/bot$BOT_AUTH_TOKEN/setWebhook); \
     else \
       echo "BOT_TOKEN, WEBHOOK_URL, or WEBHOOK_PATH is missing. Skipping webhook setup."; \
     fi
