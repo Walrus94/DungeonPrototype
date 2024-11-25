@@ -136,7 +136,7 @@ services:
     restart: unless-stopped
     network_mode: host
     command:
-      tunnel run dungeon-bot-tunnel
+      tunnel --no-autoupdate run dungeon-bot-tunnel
     labels:
       environment: shared
       service: cloudflared
