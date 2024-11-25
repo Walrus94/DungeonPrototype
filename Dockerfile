@@ -27,17 +27,17 @@ ENV BOT_WEBHOOK_URL=$BOT_WEBHOOK_URL
 ENV BOT_WEBHOOK_PATH=$BOT_WEBHOOK_PATH
 
 # Set webhook url
-CMD |
-    if [ -n "$BOT_AUTH_TOKEN" ] && [ -n "$BOT_WEBHOOK_URL" ] && [-n $BOT_WEBHOOK_PATH]; then \
+ENTRYPOINT
+    IF [ -n "$BOT_AUTH_TOKEN" ] && [ -n "$BOT_WEBHOOK_URL" ] && [-n $BOT_WEBHOOK_PATH]; then \
         echo "Setting webhook for Telegram bot..." && \
           RESPONSE=$(curl -X POST "https://api.telegram.org/bot$BOT_AUTH_TOKEN/setWebhook" \
             -H "Content-Type: application/json" \
             -d '{"url": "'"$BOT_WEBHOOK_URL$BOT_WEBHOOK_PATH"'"}') && \
           echo  "Telegram API Response: $RESPONSE"; \
-    else \
+    ELSE \
         echo "BOT_TOKEN or WEBHOOK_URL is missing. Skipping webhook setup."; \
-    fi
+    FI &&
 
 # Run the Spring Boot app
 
-ENTRYPOINT ["java", "-jar", "/app/DungeonPrototype.jar"]
+RUN ["java", "-jar", "/app/DungeonPrototype.jar"]
