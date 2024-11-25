@@ -27,7 +27,7 @@ ENV BOT_WEBHOOK_URL=$BOT_WEBHOOK_URL
 ENV BOT_WEBHOOK_PATH=$BOT_WEBHOOK_PATH
 
 # Set webhook url
-ENTRYPOINT |
+CMD |
     if [ -n "$BOT_AUTH_TOKEN" ] && [ -n "$BOT_WEBHOOK_URL" ] && [-n $BOT_WEBHOOK_PATH]; then \
         echo "Setting webhook for Telegram bot..." && \
           RESPONSE=$(curl -X POST "https://api.telegram.org/bot$BOT_AUTH_TOKEN/setWebhook" \
