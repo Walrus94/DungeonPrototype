@@ -26,18 +26,18 @@ ENV BOT_AUTH_TOKEN=$BOT_AUTH_TOKEN
 ENV BOT_WEBHOOK_URL=$BOT_WEBHOOK_URL
 ENV BOT_WEBHOOK_PATH=$BOT_WEBHOOK_PATH
 
-# Set webhook url
-CMD |
-    if [ -n "$BOT_AUTH_TOKEN" ] && [ -n "$BOT_WEBHOOK_URL" ] && [-n $BOT_WEBHOOK_PATH]; then \
-        echo "Setting webhook for Telegram bot..." && \
-          RESPONSE=$(curl -X POST "https://api.telegram.org/bot$BOT_AUTH_TOKEN/setWebhook" \
-            -H "Content-Type: application/json" \
-            -d '{"url": "'"$BOT_WEBHOOK_URL$BOT_WEBHOOK_PATH"'"}') && \
-          echo  "Telegram API Response: $RESPONSE"; \
-    else \
-        echo "BOT_TOKEN or WEBHOOK_URL is missing. Skipping webhook setup."; \
-    fi
-
+# Set webhook url and
 # Run the Spring Boot app
-
-ENTRYPOINT ["java", "-jar", "/app/DungeonPrototype.jar"]
+ENTRYPOINT java -jar app/DungeonPrototype.jar && \
+    echo "Waiting for the application to initialize..." && \
+    sleep 10 && \
+    if [ -n "$BOT_TOKEN" ] && [ -n "$WEBHOOK_URL" ]; then \
+      FULL_WEBHOOK_URL="${WEBHOOK_URL}${WEBHOOK_PATH}" && \
+      echo "Setting webhook for Telegram bot at $FULL_WEBHOOK_URL..." && \
+      RESPONSE=$(curl -X POST "https://api.telegram.org/bot$BOT_TOKEN/setWebhook" \
+        -H "Content-Type: application/json" \
+        -d '{"url": "'"$FULL_WEBHOOK_URL"'"}') && \
+      echo "Telegram API Response: $RESPONSE"; \
+    else \
+      echo "BOT_TOKEN, WEBHOOK_URL, or WEBHOOK_PATH is missing. Skipping webhook setup."; \
+    fi &&
