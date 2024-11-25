@@ -58,10 +58,7 @@ services:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
     volumes:
-      - ./grafana.ini:/etc/grafana/grafana.ini
-      - ./grafana.sh:/grafana.sh
-    entrypoint:
-      - /grafana.sh
+      - ./grafana:/etc/grafana
     image: grafana/grafana:latest
     container_name: grafana
     ports:
