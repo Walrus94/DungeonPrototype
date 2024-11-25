@@ -18,6 +18,18 @@ RUN gradle bootJar --no-daemon
 FROM openjdk:23-ea-8-jdk-slim
 COPY --from=build /app/build/libs/*.jar /app/DungeonPrototype.jar
 
+# Set webhook url
+
+CMD if [ -n "$BOT_AUTH_TOKEN" ] && [ -n "$BOT_WEBHOOK_URL" ] && [-n $BOT_WEBHOOK_PATH]; then \
+          echo "Setting webhook for Telegram bot..." && \
+          RESPONSE=$(curl -X POST "https://api.telegram.org/bot$BOT_AUTH_TOKEN/setWebhook" \
+            -H "Content-Type: application/json" \
+            -d '{"url": "'"$BOT_WEBHOOK_URL$BOT_WEBHOOK_PATH"'"}') && \
+          echo  "Telegram API Response: $RESPONSE"; \
+        else \
+          echo "BOT_TOKEN or WEBHOOK_URL is missing. Skipping webhook setup."; \
+        fi && \
+
 # Run the Spring Boot app
 
 ENTRYPOINT ["java", "-jar", "/app/DungeonPrototype.jar"]
