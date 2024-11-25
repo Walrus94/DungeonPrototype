@@ -3,6 +3,27 @@ FROM gradle:8.10.1 AS build
 
 WORKDIR /app
 
+ARG BOT_AUTH_TOKEN
+ARG BOT_WEBHOOK_URL
+ARG BOT_WEBHOOK_PATH
+
+ENV BOT_AUTH_TOKEN=$BOT_AUTH_TOKEN
+ENV BOT_WEBHOOK_URL=$BOT_WEBHOOK_URL
+ENV BOT_WEBHOOK_PATH=$BOT_WEBHOOK_PATH
+
+# Set webhook url
+CMD echo "Initializing webhook..." && \
+    if [ -n "$BOT_AUTH_TOKEN" ] && [ -n "$BOT_WEBHOOK_URL" ] && [-n "$BOT_WEBHOOK_PATH"]; then \
+      FULL_WEBHOOK_URL="${BOT_WEBHOOK_URL}${BOT_WEBHOOK_PATH}" && \
+      echo "Setting webhook for Telegram bot at $FULL_WEBHOOK_URL..." && \
+      RESPONSE=$(curl -X POST "https://api.telegram.org/bot$BOT_AUTH_TOKEN/setWebhook" \
+        -H "Content-Type: application/json" \
+        -d '{"url": "'"$FULL_WEBHOOK_URL"'"}') && \
+      echo "Telegram API Response: $RESPONSE"; \
+    else \
+      echo "BOT_TOKEN, WEBHOOK_URL, or WEBHOOK_PATH is missing. Skipping webhook setup."; \
+    fi
+
 # Copy the Gradle project files (to use the build cache when possible)
 COPY build.gradle settings.gradle /app/
 COPY gradle /app/gradle
@@ -18,24 +39,5 @@ RUN gradle bootJar --no-daemon
 FROM openjdk:23-ea-8-jdk-slim
 COPY --from=build /app/build/libs/*.jar /app/DungeonPrototype.jar
 
-ARG BOT_AUTH_TOKEN
-ARG BOT_WEBHOOK_URL
-ARG BOT_WEBHOOK_PATH
-
-ENV BOT_AUTH_TOKEN=$BOT_AUTH_TOKEN
-ENV BOT_WEBHOOK_URL=$BOT_WEBHOOK_URL
-ENV BOT_WEBHOOK_PATH=$BOT_WEBHOOK_PATH
-
-# Set webhook url and
 # Run the Spring Boot app
-ENTRYPOINT echo "Initializing application..." && \
-    if [ -n "$BOT_TOKEN" ] && [ -n "$WEBHOOK_URL" ]; then \
-      FULL_WEBHOOK_URL="${WEBHOOK_URL}${WEBHOOK_PATH}" && \
-      echo "Setting webhook for Telegram bot at $FULL_WEBHOOK_URL..." && \
-      RESPONSE=$(curl -X POST "https://api.telegram.org/bot$BOT_TOKEN/setWebhook" \
-        -H "Content-Type: application/json" \
-        -d '{"url": "'"$FULL_WEBHOOK_URL"'"}') && \
-      echo "Telegram API Response: $RESPONSE"; \
-    else \
-      echo "BOT_TOKEN, WEBHOOK_URL, or WEBHOOK_PATH is missing. Skipping webhook setup."; \
-    fi && java -jar app/DungeonPrototype.jar
+ENTRYPOINT java -jar app/DungeonPrototype.jar
