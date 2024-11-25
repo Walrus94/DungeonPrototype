@@ -53,7 +53,7 @@ services:
      - mongodb-exporter-percona
 
   mongodb-exporter-percona:
-    image: percona/mongodb_exporter:latest
+    image: percona/mongodb_exporter:0.42.0
     container_name: mongodb-exporter-percona
     environment:
       MONGODB_URI: mongodb://${MONGO_DB_USER}:${MONGO_DB_PASSWORD}@mongo:${MONGO_DB_PORT}/admin?ssl=true
