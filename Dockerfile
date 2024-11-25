@@ -12,7 +12,7 @@ ENV BOT_WEBHOOK_URL=$BOT_WEBHOOK_URL
 ENV BOT_WEBHOOK_PATH=$BOT_WEBHOOK_PATH
 
 # Set webhook url
-CMD echo "Initializing webhook..." && \
+RUN echo "Initializing webhook..." && \
     if [ -n "$BOT_AUTH_TOKEN" ] && [ -n "$BOT_WEBHOOK_URL" ] && [-n "$BOT_WEBHOOK_PATH"]; then \
       FULL_WEBHOOK_URL="${BOT_WEBHOOK_URL}${BOT_WEBHOOK_PATH}" && \
       echo "Setting webhook for Telegram bot at $FULL_WEBHOOK_URL..." && \
