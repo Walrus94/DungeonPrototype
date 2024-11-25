@@ -36,8 +36,8 @@ CMD |
           echo  "Telegram API Response: $RESPONSE"; \
     else \
         echo "BOT_TOKEN or WEBHOOK_URL is missing. Skipping webhook setup."; \
-    fi &&
+    fi
 
 # Run the Spring Boot app
 
-RUN ["java", "-jar", "/app/DungeonPrototype.jar"]
+ENTRYPOINT ["java", "-jar", "/app/DungeonPrototype.jar"]
