@@ -3,15 +3,20 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  - job_name: 'springboot-app'
+  - job_name: 'dungeon-prototype-app-prod'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['localhost:9091']
+      - targets: ['prod-dungeon-prototype-app:8080']
+
+  - job_name: 'dungeon-prototype-app-dev'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: [ 'dev-dungeon-prototype-app:8081' ]
 
   - job_name: 'loki'
     metrics_path: '/metrics'
     static_configs:
-      - targets: ['localhost:3100']
+      - targets: ['loki:3100']
 
   - job_name: 'mongodb'
     static_configs:
@@ -20,4 +25,4 @@ scrape_configs:
   - job_name: 'prometheus'
     metrics_path: '/metrics'
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ['prometheus:9090']
