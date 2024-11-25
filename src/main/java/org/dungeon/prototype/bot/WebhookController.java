@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
 @RestController
-@RequestMapping("/webhook")
+@RequestMapping("${bot.path}")
 public class WebhookController {
 
     private final DungeonBot dungeonBot;
