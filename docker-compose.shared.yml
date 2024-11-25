@@ -10,9 +10,18 @@ services:
     ports:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yml
+    labels:
+      environment: logging
+      service: loki
+    logging:
+      driver: "json-file"
+      options:
+        labels: environment,service
     volumes:
       - ./loki-config.yml:/etc/loki/local-config.yml
     restart: unless-stopped
+    depends_on:
+      - promtail
     networks:
       - shared_net
 
@@ -24,6 +33,13 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./promtail-config.yml:/etc/promtail/config.yml
     command: -config.file=/etc/promtail/config.yml
+    labels:
+      environment: logging
+      service: promtail
+    logging:
+      driver: "json-file"
+      options:
+        labels: environment,service
     restart: unless-stopped
     networks:
       - shared_net
@@ -33,9 +49,19 @@ services:
     container_name: prometheus
     ports:
       - "9090:9090"
+    labels:
+      environment: logging
+      service: prometheus
+    logging:
+      driver: "json-file"
+      options:
+        labels: environment,service
     volumes:
         - ./prometheus.yml:/etc/prometheus/prometheus.yml
     restart: unless-stopped
+    depends_on:
+      - mongodb-exporter
+      - loki
     networks:
       - shared_net
 
@@ -47,6 +73,13 @@ services:
     ports:
       - "9216:9216"
     restart: unless-stopped
+    labels:
+      environment: logging
+      service: mongodb-exporter
+    logging:
+      driver: "json-file"
+      options:
+        labels: environment,service
     networks:
       - shared_net
     depends_on:
@@ -60,6 +93,13 @@ services:
     ports:
       - "9001:9001"
     restart: unless-stopped
+    labels:
+      environment: logging
+      service: mongodb-exporter-percona
+    logging:
+      driver: "json-file"
+      options:
+        labels: environment,service
     networks:
       - shared_net
     depends_on:
@@ -74,9 +114,19 @@ services:
       - ./grafana:/etc/grafana
     image: grafana/grafana:latest
     container_name: grafana
+    labels:
+      environment: logging
+      service: grafana
+    logging:
+      driver: "json-file"
+      options:
+        labels: environment,service
     ports:
       - "3000:3000"
     restart: unless-stopped
+    depends_on:
+      - prometheus
+      - loki
     networks:
       - shared_net
 
