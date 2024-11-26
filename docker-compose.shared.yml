@@ -130,23 +130,6 @@ services:
     networks:
       - shared_net
 
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    container_name: cloudflared-agent
-    restart: unless-stopped
-    network_mode: host
-    command:
-      tunnel --no-autoupdate run dungeon-bot-tunnel
-    labels:
-      environment: shared
-      service: cloudflared
-    logging:
-      driver: "json-file"
-      options:
-        labels: environment,service
-    environment:
-      - TUNNEL_TOKEN=${CLOUDFLARE_TOKEN}
-
   zookeeper:
     image: 'confluentinc/cp-zookeeper:latest'
     container_name: zookeeper
