@@ -1,0 +1,87 @@
+name: Test Environment Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Select the branch to deploy to the test environment"
+        required: true
+
+jobs:
+  deploy:
+    runs-on: remote
+
+    steps:
+      - name: Fetch Available Branches
+        id: fetch_branches
+        run: |
+          echo "Fetching all branches..."
+          BRANCHES=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/repos/${{ github.repository }}/branches | jq -r '.[].name')
+
+          echo "Available branches:"
+          echo "$BRANCHES"
+
+          # Check if the selected branch exists
+          if echo "$BRANCHES" | grep -qx "${{ github.event.inputs.branch }}"; then
+            echo "Selected branch '${{ github.event.inputs.branch }}' is valid."
+          else
+            echo "Error: Selected branch '${{ github.event.inputs.branch }}' does not exist."
+            exit 1
+          fi
+
+      - name: Update repository
+        run: cd ${{vars.WORK_DIR}} &&
+          git fetch origin ${{ github.event.inputs.branch }} &&
+          git checkout &&
+          git pull
+
+      - name: Set environment variables
+        run: |
+          cd ${{vars.WORK_DIR}} &&
+          echo "ENV=${{vars.ENV}}" >> .env
+          echo "JAVA_OPTIONS=${{vars.JAVA_OPTIONS}}" >> .env
+          echo "BOT_AUTH_TOKEN=${{ secrets.BOT_TOKEN }}" >> .env
+          echo "BOT_USERNAME=${{vars.BOT_USERNAME}}" >> .env
+          echo "BOT_WEBHOOK_PORT=${{vars.BOT_WEBHOOK_PORT}}" >> .env
+          echo "BOT_WEBHOOK_PATH=${{vars.BOT_WEBHOOK_PATH}}" >> .env
+          echo "BOT_WEBHOOK_URL=${{vars.BOT_WEBHOOK_URL}}" >> .env
+          echo "CLOUDFLARE_TOKEN=${{secrets.CLOUDFLARE_TOKEN}}" >> .env
+          echo "GRAFANA_USER=${{secrets.GRAFANA_USER}}" >> .env
+          echo "GRAFANA_PASSWORD=${{secrets.GRAFANA_PASSWORD}}" >> .env
+          echo "KAFKA_PORT=${{vars.KAFKA_PORT}}" >> .env
+          echo "KAFKA_ITEM_NAMING_TOPIC=${{vars.KAFKA_ITEM_NAMING_TOPIC}}" >> .env
+          echo "MONGO_DB_DATABASE_NAME=${{vars.MONGO_DB_DATABASE_NAME}}" >> .env
+          echo "MONGO_DB_PORT=${{vars.MONGO_DB_PORT}}" >> .env
+          echo "MONGO_DB_USER=${{ secrets.MONGO_DB_USER }}" >> .env
+          echo "MONGO_DB_PASSWORD=${{ secrets.MONGO_DB_PASSWORD }}" >> .env
+
+      - name: Create shared network
+        run: |
+          if [ ! "$(docker network ls | grep shared_net)" ]; then
+            echo "Creating shared_net network ..."
+            docker network create shared_net
+          else
+            echo "shared_net network exists."
+          fi
+      - name: Run Shared services
+        run: cd ${{vars.WORK_DIR}} &&
+          docker-compose -p shared -f docker-compose.shared.yml --env-file .env up --build -d
+      - name: Create network
+        run: |
+          if [ ! "$(docker network ls | grep test_net)" ]; then
+            echo "Creating test_net network ..."
+            docker network create test_net
+          else
+            echo "test_net network exists."
+          fi
+      - name: Run Environment specific services
+        run: cd ${{vars.WORK_DIR}} &&
+          docker-compose -p test --env-file .env up --build -d
+      - name: Clean up environment file
+        run: cd ${{vars.WORK_DIR}} && rm -f .env
+      - name: Cleanup Docker Data
+        run: docker system prune -af &&
+          docker volume prune -f
+      - name: Verify Cleanup
+        run: docker system df
