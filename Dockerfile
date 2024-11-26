@@ -6,14 +6,17 @@ WORKDIR /app
 ARG BOT_AUTH_TOKEN
 ARG BOT_WEBHOOK_URL
 ARG BOT_WEBHOOK_PATH
+ARG BOT_WEBHOOK_PORT
 
 ENV BOT_AUTH_TOKEN=$BOT_AUTH_TOKEN
 ENV BOT_WEBHOOK_URL=$BOT_WEBHOOK_URL
 ENV BOT_WEBHOOK_PATH=$BOT_WEBHOOK_PATH
+ENV BOT_WEBHOOK_PORT=$BOT_WEBHOOK_PORT
 
 # Set webhook url
 RUN echo "Setting webhook for Telegram bot..." && \
-    echo "Telegram API Response: $(curl -F url=${BOT_WEBHOOK_URL}${BOT_WEBHOOK_PATH} https://api.telegram.org/bot$BOT_AUTH_TOKEN/setWebhook)";
+    echo "Telegram API Response: $(curl -H Origin: http://localhost:${BOT_WEBHOOK_PORT} \
+    -F url=${BOT_WEBHOOK_URL}${BOT_WEBHOOK_PATH} https://api.telegram.org/bot$BOT_AUTH_TOKEN/setWebhook)";
 # Copy the Gradle project files (to use the build cache when possible)
 COPY build.gradle settings.gradle /app/
 COPY gradle /app/gradle
