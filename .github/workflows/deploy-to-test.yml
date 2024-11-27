@@ -11,6 +11,7 @@ on:
           # BEGIN BRANCH LIST
         - develop
         - master
+        - secure-test-environment
           # END BRANCH LIST
 
 jobs:
