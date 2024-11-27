@@ -24,8 +24,17 @@ jobs:
           BRANCHES=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             https://api.github.com/repos/${{ github.repository }}/branches | jq -r '.[].name')
 
-          # Save branch list to environment variable
-          echo "branches=$BRANCHES" >> $GITHUB_ENV
+          echo "Available branches:"
+          echo "$BRANCHES"
+
+          # Format branches into YAML options, ensuring proper escaping of newlines
+          BRANCH_OPTIONS=$(echo "$BRANCHES" | sed ':a;N;$!ba;s/\n/\\n/g' | awk '{printf "- %s\\n", $0}')
+          echo "BRANCH_OPTIONS: $BRANCH_OPTIONS"
+
+        # Export properly formatted options into an environment variable
+          echo "branch_options<<EOF" >> $GITHUB_ENV
+          echo -e "$BRANCH_OPTIONS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Update Workflow File
         run: |
