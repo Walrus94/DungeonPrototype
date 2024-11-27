@@ -73,6 +73,6 @@ jobs:
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           branch: update-branch-list-${{ github.run_id }}
+          delete-branch: true
           title: "Update branch list"
           body: "Automatically updating branch list due to changes in repository."
-          base: master
