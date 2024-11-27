@@ -1,18 +1,17 @@
 name: Update Deployment Workflow
 
 on:
-#  create:
-#    branches:
-#      - '!update-branch-list-**'
-#  delete:
-#    branches:
-#      - '!update-branch-list-**'
-  workflow_dispatch:
+  create:
+    branches:
+      - '**'
+  delete:
+    branches:
+      - '**'
 
 jobs:
   update-workflow:
     runs-on: ubuntu-latest
-
+    if: "! startsWith(github.ref_name, 'update-branch-list-')"
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
