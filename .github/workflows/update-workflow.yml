@@ -24,7 +24,7 @@ jobs:
         id: fetch_branches
         run: |
           echo "Fetching branches..."
-          BRANCHES=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          BRANCHES=$(curl -s -H "Authorization: Bearer ${{ secrets.PERSONAL_ACCESS_TOKEN }}" \
             https://api.github.com/repos/${{ github.repository }}/branches | jq -r '.[].name')
 
           echo "Available branches:"
