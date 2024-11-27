@@ -1,12 +1,12 @@
 name: Update Deployment Workflow
 
 on:
-#  create:
-#    branches-ignore:
-#      - 'update-branch-list-*'
-#  delete:
-#    branches-ignore:
-#      - 'update-branch-list-*'
+  create:
+    branches:
+      - '!update-branch-list-**'
+  delete:
+    branches:
+      - '!update-branch-list-**'
   workflow_dispatch:
 
 jobs:
@@ -60,13 +60,6 @@ jobs:
 
       - name: Cleanup Temporary Files
         run: rm -f branch_list.txt
-
-#      - name: Create a new branch
-#        run: |
-#          git checkout -b update-branch-list-${{ github.run_id }}
-#          git add .github/workflows/deploy-to-test.yml
-#          git commit -m "Update branch list dynamically"
-#          git push origin update-branch-list-${{ github.run_id }}
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
