@@ -1,12 +1,12 @@
 name: Update Deployment Workflow
 
 on:
-  create:
-    branches:
-      - '!update-branch-list-**'
-  delete:
-    branches:
-      - '!update-branch-list-**'
+#  create:
+#    branches:
+#      - '!update-branch-list-**'
+#  delete:
+#    branches:
+#      - '!update-branch-list-**'
   workflow_dispatch:
 
 jobs:
