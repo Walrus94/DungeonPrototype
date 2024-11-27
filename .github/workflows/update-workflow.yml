@@ -41,15 +41,13 @@ jobs:
           echo "$BRANCHES" | sed 's/^/          - /' >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      - name: Update Workflow File
+      - name: Update Deployment Workflow
         run: |
-          # Generate the list of branches in YAML format
-          BRANCH_OPTIONS=$(echo ${{ env.branches }} | awk '{printf "- %s\n", $0}')
-
-          # Update the deployment workflow YAML
+          echo -e "Branch options being used:\n${{ env.BRANCH_OPTIONS }}"
           sed -i '/# BEGIN BRANCH LIST/,/# END BRANCH LIST/c\
-          # BEGIN BRANCH LIST\n          options:\n'"$BRANCH_OPTIONS"'          # END BRANCH LIST' \
-            .github/workflows/deploy-to-test.yml
+          # BEGIN BRANCH LIST\n'"${{ env.BRANCH_OPTIONS }}"'\n          # END BRANCH LIST' \
+          .github/workflows/deploy-to-test.yml
+      
 
       - name: Create a new branch
         run: |
@@ -65,3 +63,4 @@ jobs:
           branch: update-branch-list-${{ github.run_id }}
           title: "Update branch list"
           body: "Automatically updating branch list due to changes in repository."
+          base: master
