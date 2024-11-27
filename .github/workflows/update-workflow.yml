@@ -49,8 +49,8 @@ jobs:
           cat branch_list.txt
           awk '
             BEGIN { inBlock = 0 }
-            /# BEGIN BRANCH LIST/ { inBlock = 0; print; next }
-            /# END BRANCH LIST/ { inBlock = 1; print; next }
+            /# BEGIN BRANCH LIST/ { inBlock = 1; print; next }
+            /# END BRANCH LIST/ { inBlock = 0; print; next }
             !inBlock { print }
             inBlock && /# BEGIN BRANCH LIST/ {
               while ((getline line < "branch_list.txt") > 0) {
