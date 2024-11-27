@@ -44,10 +44,10 @@ jobs:
       - name: Update Deployment Workflow
         run: |
           echo -e "Branch options being used:\n${{ env.BRANCH_OPTIONS }}"
-          sed '/# BEGIN BRANCH LIST/,/# END BRANCH LIST/c\
-          # BEGIN BRANCH LIST\n'"${{ env.BRANCH_OPTIONS }}"'\n          # END BRANCH LIST' \
-          .github/workflows/deploy-to-test.yml
-      
+              sed -i '/# BEGIN BRANCH LIST/,/# END BRANCH LIST/c\
+              # BEGIN BRANCH LIST\
+            '"$(printf '%s\n' "${{ env.BRANCH_OPTIONS }}")"' \
+          # END BRANCH LIST' .github/workflows/deploy-to-test.yml      
 
       - name: Create a new branch
         run: |
