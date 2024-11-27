@@ -38,7 +38,7 @@ jobs:
           echo "$BRANCHES"
 
           echo "BRANCH_OPTIONS<<EOF" >> $GITHUB_ENV
-          echo "$BRANCHES" | sed 's/^/          - /' >> $GITHUB_ENV
+          echo "$BRANCHES" | sed 's/^/        - /' >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
       - name: Update Deployment Workflow
@@ -67,6 +67,7 @@ jobs:
           git add .github/workflows/deploy-to-test.yml
           git commit -m "Update branch list dynamically"
           git push origin update-branch-list-${{ github.run_id }}
+          git checkout master
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
@@ -76,3 +77,4 @@ jobs:
           delete-branch: true
           title: "Update branch list"
           body: "Automatically updating branch list due to changes in repository."
+          base: master

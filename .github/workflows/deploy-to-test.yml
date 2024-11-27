@@ -8,7 +8,7 @@ on:
         required: true
         options:
         # BEGIN BRANCH LIST
-          -
+        -
         # END BRANCH LIST
 
 jobs:
