@@ -17,6 +17,9 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Fetch Branch List
         id: fetch_branches
         run: |
@@ -27,13 +30,8 @@ jobs:
           echo "Available branches:"
           echo "$BRANCHES"
 
-          # Format branches into YAML options, ensuring proper escaping of newlines
-          BRANCH_OPTIONS=$(echo "$BRANCHES" | sed ':a;N;$!ba;s/\n/\\n/g' | awk '{printf "- %s\\n", $0}')
-          echo "BRANCH_OPTIONS: $BRANCH_OPTIONS"
-
-        # Export properly formatted options into an environment variable
-          echo "branch_options<<EOF" >> $GITHUB_ENV
-          echo -e "$BRANCH_OPTIONS" >> $GITHUB_ENV
+          echo "BRANCH_OPTIONS<<EOF" >> $GITHUB_ENV
+          echo "$BRANCHES" | sed 's/^/          - /' >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
       - name: Update Workflow File
