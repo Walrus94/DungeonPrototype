@@ -59,6 +59,9 @@ jobs:
 
           mv temp.yml .github/workflows/test-env-deployment.yml
 
+      - name: Cleanup Temporary Files
+        run: rm -f branch_list.txt
+
       - name: Create a new branch
         run: |
           git checkout -b update-branch-list-${{ github.run_id }}
