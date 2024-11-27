@@ -45,6 +45,8 @@ jobs:
         run: |
           echo -e "Branch options being used:\n${{ env.BRANCH_OPTIONS }}"
           echo "${{ env.BRANCH_OPTIONS }}" > branch_list.txt
+          echo "branch_list.txt content:"
+          cat branch_list.txt
           awk '
             BEGIN { inBlock = 0 }
             /# BEGIN BRANCH LIST/ { inBlock = 1; print; next }
@@ -56,6 +58,7 @@ jobs:
               }
             }
           ' .github/workflows/deploy-to-test.yml > temp.yml
+          echo "temp.yml content:"
           cat temp.yml
           mv temp.yml .github/workflows/deploy-to-test.yml
 
