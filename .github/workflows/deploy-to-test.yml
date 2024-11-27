@@ -6,8 +6,8 @@ on:
       branch:
         description: "Select the branch to deploy to the test environment"
         required: true
+        type: choice
         options:
-          - -
           # BEGIN BRANCH LIST
           - develop
           - master
