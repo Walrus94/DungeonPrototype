@@ -6,10 +6,9 @@ on:
       branch:
         description: "Select the branch to deploy to the test environment"
         required: true
-        # BEGIN BRANCH LIST
-        options:
-          -
-        # END BRANCH LIST
+# BEGIN BRANCH LIST
+          options:
+-           # END BRANCH LIST
   push:
     branches:
       - '**'
