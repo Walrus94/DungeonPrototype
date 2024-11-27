@@ -48,6 +48,10 @@ jobs:
           git config --global user.email "arsnazarov94@gmail.com"
           git config --global user.name "Walrus94"
 
+      - name: Set Remote with PAT
+        run: |
+          git remote set-url origin https://x-access-token:${{ secrets.PERSONAL_ACCESS_TOKEN }}@github.com/${{ github.repository }}
+
       - name: Create a new branch
         run: |
           git checkout -b update-branch-list-${{ github.run_id }}
