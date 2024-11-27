@@ -57,7 +57,7 @@ jobs:
             }
           ' .github/workflows/deploy-to-test.yml > temp.yml
 
-          mv temp.yml .github/workflows/test-env-deployment.yml
+          mv temp.yml .github/workflows/deploy-to-test.yml
 
       - name: Cleanup Temporary Files
         run: rm -f branch_list.txt
