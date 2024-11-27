@@ -56,7 +56,7 @@ jobs:
               }
             }
           ' .github/workflows/deploy-to-test.yml > temp.yml
-
+          cat temp.yml
           mv temp.yml .github/workflows/deploy-to-test.yml
 
       - name: Cleanup Temporary Files
