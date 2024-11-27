@@ -53,7 +53,7 @@ jobs:
             /# END BRANCH LIST/ { inBlock = 0; print; next }
             !inBlock { print }
             inBlock && /# BEGIN BRANCH LIST/ {
-              while ((getline line < "branch_list.txt") > 0) {
+              while ((getline line < branch_list.txt) > 0) {
                 print "          - " line
               }
             }
