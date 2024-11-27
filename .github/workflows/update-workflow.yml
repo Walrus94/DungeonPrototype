@@ -2,12 +2,12 @@ name: Update Deployment Workflow
 
 on:
   create:
-    branches:
-      - '**' # Trigger on any new branch creation
+    branches-ignore:
+      - 'update-branch-list-*'
   delete:
-    branches:
-      - '**' # Trigger on any branch deletion
-  workflow_dispatch: # Allows manual updates as a fallback
+    branches-ignore:
+      - 'update-branch-list-*'
+  workflow_dispatch:
 
 jobs:
   update-workflow:
