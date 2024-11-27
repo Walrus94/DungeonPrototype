@@ -9,9 +9,8 @@ on:
         type: choice
         options:
           # BEGIN BRANCH LIST
-          - develop
-          - master
-          - test-branch
+        - develop
+        - master
           # END BRANCH LIST
 
 jobs:
