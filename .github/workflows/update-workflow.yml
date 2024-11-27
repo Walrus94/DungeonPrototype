@@ -44,7 +44,7 @@ jobs:
       - name: Update Deployment Workflow
         run: |
           echo -e "Branch options being used:\n${{ env.BRANCH_OPTIONS }}"
-          sed -i '/# BEGIN BRANCH LIST/,/# END BRANCH LIST/c\
+          sed '/# BEGIN BRANCH LIST/,/# END BRANCH LIST/c\
           # BEGIN BRANCH LIST\n'"${{ env.BRANCH_OPTIONS }}"'\n          # END BRANCH LIST' \
           .github/workflows/deploy-to-test.yml
       
