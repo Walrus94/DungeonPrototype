@@ -6,10 +6,10 @@ on:
       branch:
         description: "Select the branch to deploy to the test environment"
         required: true
-          # BEGIN BRANCH LIST
+        # BEGIN BRANCH LIST
         options:
           -
-          # END BRANCH LIST
+        # END BRANCH LIST
   push:
     branches:
       - '**'
@@ -19,6 +19,9 @@ jobs:
     runs-on: self-hosted
 
     steps:
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Fetch Available Branches
         id: fetch_branches
         run: |
