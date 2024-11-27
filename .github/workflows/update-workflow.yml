@@ -54,7 +54,7 @@ jobs:
             !inBlock { print }
             inBlock {
               while ((getline line < "branch_list.txt") > 0) {
-                print "          - " line
+                print line
               }
             }
           ' .github/workflows/deploy-to-test.yml > temp.yml
