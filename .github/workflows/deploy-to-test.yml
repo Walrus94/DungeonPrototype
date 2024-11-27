@@ -10,9 +10,6 @@ on:
         # BEGIN BRANCH LIST
           -
         # END BRANCH LIST
-  push:
-    branches:
-      - '**'
 
 jobs:
   deploy:
