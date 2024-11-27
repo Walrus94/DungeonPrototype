@@ -2,6 +2,8 @@ name: Enforce PR Rules
 
 on:
   pull_request:
+    types:
+      - opened
     branches:
       - master
 
@@ -11,7 +13,7 @@ jobs:
     steps:
       - name: Check PR Source
         run: |
-          if [ "${{ github.base_ref }}" = "master" ] && [ [ "${{ github.head_ref }}" != "develop" ] || [startsWith("${{ github.head_ref }}", "update-branch-list-")] ]; then
+          if [ [ "${{ github.head_ref }}" != "develop" ] || [ !startsWith("${{ github.head_ref }}", "update-branch-list-") ]; then
             echo "Pull requests to master are only allowed from develop!";
             exit 1;
           fi
