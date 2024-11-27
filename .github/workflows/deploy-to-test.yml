@@ -8,7 +8,13 @@ on:
         required: true
         options:
         # BEGIN BRANCH LIST
-        -
+        - develop
+        - master
+        - test-branch
+        - update-branch-list-12052190586
+        - update-branch-list-12052191575
+        - update-branch-list-12052192174
+        - update-branch-list-12052197116
         # END BRANCH LIST
 
 jobs:
