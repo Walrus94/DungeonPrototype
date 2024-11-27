@@ -13,8 +13,8 @@ jobs:
     steps:
       - name: Check PR Source
         run: |
-          if [ [ "${{ github.head_ref }}" != "develop" ] || [ startsWith( "${{ github.head_ref }}", "update-branch-list-" ) != true ]; then
-            echo "Pull requests to master are only allowed from develop!";
+          if [ [ "${{ github.head_ref }}" != "develop" ] || [ "${{ github.head_ref }}" != update-branch-list-* ]; then
+            echo "Pull requests to master are only allowed from develop and branch list update!";
             exit 1;
           fi
         shell: bash
