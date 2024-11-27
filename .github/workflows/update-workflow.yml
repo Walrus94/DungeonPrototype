@@ -51,7 +51,7 @@ jobs:
           !inBlock { print }
           inBlock && /# BEGIN BRANCH LIST/ {
           print "          options:"
-          split("'"${{ env.BRANCH_OPTIONS }}"'", branches, "\n")
+          split('${{ env.BRANCH_OPTIONS }}', branches, "\n")
           for (i in branches) print "          - " branches[i]
           }
           ' .github/workflows/test-env-deployment.yml > temp.yml
