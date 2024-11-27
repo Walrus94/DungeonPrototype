@@ -47,7 +47,7 @@ jobs:
       - name: Create a new branch
         run: |
           git checkout -b update-branch-list-${{ github.run_id }}
-          git add .github/workflows/test-env-deployment.yml
+          git add .github/workflows/deploy-to-test.yml
           git commit -m "Update branch list dynamically"
           git push origin update-branch-list-${{ github.run_id }}
 
