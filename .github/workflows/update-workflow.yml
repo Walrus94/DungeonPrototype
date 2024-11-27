@@ -52,9 +52,9 @@ jobs:
             /# BEGIN BRANCH LIST/ { inBlock = 1; print; next }
             /# END BRANCH LIST/ { inBlock = 0; print; next }
             !inBlock { print }
-            inBlock && /# BEGIN BRANCH LIST/ {
+            inBlock {
               while ((getline line < "branch_list.txt") > 0) {
-                print line
+                print "          - "
               }
             }
           ' .github/workflows/deploy-to-test.yml > temp.yml
