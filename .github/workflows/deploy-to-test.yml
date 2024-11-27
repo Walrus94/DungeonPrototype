@@ -9,7 +9,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: remote
+    runs-on: self-hosted
 
     steps:
       - name: Fetch Available Branches
