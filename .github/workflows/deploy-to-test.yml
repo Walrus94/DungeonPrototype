@@ -6,8 +6,8 @@ on:
       branch:
         description: "Select the branch to deploy to the test environment"
         required: true
-        # BEGIN BRANCH LIST
         options:
+        # BEGIN BRANCH LIST
           -
         # END BRANCH LIST
   push:
