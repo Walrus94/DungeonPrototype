@@ -8,7 +8,9 @@ on:
         required: true
         options:
         # BEGIN BRANCH LIST
-        -
+        - develop
+        - master
+        - test-branch
         # END BRANCH LIST
 
 jobs:
