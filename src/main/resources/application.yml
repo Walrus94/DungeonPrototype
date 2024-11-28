@@ -30,6 +30,8 @@ bot:
   webhook: ${BOT_WEBHOOK_URL}
   token: ${BOT_AUTH_TOKEN}
 
+auth-users: ${AUTH_USERS}
+
 kafka-topics:
   item-naming-topic: ${ITEM_NAMING_TOPIC}
 
