@@ -17,7 +17,8 @@ on:
 jobs:
   deploy:
     runs-on: self-hosted
-
+    environment:
+      name: test
     steps:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
