@@ -1,7 +1,6 @@
 package org.dungeon.prototype.bot;
 
-import org.dungeon.prototype.exception.RestrictedOperationException;
-import org.dungeon.prototype.properties.CallbackType;
+import org.dungeon.prototype.exception.ChatException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,9 +25,7 @@ public class WebhookController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (!authentication.isAuthenticated() || !authentication.getPrincipal().equals(userId)) {
-            //TODO: implement exception message without button
-            throw new RestrictedOperationException(userId, "authentificate",
-                    "Unauthorized access. You are not allowed to use this bot.", CallbackType.MENU_BACK);
+            throw new ChatException("Unauthorized access. This bot is for development purposes only. Contact @arsnazarov for more info", userId);
         } else {
             dungeonBot.onWebhookUpdateReceived(update);
         }

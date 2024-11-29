@@ -22,4 +22,10 @@ public class DungeonPrototypeExceptionHandler {
         log.error("Exception occurred: {}", e.getMessage());
         messageService.sendErrorMessage(e);
     }
+
+    @ExceptionHandler(ChatException.class)
+    public void handleException(ChatException e) {
+        log.error("Exception occurred: {}", e.getMessage());
+        messageService.sendErrorMessage(e);
+    }
 }

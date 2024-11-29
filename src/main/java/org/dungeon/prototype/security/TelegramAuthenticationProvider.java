@@ -1,6 +1,5 @@
 package org.dungeon.prototype.security;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -10,8 +9,11 @@ import java.util.List;
 
 public class TelegramAuthenticationProvider implements AuthenticationProvider {
 
-    @Value("${auth-users}")
-    private List<Long> authorizedUsers;
+    private final List<Long> authorizedUsers;
+
+    public TelegramAuthenticationProvider(List<Long> authorizedUsers) {
+        this.authorizedUsers = authorizedUsers;
+    }
 
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
