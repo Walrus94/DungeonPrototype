@@ -29,7 +29,8 @@ public class WebhookController {
             //TODO: implement exception message without button
             throw new RestrictedOperationException(userId, "authentificate",
                     "Unauthorized access. You are not allowed to use this bot.", CallbackType.MENU_BACK);
+        } else {
+            dungeonBot.onWebhookUpdateReceived(update);
         }
-        dungeonBot.onWebhookUpdateReceived(update);
     }
 }
