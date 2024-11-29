@@ -21,11 +21,11 @@ public class WebhookController {
 
     @PostMapping
     public void onUpdateReceived(@RequestBody Update update) {
-        long userId = update.getMessage().getFrom().getId();
+        long chatId = update.getMessage().getChatId();
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        if (!authentication.isAuthenticated() || !authentication.getPrincipal().equals(userId)) {
-            throw new ChatException("Unauthorized access. This bot is for development purposes only. Contact @arsnazarov for more info", userId);
+        if (!authentication.isAuthenticated() || !authentication.getPrincipal().equals(chatId)) {
+            throw new ChatException("Unauthorized access. This bot is for development purposes only. Contact @arsnazarov for more info", chatId);
         } else {
             dungeonBot.onWebhookUpdateReceived(update);
         }
