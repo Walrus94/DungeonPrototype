@@ -12,6 +12,7 @@ on:
         - develop
         - master
         - secure-test-environment
+        - test-coverage
           # END BRANCH LIST
 
 jobs:
