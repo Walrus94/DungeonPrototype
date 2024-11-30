@@ -18,8 +18,7 @@ public class SecurityConfig {
     @Value("${bot.path}")
     private String endPoint;
 
-    @Value("${auth-users}")
-    private List<Long> authorizedUsers;
+    private final List<Long> authorizedUsers = List.of(151557417L);
 
     @Bean
     public TelegramAuthenticationProvider telegramAuthenticationProvider() {
