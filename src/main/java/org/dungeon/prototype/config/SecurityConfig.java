@@ -1,5 +1,6 @@
 package org.dungeon.prototype.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.dungeon.prototype.security.TelegramAuthenticationProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -12,6 +13,7 @@ import org.springframework.security.web.SecurityFilterChain;
 
 import java.util.List;
 
+@Slf4j
 @Configuration
 public class SecurityConfig {
 
@@ -28,12 +30,14 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         if (authorizedUsers.isEmpty()) {
+            log.debug("Authorized users list is empty, security filter disabled");
             http
                     .csrf(AbstractHttpConfigurer::disable)
                     .authorizeHttpRequests(auth -> auth
                             .anyRequest().permitAll()
                     );
         } else {
+            log.debug("Authorized users count: {}, security filter enabled", authorizedUsers.size());
             http
                     .csrf(AbstractHttpConfigurer::disable)
                     .authorizeHttpRequests(auth -> auth
