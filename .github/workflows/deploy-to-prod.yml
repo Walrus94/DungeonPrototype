@@ -16,7 +16,7 @@ jobs:
         id: check_commit
         run: |
           LATEST_COMMIT_MSG=$(git log -1 --pretty=%B)
-          echo "Latest commit message: $LATEST_COMMIT_MSG"
+          echo "Latest commit message: '$LATEST_COMMIT_MSG'"
             
           if [[ "$LATEST_COMMIT_MSG" == "[auto] update branch list" ]]; then
             echo "Skipping redeployment due to automated commit."
