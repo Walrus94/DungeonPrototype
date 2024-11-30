@@ -68,4 +68,5 @@ jobs:
           delete-branch: true
           title: "Update branch list"
           body: "Automatically updating branch list due to changes in repository."
+          commit-message: "[auto] update branch list"
           base: master

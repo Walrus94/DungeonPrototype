@@ -12,6 +12,17 @@ jobs:
       contents: read
 
     steps:
+      - name: Check Latest Commit Message
+        id: check_commit
+        run: |
+          LATEST_COMMIT_MSG=$(git log -1 --pretty=%B)
+          echo "Latest commit message: $LATEST_COMMIT_MSG"
+            
+          if [[ "$LATEST_COMMIT_MSG" == "[auto] update branch list" ]]; then
+            echo "Skipping redeployment due to automated commit."
+            exit 0
+          fi
+
       - name: Update repository
         run : cd ${{vars.WORK_DIR}} && 
           git fetch origin master &&
