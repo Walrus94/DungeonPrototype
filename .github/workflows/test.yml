@@ -19,3 +19,9 @@ jobs:
         run: cd ${{vars.WORK_DIR}} &&
           docker build -f Dockerfile-test -t dungeon-prototype-app . &&
           docker run --rm dungeon-prototype-app
+
+      - name: Upload coverage report to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
