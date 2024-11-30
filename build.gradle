@@ -1,7 +1,14 @@
 plugins {
     id 'application'
     id 'java'
+    id 'jacoco'
     id 'org.springframework.boot' version '3.3.4'
+}
+
+jacocoTestReport {
+    reports {
+        xml.required.set(true)
+    }
 }
 
 group = 'org.example'
@@ -72,4 +79,5 @@ tasks.withType(Javadoc) {
 
 test {
     useJUnitPlatform()
+    finalizedBy jacocoTestReport
 }
