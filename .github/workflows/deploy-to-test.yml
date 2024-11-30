@@ -12,7 +12,6 @@ on:
         - develop
         - master
         - secure-test-environment
-        - test-branch
         - test-coverage
           # END BRANCH LIST
 
