@@ -11,6 +11,10 @@ jobs:
       contents: read
 
     steps:
+      - name: Configure Git Safe Directory
+        run: |
+          git config --global --add core.safeDirectory "$(pwd)"
+          echo "Configured $(pwd) as a safe directory"
       - name: Update repository
         run : git fetch origin ${{ github.event.pull_request.head.ref }} &&
           git checkout && git pull
