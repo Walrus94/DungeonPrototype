@@ -14,8 +14,7 @@ jobs:
 
     steps:
       - name: Update repository
-        run : cd ${{vars.WORK_DIR}} &&
-          git fetch origin develop &&
+        run : git fetch origin develop &&
           git checkout &&
           git pull
       - name: Check Latest Commit Message
@@ -31,7 +30,6 @@ jobs:
           fi
       - name: Set environment variables
         run: |
-          cd ${{vars.WORK_DIR}} &&
           echo "ENV=${{vars.ENV}}" >> .env
           echo "JAVA_OPTIONS=${{vars.JAVA_OPTIONS}}" >> .env
           echo "BOT_AUTH_TOKEN=${{ secrets.BOT_TOKEN }}" >> .env
@@ -56,8 +54,7 @@ jobs:
             echo "shared_net network exists."
           fi
       - name: Run Shared services
-        run: cd ${{vars.WORK_DIR}} &&
-          docker-compose -p shared -f docker-compose.shared.yml --env-file .env up --build -d
+        run: docker-compose -p shared -f docker-compose.shared.yml --env-file .env up --build -d
       - name: Create network
         run: |
           if [ ! "$(docker network ls | grep dev_net)" ]; then
@@ -67,10 +64,9 @@ jobs:
             echo "dev_net network exists."
           fi
       - name: Run Environment specific services
-        run: cd ${{vars.WORK_DIR}} &&
-          docker-compose -p dev --env-file .env up --build -d
+        run: docker-compose -p dev --env-file .env up --build -d
       - name: Clean up environment file
-        run: cd ${{vars.WORK_DIR}} && rm -f .env
+        run: rm -f .env
       - name: Cleanup Docker Data
         run: docker system prune -af &&
           docker volume prune -f
