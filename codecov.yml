@@ -1,0 +1,11 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 20% # TODO: adjust to reasonable value before release
+        threshold: 1%
+
+    patch:
+      default:
+        target: 75%
+        threshold: 1%
