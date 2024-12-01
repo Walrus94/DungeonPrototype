@@ -24,8 +24,9 @@ jobs:
         run: |
           ci_env=`bash <(curl -s https://codecov.io/env)` \
           docker build -f Dockerfile-test -t dungeon-prototype-app . &&
-          docker run $ci_env -e CI=true --rm dungeon-prototype-app \
+          docker run $ci_env -e CI=true --rm \
           -v $(pwd)/coverage:/app/build/reports/jacoco/test \
+          dungeon-prototype-app
 
       - name: Upload coverage report to Codecov
         uses: codecov/codecov-action@v5
@@ -33,3 +34,9 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage/jacocoTestReport.xml
           fail_ci_if_error: true
+
+      - name: Cleanup Docker Data
+        run: docker system prune -af &&
+          docker volume prune -f
+      - name: Verify Cleanup
+        run: docker system df
