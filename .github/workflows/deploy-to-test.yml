@@ -43,6 +43,9 @@ jobs:
 
       - name: Checkout the repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
 
       - name: Set environment variables
         run: |
