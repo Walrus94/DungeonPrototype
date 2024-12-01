@@ -20,26 +20,6 @@ jobs:
     environment:
       name: test
     steps:
-      - name: Install jq
-        run: apt-get update && apt-get install -y jq
-
-      - name: Fetch Available Branches
-        id: fetch_branches
-        run: |
-          echo "Fetching all branches..."
-          BRANCHES=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            https://api.github.com/repos/${{ github.repository }}/branches | jq -r '.[].name')
-
-          echo "Available branches:"
-          echo "$BRANCHES"
-
-          # Check if the selected branch exists
-          if echo "$BRANCHES" | grep -qx "${{ github.event.inputs.branch }}"; then
-            echo "Selected branch '${{ github.event.inputs.branch }}' is valid."
-          else
-            echo "Error: Selected branch '${{ github.event.inputs.branch }}' does not exist."
-            exit 1
-          fi
 
       - name: Checkout the repository
         uses: actions/checkout@v4
