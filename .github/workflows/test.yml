@@ -19,12 +19,12 @@ jobs:
 
       - name: Run tests
         run: |
+          ci_env=`bash <(curl -s https://codecov.io/env)`
           docker build -f Dockerfile-test -t dungeon-prototype-app . &&
-          docker run --rm dungeon-prototype-app
+          docker run $ci_env -e CI=true --rm dungeon-prototype-app
 
       - name: Upload coverage report to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./build/reports/jacoco/test/**.xml
           fail_ci_if_error: true
