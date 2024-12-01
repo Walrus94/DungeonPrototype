@@ -7,6 +7,7 @@ on:
 jobs:
   test:
     runs-on: self-hosted
+    if: "!startsWith(github.event.head_commit.message, '[auto] update branch list') && !endsWith(github.event.head_commit.message, '-skipTest')"
     permissions:
       contents: read
 
