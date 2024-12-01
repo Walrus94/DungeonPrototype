@@ -41,10 +41,11 @@ jobs:
             exit 1
           fi
 
-      - name: Update repository
-        run: git fetch origin ${{ github.event.inputs.branch }} &&
-          git checkout &&
-          git pull
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          clean: false
 
       - name: Set environment variables
         run: |
