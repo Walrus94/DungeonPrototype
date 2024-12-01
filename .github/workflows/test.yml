@@ -23,9 +23,9 @@ jobs:
       - name: Run tests
         run: |
           ci_env=`bash <(curl -s https://codecov.io/env)`\
-          -v $(pwd)/coverage:/app/build/reports/jacoco/test \
           docker build -f Dockerfile-test -t dungeon-prototype-app . &&
-          docker run $ci_env -e CI=true --rm dungeon-prototype-app
+          docker run $ci_env -e CI=true --rm dungeon-prototype-app \
+          -v $(pwd)/coverage:/app/build/reports/jacoco/test \
 
       - name: Upload coverage report to Codecov
         uses: codecov/codecov-action@v5
