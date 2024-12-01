@@ -17,6 +17,9 @@ jobs:
           persist-credentials: false
           clean: false
 
+      - name: Create coverage directory
+        run: mkdir -p $(pwd)/coverage
+
       - name: Run tests
         run: |
           ci_env=`bash <(curl -s https://codecov.io/env)`\
