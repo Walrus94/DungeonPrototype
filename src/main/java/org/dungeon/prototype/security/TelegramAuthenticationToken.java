@@ -1,18 +1,21 @@
 package org.dungeon.prototype.security;
 
 import org.springframework.security.authentication.AbstractAuthenticationToken;
-import org.springframework.security.core.GrantedAuthority;
-
-import java.util.Collection;
 
 public class TelegramAuthenticationToken extends AbstractAuthenticationToken {
 
     private final Long userId;
 
-    public TelegramAuthenticationToken(Long userId, Collection<? extends GrantedAuthority> authorities) {
-        super(authorities);
+    public TelegramAuthenticationToken(Long userId) {
+        super(null);
         this.userId = userId;
-        setAuthenticated(true);
+        setAuthenticated(false);
+    }
+
+    public TelegramAuthenticationToken(Long userId, boolean authenticated) {
+        super(null);
+        this.userId = userId;
+        setAuthenticated(authenticated);
     }
 
     @Override

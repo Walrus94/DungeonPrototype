@@ -20,10 +20,10 @@ public class TelegramAuthenticationProvider implements AuthenticationProvider {
         Long userId = (Long) authentication.getPrincipal();
 
         if (authorizedUsers.contains(userId)) {
-            return new TelegramAuthenticationToken(userId, List.of(new SimpleGrantedAuthority("ROLE_USER")));
+            return new TelegramAuthenticationToken(userId, true);
         }
 
-        throw new AuthenticationException("Unauthorized user: " + userId) {};
+        return new TelegramAuthenticationToken(userId);
     }
 
     @Override
