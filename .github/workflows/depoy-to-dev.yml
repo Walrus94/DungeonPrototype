@@ -7,7 +7,7 @@ on:
 jobs:
   build-and-run:
     runs-on: self-hosted
-    if: "!startsWith(github.event.head_commit.message, '[auto] update branch list')"
+    if: "!startsWith(github.event.head_commit.message, '[auto] update branch list') && !startsWith(github.event.head_commit.message, '[no-deploy]')"
     environment: dev
     permissions:
       contents: read
