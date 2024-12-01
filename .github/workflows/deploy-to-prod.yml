@@ -16,7 +16,6 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
           clean: false
       - name: Check Latest Commit Message
         id: check_commit
