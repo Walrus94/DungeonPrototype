@@ -6,6 +6,7 @@ plugins {
 }
 
 jacocoTestReport {
+    dependsOn(test)
     reports {
         xml.required.set(true)
     }
