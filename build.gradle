@@ -9,7 +9,6 @@ jacocoTestReport {
     dependsOn(test)
     reports {
         xml.required.set(true)
-        xml.outputLocation = layout.buildDirectory.file('reports/jacoco/test/jacocoTestReport.xml')
     }
 }
 

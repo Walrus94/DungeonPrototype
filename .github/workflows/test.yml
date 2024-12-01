@@ -19,7 +19,8 @@ jobs:
 
       - name: Run tests
         run: |
-          ci_env=`bash <(curl -s https://codecov.io/env)`
+          ci_env=`bash <(curl -s https://codecov.io/env)`\
+          -v $(pwd)/coverage:/app/build/reports/jacoco/test \
           docker build -f Dockerfile-test -t dungeon-prototype-app . &&
           docker run $ci_env -e CI=true --rm dungeon-prototype-app
 
@@ -27,5 +28,5 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./build/reports/jacoco/test/jacocoTestReport.xml
+          files: ./coverage/jacocoTestReport.xml
           fail_ci_if_error: true
