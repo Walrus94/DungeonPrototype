@@ -9,6 +9,7 @@ jacocoTestReport {
     dependsOn(test)
     reports {
         xml.required.set(true)
+        outputs.file(file("/app/build/reports/jacoco/test/jacocoTestReport.xml"))
     }
 }
 
