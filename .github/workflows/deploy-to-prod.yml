@@ -13,10 +13,8 @@ jobs:
       contents: read
 
     steps:
-      - name: Update repository
-        run : git fetch origin master &&
-          git checkout &&
-          git pull
+      - name: Checkout the repository
+        uses: actions/checkout@v4
       - name: Check Latest Commit Message
         id: check_commit
         run: |
