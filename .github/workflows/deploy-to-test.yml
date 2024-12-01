@@ -21,7 +21,7 @@ jobs:
       name: test
     steps:
       - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
+        run: apt-get update && apt-get install -y jq
 
       - name: Fetch Available Branches
         id: fetch_branches
