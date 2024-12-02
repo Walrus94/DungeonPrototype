@@ -70,3 +70,5 @@ jobs:
           body: "Automatically updating branch list due to changes in repository."
           commit-message: "[auto] update branch list"
           base: master
+          labels: |
+            skip-check

@@ -3,11 +3,14 @@ name: Run tests
 on:
   pull_request:
     branches: [ "master", "develop" ]
+    types:
+      - opened
+      - synchronize
 
 jobs:
   test:
     runs-on: self-hosted
-    if: "!startsWith(github.event.head_commit.message, '[auto] update branch list') && !endsWith(github.event.head_commit.message, '-skipTest')"
+    if: "${{ !contains(github.event.pull_request.labels.*.name, 'skip-check') }}"
     permissions:
       contents: read
 
