@@ -1,12 +1,13 @@
 package org.dungeon.prototype.security;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.util.List;
 
+@Slf4j
 public class TelegramAuthenticationProvider implements AuthenticationProvider {
 
     private final List<Long> authorizedUsers;
@@ -17,12 +18,15 @@ public class TelegramAuthenticationProvider implements AuthenticationProvider {
 
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
-        Long userId = (Long) authentication.getPrincipal();
+        log.debug("Authenticating: {}", authentication);
+        long userId = (long) authentication.getPrincipal();
 
         if (authorizedUsers.contains(userId)) {
+            log.debug("Successfully authenticated user:{}", userId);
             return new TelegramAuthenticationToken(userId, true);
         }
 
+        log.debug("Failed to authenticated user:{}", userId);
         return new TelegramAuthenticationToken(userId);
     }
 

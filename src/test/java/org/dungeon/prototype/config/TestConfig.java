@@ -23,6 +23,6 @@ public class TestConfig {
 
     @Bean
     public DungeonBot dungeonBot(SetWebhook setWebhook) {
-        return new DungeonBot( "botUsername", "", "", setWebhook);
+        return new DungeonBot( "botUsername", "", "/webhook", setWebhook);
     }
 }

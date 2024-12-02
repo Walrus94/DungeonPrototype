@@ -1,0 +1,16 @@
+spring:
+  aop:
+    proxy-target-class: false
+    auto: false
+  main:
+    allow-bean-definition-overriding: true
+bot:
+  username: test
+  token: token
+  path: /webhook
+
+auth-users: [123456789]
+
+logging:
+  level:
+    root: debug
