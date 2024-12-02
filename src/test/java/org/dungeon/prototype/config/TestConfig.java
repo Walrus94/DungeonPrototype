@@ -6,6 +6,8 @@ import org.springframework.context.annotation.Bean;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.api.methods.updates.SetWebhook;
 
+import java.util.List;
+
 import static org.mockito.Mockito.mock;
 
 @TestConfiguration
@@ -23,6 +25,6 @@ public class TestConfig {
 
     @Bean
     public DungeonBot dungeonBot(SetWebhook setWebhook) {
-        return new DungeonBot( "botUsername", "", "/webhook", setWebhook);
+        return new DungeonBot( "botUsername", "", "/webhook", setWebhook, List.of(123456789L));
     }
 }

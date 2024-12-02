@@ -1,6 +1,7 @@
 package org.dungeon.prototype.bot;
 
 import lombok.extern.slf4j.Slf4j;
+import lombok.extern.slf4j.Slf4j;
 import org.dungeon.prototype.exception.ChatException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -14,7 +15,6 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 @RestController
 @RequestMapping("${bot.path}")
 public class WebhookController {
-
     private final DungeonBot dungeonBot;
 
     public WebhookController(DungeonBot dungeonBot) {

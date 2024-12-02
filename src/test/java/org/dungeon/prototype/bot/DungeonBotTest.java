@@ -4,6 +4,7 @@ import lombok.SneakyThrows;
 import lombok.val;
 import org.dungeon.prototype.config.BotConfig;
 import org.dungeon.prototype.config.TestConfig;
+import org.dungeon.prototype.exception.ChatException;
 import org.dungeon.prototype.service.PlayerService;
 import org.dungeon.prototype.service.state.ChatStateService;
 import org.junit.jupiter.api.DisplayName;
@@ -15,6 +16,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -81,6 +83,29 @@ class DungeonBotTest {
         dungeonBot.onWebhookUpdateReceived(update);
 
         verify(botCommandHandler).processStartAction(CHAT_ID);
+    }
+
+    @Test
+    @SneakyThrows
+    @DisplayName("Fails to process update with /start action message from non-authenticated user")
+    void onUpdateReceived_startCommand_newUser_notAuthenticated() {
+        val update = mock(Update.class);
+        val message = mock(Message.class);
+
+        when(update.hasMessage()).thenReturn(true);
+        when(update.getMessage()).thenReturn(message);
+        when(message.getChatId()).thenReturn(9999999L);
+        when(message.getMessageId()).thenReturn(MESSAGE_ID);
+        when(message.hasText()).thenReturn(true);
+        when(message.getText()).thenReturn("/start");
+        update.setMessage(message);
+//        when(chatStateService.isStartAvailable(CHAT_ID)).thenReturn(true);
+//        doNothing().when(botCommandHandler).processStartAction(CHAT_ID);
+
+
+        assertThrows(ChatException.class, () -> dungeonBot.onWebhookUpdateReceived(update));
+
+//        verify(botCommandHandler).processStartAction(CHAT_ID);
     }
 
     @Test
