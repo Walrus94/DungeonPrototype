@@ -60,9 +60,11 @@ public class DungeonBot extends SpringWebhookBot {
             //handles message text if present
             long chatId = update.getMessage().getChatId();
             if (!authUsers.isEmpty() && !authUsers.contains(chatId)) {
-                log.debug("User {} failed to authenticate", chatId);
+                log.debug("Authenticated userIds: {}", authUsers);
+                log.info("User {} failed to authenticate", chatId);
                 throw new ChatException(AUTH_EXCEPTION_MESSAGE, chatId);
             }
+            log.info("User {} successfully authenticated!", chatId);
             val messageText = update.getMessage().getText();
             processTextMessage(chatId, messageText);
         } else if (update.hasCallbackQuery()) {

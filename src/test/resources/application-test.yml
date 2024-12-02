@@ -12,4 +12,4 @@ bot:
   username: test
   token: token
 
-auth-users: ""
+auth-users: 123456789
