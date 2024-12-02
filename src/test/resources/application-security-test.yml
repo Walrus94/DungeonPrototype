@@ -9,7 +9,7 @@ bot:
   token: token
   path: /webhook
 
-auth-users: [123456789]
+auth-users: 123456789
 
 logging:
   level:

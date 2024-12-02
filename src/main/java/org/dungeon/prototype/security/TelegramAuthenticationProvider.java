@@ -21,7 +21,7 @@ public class TelegramAuthenticationProvider implements AuthenticationProvider {
         log.debug("Authenticating: {}", authentication);
         long userId = (long) authentication.getPrincipal();
 
-        if (authorizedUsers.contains(userId)) {
+        if (authorizedUsers.isEmpty() || authorizedUsers.contains(userId)) {
             log.debug("Successfully authenticated user:{}", userId);
             return new TelegramAuthenticationToken(userId, true);
         }

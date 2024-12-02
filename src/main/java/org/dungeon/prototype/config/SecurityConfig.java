@@ -10,7 +10,9 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 
-import java.util.List;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.stream.Collectors;
 
 @Configuration
 @EnableWebSecurity
@@ -20,11 +22,15 @@ public class SecurityConfig {
     private String endPoint;
 
     @Value("${auth-users}")
-    private List<Long> authorizedUsers;
+    private String authorizedUsers;
 
     @Bean
     public AuthenticationProvider telegramAuthenticationProvider() {
-        return new TelegramAuthenticationProvider(authorizedUsers);
+        return new TelegramAuthenticationProvider(authorizedUsers.isEmpty() ? Collections.emptyList() :
+                Arrays.stream(authorizedUsers.split(","))
+                        .map(String::trim)
+                        .map(Long::valueOf)
+                        .collect(Collectors.toList()));
     }
 
     @Bean
