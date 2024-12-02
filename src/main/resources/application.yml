@@ -1,4 +1,6 @@
 spring:
+  main:
+    web-application-type: servlet
   data:
     mongodb:
       uri: ${SPRING_DATA_MONGODB_URI}
