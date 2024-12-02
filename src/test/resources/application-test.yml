@@ -11,3 +11,5 @@ spring:
 bot:
   username: test
   token: token
+
+auth-users: ""

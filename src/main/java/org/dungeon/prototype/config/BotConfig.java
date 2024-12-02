@@ -7,6 +7,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.telegram.telegrambots.meta.api.methods.updates.SetWebhook;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Configuration
 public class BotConfig {
 
@@ -14,14 +19,28 @@ public class BotConfig {
     private final String botUsername;
     private final String webHookUrl;
     private final String botPath;
+    private final List<Long> authUsers;
+
     public BotConfig(@Value("${bot.token}") String botToken,
                      @Value("${bot.username}") String botUsername,
                      @Value("${bot.webhook}") String webHookUrl,
-                     @Value("${bot.path}") String botPath) {
+                     @Value("${bot.path}") String botPath,
+                     @Value("${auth-users}") String authUsers) {
         this.botToken = botToken;
         this.botUsername = botUsername;
         this.webHookUrl = webHookUrl;
         this.botPath = botPath;
+        this.authUsers = authUsers.isEmpty() ? Collections.emptyList() :
+                Arrays.stream(authUsers.split(","))
+                .map(String::trim)
+                .map(Long::valueOf)
+                .collect(Collectors.toList());
+    }
+
+    @Bean
+    @Qualifier("authUsers")
+    public List<Long> authUsers() {
+        return authUsers;
     }
 
     @Bean
@@ -57,7 +76,7 @@ public class BotConfig {
     }
 
     @Bean
-    public DungeonBot dungeonBot(String botUsername,String botToken, String botPath, SetWebhook setWebhook) {
-        return new DungeonBot(botUsername, botToken, botPath, setWebhook);
+    public DungeonBot dungeonBot(String botUsername, String botToken, String botPath, SetWebhook setWebhook, List<Long> authUsers) {
+        return new DungeonBot(botUsername, botToken, botPath, setWebhook, authUsers);
     }
 }
