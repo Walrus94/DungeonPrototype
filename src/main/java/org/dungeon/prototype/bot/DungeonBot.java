@@ -3,6 +3,7 @@ package org.dungeon.prototype.bot;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.exception.CallbackException;
+import org.dungeon.prototype.exception.ChatException;
 import org.dungeon.prototype.exception.DeleteMessageException;
 import org.dungeon.prototype.exception.SendMessageException;
 import org.dungeon.prototype.properties.CallbackType;
@@ -20,9 +21,13 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.starter.SpringWebhookBot;
 
+import java.util.List;
+
 @Slf4j
 @Component
 public class DungeonBot extends SpringWebhookBot {
+
+    private static final String AUTH_EXCEPTION_MESSAGE = "Unauthorized access. This bot is for development purposes only. Contact @arsnazarov for more info";
     @Autowired
     private PlayerService playerService;
     @Autowired
@@ -32,13 +37,15 @@ public class DungeonBot extends SpringWebhookBot {
     @Autowired
     private ChatStateService chatStateService;
 
+    private final List<Long> authUsers;
     private final String botUsername;
-    private final  String botPath;
+    private final String botPath;
 
-    public DungeonBot(String botUsername, String botToken, String botPath, SetWebhook setWebhook) {
+    public DungeonBot(String botUsername, String botToken, String botPath, SetWebhook setWebhook, List<Long> authUsers) {
         super(setWebhook, botToken);
         this.botUsername = botUsername;
         this.botPath = botPath;
+        this.authUsers = authUsers;
     }
 
     /**
@@ -49,9 +56,15 @@ public class DungeonBot extends SpringWebhookBot {
      */
     @Override
     public BotApiMethod<?> onWebhookUpdateReceived(Update update) {
+        log.debug("Authenticated userIds: {}", authUsers);
         if (update.hasMessage() && update.getMessage().hasText()) {
             //handles message text if present
             long chatId = update.getMessage().getChatId();
+            if (!authUsers.isEmpty() && !authUsers.contains(chatId)) {
+                log.info("User {} failed to authenticate", chatId);
+                throw new ChatException(AUTH_EXCEPTION_MESSAGE, chatId);
+            }
+            log.info("User {} successfully authenticated!", chatId);
             val messageText = update.getMessage().getText();
             processTextMessage(chatId, messageText);
         } else if (update.hasCallbackQuery()) {

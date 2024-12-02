@@ -6,6 +6,7 @@ import lombok.val;
 import org.dungeon.prototype.annotations.aspect.ChatStateUpdate;
 import org.dungeon.prototype.annotations.aspect.ClearChatContext;
 import org.dungeon.prototype.bot.state.ChatState;
+import org.dungeon.prototype.exception.ChatException;
 import org.dungeon.prototype.exception.EntityNotFoundException;
 import org.dungeon.prototype.exception.PlayerException;
 import org.dungeon.prototype.model.effect.Effect;
@@ -250,6 +251,12 @@ public class MessageService {
                 e.getChatId(),
                 e.getMessage(),
                 keyboardService.getErrorKeyboardMarkup(e.getButton()));
+    }
+
+    public void sendErrorMessage(ChatException e) {
+        messageSender.sendInfoMessage(
+                e.getChatId(),
+                e.getMessage());
     }
 
     private String getRoomMessageCaption(Player player, Monster monster) {
