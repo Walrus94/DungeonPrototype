@@ -12,6 +12,7 @@ on:
         - develop
         - master
         - secure-test-environment
+        - simple-env-security
           # END BRANCH LIST
 
 jobs:
@@ -24,6 +25,8 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.inputs.branch }}
+          fetch-depth: 0
           persist-credentials: false
           clean: false
 
