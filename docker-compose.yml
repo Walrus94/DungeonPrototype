@@ -32,6 +32,7 @@ services:
         labels: environment,service
     environment:
       JAVA_OPTIONS: ${JAVA_OPTIONS:-""}
+      AUTH_USERS: ${AUTH_USERS:-[]}
       SPRING_ACTIVE_PROFILE: ${ENV}
       BOT_USERNAME: ${BOT_USERNAME}
       BOT_WEBHOOK_URL: ${BOT_WEBHOOK_URL}

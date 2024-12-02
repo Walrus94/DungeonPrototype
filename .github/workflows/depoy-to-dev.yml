@@ -33,6 +33,7 @@ jobs:
         run: |
           echo "ENV=${{vars.ENV}}" >> .env
           echo "JAVA_OPTIONS=${{vars.JAVA_OPTIONS}}" >> .env
+          echo "AUTH_USERS=${{vars.AUTH_USERS}}" >> .env
           echo "BOT_AUTH_TOKEN=${{ secrets.BOT_TOKEN }}" >> .env
           echo "BOT_USERNAME=${{vars.BOT_USERNAME}}" >> .env
           echo "BOT_WEBHOOK_PORT=${{vars.BOT_WEBHOOK_PORT}}" >> .env
