@@ -1,5 +1,6 @@
 package org.dungeon.prototype.bot;
 
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.exception.ChatException;
 import org.dungeon.prototype.exception.DungeonPrototypeException;
@@ -14,6 +15,7 @@ import java.util.List;
 
 import static java.util.Objects.isNull;
 
+@Slf4j
 @RestController
 @RequestMapping("${bot.path}")
 public class WebhookController {
@@ -33,11 +35,15 @@ public class WebhookController {
     public void onUpdateReceived(@RequestBody Update update) {
         val message = update.getMessage();
         if (isNull(message)) {
+            log.debug("Message is empty! Authentication failed");
             throw new DungeonPrototypeException(EXCEPTION_MESSAGE);
         }
         if (authUsers.isEmpty() || authUsers.contains(message.getChatId())) {
+            log.debug("Auth user ids: {}", authUsers);
+            log.debug("User {} successfully authenticated", message.getChatId());
             dungeonBot.onWebhookUpdateReceived(update);
         } else {
+            log.debug("User {} failed to authenticate", message.getChatId());
             throw new ChatException(EXCEPTION_MESSAGE , message.getChatId());
         }
     }
