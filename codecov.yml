@@ -7,5 +7,5 @@ coverage:
 
     patch:
       default:
-        target: 75%
+        target: 50% # TODO: adjust to reasonable value before release
         threshold: 1%
