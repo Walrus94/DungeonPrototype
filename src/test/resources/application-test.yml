@@ -11,5 +11,4 @@ spring:
 bot:
   username: test
   token: token
-
-auth-users: 123456789
+  auth-users: 123456789

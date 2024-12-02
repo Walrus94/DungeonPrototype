@@ -25,7 +25,7 @@ public class BotConfig {
                      @Value("${bot.username}") String botUsername,
                      @Value("${bot.webhook}") String webHookUrl,
                      @Value("${bot.path}") String botPath,
-                     @Value("${auth-users}") String authUsers) {
+                     @Value("${bot.auth-users}") String authUsers) {
         this.botToken = botToken;
         this.botUsername = botUsername;
         this.webHookUrl = webHookUrl;

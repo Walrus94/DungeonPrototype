@@ -56,11 +56,11 @@ public class DungeonBot extends SpringWebhookBot {
      */
     @Override
     public BotApiMethod<?> onWebhookUpdateReceived(Update update) {
+        log.debug("Authenticated userIds: {}", authUsers);
         if (update.hasMessage() && update.getMessage().hasText()) {
             //handles message text if present
             long chatId = update.getMessage().getChatId();
             if (!authUsers.isEmpty() && !authUsers.contains(chatId)) {
-                log.debug("Authenticated userIds: {}", authUsers);
                 log.info("User {} failed to authenticate", chatId);
                 throw new ChatException(AUTH_EXCEPTION_MESSAGE, chatId);
             }
