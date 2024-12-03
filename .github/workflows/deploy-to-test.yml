@@ -12,6 +12,7 @@ on:
         - develop
         - master
         - secure-test-environment
+        - upgrade-gradle-dependencies
           # END BRANCH LIST
 
 jobs:
