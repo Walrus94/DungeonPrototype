@@ -4,7 +4,6 @@ import lombok.SneakyThrows;
 import lombok.val;
 import org.dungeon.prototype.bot.DungeonBot;
 import org.dungeon.prototype.bot.WebhookController;
-import org.dungeon.prototype.config.EmbeddedServerConfig;
 import org.dungeon.prototype.config.TestConfig;
 import org.dungeon.prototype.exception.ChatException;
 import org.dungeon.prototype.service.message.MessageService;
@@ -21,7 +20,6 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -29,31 +27,27 @@ import static org.mockito.Mockito.when;
 
 @SpringBootTest(classes = {
         TestConfig.class,
-        EmbeddedServerConfig.class,
         WebhookController.class,
         DungeonBot.class},
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("security-test")
 public class SecurityIntegrationTest {
 
-    protected static final long CHAT_ID = 123456789L;
+    private static final long CHAT_ID = 123456789L;
 
     @LocalServerPort
-    protected int port;
+    private int port;
 
     private String getBaseUrl() {
         return "http://localhost:" + port + "/webhook";
     }
-
     @Autowired
-    protected TestRestTemplate restTemplate;
+    private TestRestTemplate restTemplate;
 
     @MockBean
-    protected TelegramAuthenticationProvider authenticationProvider;
+    private DungeonBot dungeonBot;
     @MockBean
-    protected DungeonBot dungeonBot;
-    @MockBean
-    protected MessageService messageService;
+    private MessageService messageService;
 
     @Test
     @DisplayName("Unauthorized")
@@ -62,9 +56,6 @@ public class SecurityIntegrationTest {
         val message = mock(Message.class);
         when(update.getMessage()).thenReturn(message);
         when(message.getChatId()).thenReturn(999999999L);
-        when(authenticationProvider.authenticate(any())).thenReturn(
-                new TelegramAuthenticationToken(999999999L)
-        );
         HttpEntity<Update> request = new HttpEntity<>(update);
 
         assertThrows(ChatException.class, () ->
@@ -80,11 +71,10 @@ public class SecurityIntegrationTest {
         val message = mock(Message.class);
         when(update.getMessage()).thenReturn(message);
         when(message.getChatId()).thenReturn(CHAT_ID);
-        when(authenticationProvider.authenticate(any())).thenReturn(
-                new TelegramAuthenticationToken(CHAT_ID, true)
-        );
         HttpEntity<Update> request = new HttpEntity<>(update);
+
         restTemplate.postForEntity(getBaseUrl(), request, String.class);
+
         verify(dungeonBot).onWebhookUpdateReceived(eq(update));
 
     }

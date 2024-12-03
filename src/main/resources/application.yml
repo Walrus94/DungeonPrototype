@@ -1,6 +1,4 @@
 spring:
-  main:
-    web-application-type: servlet
   data:
     mongodb:
       uri: ${SPRING_DATA_MONGODB_URI}
@@ -31,7 +29,6 @@ bot:
   path: ${BOT_WEBHOOK_PATH}
   webhook: ${BOT_WEBHOOK_URL}
   token: ${BOT_AUTH_TOKEN}
-  auth-users: ${AUTH_USERS}
 
 auth-users: ${AUTH_USERS}
 
