@@ -9,7 +9,7 @@ public class PlayerException extends DungeonPrototypeException {
     @Getter
     private final CallbackType button;
 
-    public PlayerException(String message, Long chatId, CallbackType button) {
+    public PlayerException(String message, long chatId, CallbackType button) {
         super(message);
         this.chatId = chatId;
         this.button = button;
