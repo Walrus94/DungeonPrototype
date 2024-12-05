@@ -84,7 +84,7 @@ public class WalkerDistributor {
                                     .currentSection(currentSection)
                                     .previousRoom(roomsMap.get(currentSection.getPoint()))
                                     .currentStep(section.getStepsFromStart())
-                                    .totalSteps(section.getStepsFromStart())
+                                    .mainPathLength(mainPathLength)
                                     .build());
                         }
                     }
@@ -94,6 +94,7 @@ public class WalkerDistributor {
             currentSection = nextSection;
             previousRoom = room;
             currentStep--;
+            totalSteps++;
             if (currentStep == 0) {
                 log.info("Current step equals 0, finishing walker");
                 if (subWalkers.isEmpty()) {
@@ -108,7 +109,6 @@ public class WalkerDistributor {
                     .room(room)
                     .section(nextSection)
                     .currentStep(currentStep)
-                    .totalSteps(totalSteps)
                     .build();
         } else {
             return null;

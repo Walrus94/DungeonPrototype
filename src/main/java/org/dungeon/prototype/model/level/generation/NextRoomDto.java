@@ -11,5 +11,4 @@ public class NextRoomDto {
     private Room room;
     private GridSection section;
     private int currentStep;
-    private int totalSteps;
 }

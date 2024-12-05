@@ -25,4 +25,6 @@ public class LevelDocument {
     private LevelMap levelMap;
     @DBRef
     private Map<String, RoomDocument> roomsMap;
+    private boolean hasAnvil;
+    private boolean hasMerchant;
 }

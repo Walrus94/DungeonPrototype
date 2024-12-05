@@ -25,6 +25,8 @@ public class Level {
     private GridSection[][] grid;
     private LevelMap levelMap;
     private Map<Point, Room> roomsMap = new HashMap<>();
+    private boolean hasAnvil = false;
+    private boolean hasMerchant = false;
 
     public Room getRoomByCoordinates(Point currentPoint) {
         return roomsMap.get(currentPoint);
