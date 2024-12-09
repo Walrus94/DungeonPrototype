@@ -9,6 +9,7 @@ on:
         type: choice
         options:
           # BEGIN BRANCH LIST
+        - async-task-execution
         - develop
         - master
         - room-content-population
