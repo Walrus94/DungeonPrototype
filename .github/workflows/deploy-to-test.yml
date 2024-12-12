@@ -11,6 +11,7 @@ on:
           # BEGIN BRANCH LIST
         - async-task-execution
         - develop
+        - item-generation-refactoring
         - master
         - room-content-population
         - secure-test-environment
