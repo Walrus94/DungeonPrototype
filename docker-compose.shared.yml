@@ -199,7 +199,7 @@ services:
 
   postgres:
     image: postgres:15
-    container_name: postges
+    container_name: postgres
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_DATABASE_USER}
@@ -212,6 +212,6 @@ services:
       - ./init-scripts:/docker-entrypoint-initdb.d
 
 
-  volumes:
-    pgdata:
+volumes:
+  pgdata:
 
