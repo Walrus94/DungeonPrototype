@@ -29,7 +29,7 @@ COPY . .
 RUN gradle bootJar --no-daemon
 
 # Use a lightweight JRE to run the Spring Boot application
-FROM openjdk:23-ea-8-jdk-slim
+FROM ghcr.io/graalvm/graalvm-ce:21
 COPY --from=build /app/build/libs/*.jar /app/DungeonPrototype.jar
 
 # Run the Spring Boot app
