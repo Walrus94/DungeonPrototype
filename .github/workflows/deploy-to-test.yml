@@ -55,7 +55,7 @@ jobs:
           echo "POSTGRES_DATABASE_NAME=${{vars.POSTGRES_DATABASE_NAME}}" >> .env
           echo "POSTGRES_DATABASE_PASSWORD=${{secrets.POSTGRES_DATABASE_PASSWORD}}" >> .env
           echo "POSTGRES_DATABASE_USER=${{secrets.POSTGRES_DATABASE_USER}}" >> .env
-          echo "POSTGRES_DATABASE_PASSWORD=${{secrets.POSTGRES_DATABASE_PASSWORD}}" >> .env
+          echo "POSTGRES_DATABASE_PORT=${{vars.POSTGRES_DATABASE_PORT}}" >> .env
 
       - name: Create shared network
         run: |
