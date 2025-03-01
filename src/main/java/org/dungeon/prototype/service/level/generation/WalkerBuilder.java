@@ -7,7 +7,7 @@ import lombok.val;
 import org.dungeon.prototype.model.Point;
 import org.dungeon.prototype.model.level.generation.LevelGridCluster;
 import org.dungeon.prototype.model.level.ui.GridSection;
-import org.dungeon.prototype.service.WalkerUniqueIdFactory;
+import org.dungeon.prototype.service.UniqueIdFactory;
 
 import java.util.Comparator;
 import java.util.Objects;
@@ -24,7 +24,7 @@ import static org.dungeon.prototype.util.LevelUtil.isPointInCluster;
 @Builder
 public class WalkerBuilder {
     @Builder.Default
-    private Long id = WalkerUniqueIdFactory.getInstance().getNextId();
+    private long id = UniqueIdFactory.getInstance().getNextId();
     private Point previousPoint;
     private Point currentPoint;
     private boolean isReversed;
@@ -182,7 +182,7 @@ public class WalkerBuilder {
         if (obj == this) {
             return true;
         }
-        return this.id.equals(walkerBuilder.getId()) &&
+        return this.id == walkerBuilder.getId() &&
                 this.currentPoint.equals(walkerBuilder.getCurrentPoint()) &&
                 this.isReversed == walkerBuilder.isReversed() &&
                 this.overridingReversedPath == walkerBuilder.isOverridingReversedPath() &&

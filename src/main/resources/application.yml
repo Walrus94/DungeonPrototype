@@ -1,4 +1,16 @@
 spring:
+  datasource:
+    url: jdbc:postgresql://localhost:${POSTGRES_DATABASE_PORT}/${POSTGRES_DATABASE_NAME}
+    name: ${POSTGRES_DATABASE_NAME}
+    username: ${POSTGRES_DATABASE_USER}
+    password: ${POSTGRES_DATABASE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 60000
+
   data:
     mongodb:
       uri: ${SPRING_DATA_MONGODB_URI}
@@ -11,15 +23,23 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+  profiles:
+    active: ${SPRING_ACTIVE_PROFILE}
 
 management:
   endpoints:
     web:
       exposure:
         include: prometheus
-  endpoint:
-    prometheus:
-      enabled: true
+      base-path: /actuator
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    endpoint:
+      prometheus:
+        enabled: true
+
 
 server:
   port: ${BOT_WEBHOOK_PORT}
@@ -461,13 +481,13 @@ generation:
 
     effects:
       minimum-amount-per-item-map:
-        common: 1
+        common: 0
         rare: 1
-        epic: 1
-        legendary: 2
-        mythic: 2
+        epic: 2
+        legendary: 3
+        mythic: 3
       maximum-amount-per-item-map:
-        common: 2
+        common: 1
         rare: 2
         epic: 3
         legendary: 3
@@ -525,7 +545,7 @@ battle:
         enchanted-leather: 0.8
         treated-leather: 0.7
         mithril: 1.15
-#  TODO: adjust values
+  #  TODO: adjust values
   monster-defense-ratio-matrix:
     slash:
       monster-defense-ratio-map:

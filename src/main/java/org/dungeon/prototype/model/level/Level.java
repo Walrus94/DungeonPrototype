@@ -3,14 +3,13 @@ package org.dungeon.prototype.model.level;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.dungeon.prototype.model.Point;
+import org.dungeon.prototype.model.level.generation.LevelGridCluster;
 import org.dungeon.prototype.model.level.ui.GridSection;
 import org.dungeon.prototype.model.level.ui.LevelMap;
 import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.RoomType;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 import static org.dungeon.prototype.util.LevelUtil.getIcon;
 
@@ -23,6 +22,8 @@ public class Level {
     private Point start;
     private Point end;
     private GridSection[][] grid;
+    private Map<Point, LevelGridCluster> clusters;
+    private LinkedList<Point> clusterConnectionPoints;
     private LevelMap levelMap;
     private Map<Point, Room> roomsMap = new HashMap<>();
 

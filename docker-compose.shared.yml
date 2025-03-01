@@ -196,3 +196,22 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_DB_USER}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_DB_PASSWORD}
+
+  postgres:
+    image: postgres:15
+    container_name: postges
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_DATABASE_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_DATABASE_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DATABASE_NAME}
+    ports:
+      - ${POSTGRES_DATABASE_PORT}:${POSTGRES_DATABASE_PORT}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+
+
+  volumes:
+    pgdata:
+

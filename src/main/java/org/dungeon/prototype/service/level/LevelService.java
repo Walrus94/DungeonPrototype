@@ -19,8 +19,8 @@ import org.dungeon.prototype.model.room.content.MonsterRoom;
 import org.dungeon.prototype.model.room.content.RoomContent;
 import org.dungeon.prototype.model.room.content.Shrine;
 import org.dungeon.prototype.properties.CallbackType;
-import org.dungeon.prototype.repository.LevelRepository;
-import org.dungeon.prototype.repository.converters.mapstruct.LevelMapper;
+import org.dungeon.prototype.repository.mongo.LevelRepository;
+import org.dungeon.prototype.repository.mongo.converters.mapstruct.LevelMapper;
 import org.dungeon.prototype.service.PlayerService;
 import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.level.generation.LevelGenerationService;
@@ -60,7 +60,7 @@ public class LevelService {
      * @param chatId id of chat where game starts
      */
     public void startNewGame(Long chatId, Player player) {
-        val level = startNewLevel(chatId, player, 1);
+        Level level = startNewLevel(chatId, player, 1);
         log.info("Starting new game...");
         messageService.sendNewLevelMessage(chatId, player, level, 1);
     }
@@ -236,7 +236,7 @@ public class LevelService {
 
     public Level startNewLevel(Long chatId, Player player, Integer levelNumber) {
         messageService.sendLevelGeneratingInfoMessage(chatId, levelNumber);
-        var level = levelGenerationService.generateLevel(chatId, player, levelNumber);
+        var level = levelGenerationService.generateAndPopulateLevel(chatId, player, levelNumber);
         if (levelRepository.existsByChatId(chatId)) {
             levelRepository.removeByChatId(chatId);
         }

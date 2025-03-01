@@ -21,7 +21,7 @@ import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.content.Merchant;
 import org.dungeon.prototype.model.weight.Weight;
 import org.dungeon.prototype.properties.CallbackType;
-import org.dungeon.prototype.repository.InventoryRepository;
+import org.dungeon.prototype.repository.mongo.InventoryRepository;
 import org.dungeon.prototype.service.BaseServiceUnitTest;
 import org.dungeon.prototype.service.PlayerService;
 import org.dungeon.prototype.service.effect.EffectService;

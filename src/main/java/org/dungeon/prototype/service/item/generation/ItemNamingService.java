@@ -5,7 +5,7 @@ import org.dungeon.prototype.kafka.KafkaProducer;
 import org.dungeon.prototype.model.effect.Effect;
 import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.inventory.items.naming.api.dto.ItemNameRequestDto;
-import org.dungeon.prototype.repository.ItemRepository;
+import org.dungeon.prototype.repository.mongo.ItemRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;

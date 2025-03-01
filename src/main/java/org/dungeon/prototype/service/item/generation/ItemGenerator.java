@@ -4,6 +4,8 @@ import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.math3.util.Pair;
+import org.dungeon.prototype.async.AsyncJobHandler;
+import org.dungeon.prototype.async.TaskType;
 import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.inventory.attributes.MagicType;
 import org.dungeon.prototype.model.inventory.attributes.Quality;
@@ -29,18 +31,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CyclicBarrier;
+import java.util.*;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -76,6 +68,7 @@ import static org.dungeon.prototype.util.GenerationUtil.applyAdjustment;
 import static org.dungeon.prototype.util.GenerationUtil.multiplyAllParametersBy;
 import static org.dungeon.prototype.util.RandomUtil.getRandomEnumValue;
 import static org.dungeon.prototype.util.RandomUtil.getRandomMagicType;
+import static org.dungeon.prototype.util.RandomUtil.getRandomWeightedEnumValue;
 
 @Slf4j
 @Service
@@ -93,12 +86,13 @@ public class ItemGenerator {
     @Autowired
     private ItemService itemService;
     @Autowired
+    AsyncJobHandler asyncJobHandler;
+    @Autowired
     private MessageService messageService;
     @Autowired
     private ItemEffectsGenerator itemEffectsGenerator;
     @Autowired
     private GenerationProperties generationProperties;
-    private final Map<Long, CyclicBarrier> barriersByChat = new ConcurrentHashMap<>();
 
     /**
      * Generates items for game: runs two async generators
@@ -109,15 +103,15 @@ public class ItemGenerator {
      * @param chatId id of chat where game runs
      */
     @Transactional
-    public CompletableFuture<Void> generateItems(Long chatId) {
+    public Queue<Future<?>> generateItems(Long chatId) {
         messageService.sendItemsGeneratingInfoMessage(chatId);
-        barriersByChat.put(chatId, new CyclicBarrier(2));
         itemService.dropCollection(chatId);
 
-        CompletableFuture<Void> weaponsFuture = CompletableFuture.runAsync(() -> generateWeapons(chatId));
-        CompletableFuture<Void> wearablesFuture = CompletableFuture.runAsync(() -> generateWearables(chatId));
+        Queue<Future<?>> futures = new LinkedList<>();
+        futures.offer(asyncJobHandler.submitTask(() -> generateWeapons(chatId), TaskType.WEAPON_GENERATION, chatId, Optional.empty()));
+        futures.offer(asyncJobHandler.submitTask(() -> generateWearables(chatId), TaskType.WEARABLE_GENERATION, chatId, Optional.empty()));
 
-        return CompletableFuture.allOf(weaponsFuture, wearablesFuture);
+        return futures;
     }
 
     private void generateWeapons(Long chatId) {
@@ -155,7 +149,7 @@ public class ItemGenerator {
             if (DRAGON_BONE.equals(weaponMaterial) && WeaponHandlerMaterial.DRAGON_BONE.equals(weaponHandlerMaterial)) {
                 quality = Quality.MYTHIC;
             } else {
-                quality = getRandomEnumValue(List.of(Quality.values()));
+                quality = getRandomWeightedEnumValue(List.of(Quality.values()));
             }
             Size size;
             if (TWO_HANDED.equals(handling)) {
@@ -199,7 +193,6 @@ public class ItemGenerator {
         val savedItems = itemService.saveItems(vanillaWeapons);
 
         log.info("{} weapons without effects generated.", savedItems.size());
-        awaitBarrier(chatId);
 
         log.info("Adding effects to weapons...");
         addEffects(chatId, savedItems, weaponPerGame);
@@ -263,8 +256,6 @@ public class ItemGenerator {
                 .collect(Collectors.toList());
         val savedItems = itemService.saveItems(vanillaWearables);
         log.info("{} wearables without effects generated.", savedItems.size());
-        awaitBarrier(chatId);
-
         log.info("Adding effects to wearables...");
         addEffects(chatId, savedItems, wearablesPerGame);
     }
@@ -428,14 +419,5 @@ public class ItemGenerator {
         wearable.setArmor(armor);
         wearable.setChanceToDodge(chanceToDodge);
         return wearable;
-    }
-
-    private void awaitBarrier(Long chatId) {
-        try {
-            barriersByChat.get(chatId).await();  // Wait for both threads to complete generating vanilla items
-        } catch (Exception e) {
-            Thread.currentThread().interrupt();
-            log.error("Error while waiting at barrier: {}", e.getMessage());
-        }
     }
 }
