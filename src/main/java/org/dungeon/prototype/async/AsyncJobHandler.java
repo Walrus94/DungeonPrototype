@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration;
 import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
 
@@ -34,7 +35,7 @@ public class AsyncJobHandler {
     @Autowired
     private TaskMetrics taskMetrics;
 
-
+    @Async
     public Future<?> submitTask(Runnable job, TaskType taskType, long chatId, Optional<Long> clusterId) {
         val phaser = getPhaser(chatId);
         phaser.register();
@@ -73,14 +74,15 @@ public class AsyncJobHandler {
         }
     }
 
+    @Async
     public void awaitPhaser(long chatId) {
         phasersByChat.get(chatId).arriveAndAwaitAdvance();
     }
 
+    @Async
     public void deregisterPhaser(long chatId) {
         phasersByChat.get(chatId).arriveAndDeregister();
     }
-
     private Phaser getPhaser(long chatId) {
         return phasersByChat.computeIfAbsent(chatId, id -> new Phaser(1));
     }
