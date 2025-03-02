@@ -1,5 +1,6 @@
 confluent-kafka
-huggingface-hub 
+huggingface-hub
+python-dotenv
 pymongo
 asyncpg
 stable-baselines3
