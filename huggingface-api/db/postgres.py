@@ -3,7 +3,7 @@ from config.settings import POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, POSTG
 
 async def load_template_matrix():
     """Loads predefined template matrix from PostgreSQL."""
-    conn = await asyncpg.connect("postgresql://{}:{}@postges:{}/{}".format(
+    conn = await asyncpg.connect("postgresql://{}:{}@postgres:{}/{}".format(
         POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_PORT, POSTGRES_DB
     ))
 
@@ -14,7 +14,7 @@ async def load_template_matrix():
 
 async def save_balance_matrix(chat_id, name, matrix):
     """Stores generated balance matrix in PostgreSQL."""
-    conn = await asyncpg.connect("postgresql://{}:{}@postges:{}/{}".format(
+    conn = await asyncpg.connect("postgresql://{}:{}@postgres:{}/{}".format(
         POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_PORT, POSTGRES_DB
     ))
 

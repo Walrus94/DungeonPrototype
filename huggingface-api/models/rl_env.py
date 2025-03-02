@@ -1,13 +1,12 @@
 import asyncpg
 import numpy as np
-from config.settings import POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, POSTGRES_HOST
+from config.settings import POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, POSTGRES_PORT
 
 async def load_template_matrix():
     """Loads predefined template matrix from PostgreSQL."""
-    conn = await asyncpg.connect(
-        user=POSTGRES_USER, password=POSTGRES_PASSWORD,
-        database=POSTGRES_DB, host=POSTGRES_HOST
-    )
+    conn = await asyncpg.connect("postgresql://{}:{}@postgres:{}/{}".format(
+        POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_PORT, POSTGRES_DB
+    ))
 
     row = await conn.fetchrow("SELECT data FROM balance_matrices WHERE chat_id = 'TEMPLATE' LIMIT 1")
     await conn.close()
@@ -16,10 +15,9 @@ async def load_template_matrix():
 
 async def save_balance_matrix(chat_id, name, matrix):
     """Stores generated balance matrix in PostgreSQL."""
-    conn = await asyncpg.connect(
-        user=POSTGRES_USER, password=POSTGRES_PASSWORD,
-        database=POSTGRES_DB, host=POSTGRES_HOST
-    )
+    conn = await asyncpg.connect("postgresql://{}:{}@postgres:{}/{}".format(
+        POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_PORT, POSTGRES_DB
+    ))
 
     await conn.execute(
         "INSERT INTO balance_matrices (chat_id, name, data) VALUES ($1, $2, $3)",
