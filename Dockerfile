@@ -33,4 +33,4 @@ FROM openjdk:21-ea-8-jdk-slim
 COPY --from=build /app/build/libs/*.jar /app/DungeonPrototype.jar
 
 # Run the Spring Boot app
-ENTRYPOINT java -jar app/DungeonPrototype.jar
+ENTRYPOINT java --enable-preview -jar app/DungeonPrototype.jar
