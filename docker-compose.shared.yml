@@ -57,7 +57,7 @@ services:
       options:
         labels: environment,service
     volumes:
-        - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
     restart: unless-stopped
     depends_on:
       - mongodb-exporter
@@ -83,7 +83,7 @@ services:
     networks:
       - shared_net
     depends_on:
-     - mongodb-exporter-percona
+      - mongodb-exporter-percona
 
   mongodb-exporter-percona:
     image: percona/mongodb_exporter:0.42.0
@@ -196,3 +196,25 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_DB_USER}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_DB_PASSWORD}
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_DATABASE_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_DATABASE_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DATABASE_NAME}
+    ports:
+      - ${POSTGRES_DATABASE_PORT}:${POSTGRES_DATABASE_PORT}
+    labels:
+      environment: shared
+      service: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+
+
+volumes:
+  pgdata:
+

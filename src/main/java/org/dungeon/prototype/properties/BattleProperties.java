@@ -16,6 +16,8 @@ import java.util.Map;
 public class BattleProperties {
     Map<MonsterAttackType, MaterialDefenseRatioMap> playerDefenseRatioMatrix;
     Map<WeaponAttackType, MonsterDefenseRatioMap> monsterDefenseRatioMatrix;
+    Map<MonsterClass, PlayerAttackRatioMap> playerAttackMatrixTemplate;
+    Map<WearableMaterial, MonsterAttackRatioMap> monsterAttackMatrixTemplate;
 
     @Data
     public static class MaterialDefenseRatioMap {
@@ -25,5 +27,15 @@ public class BattleProperties {
     @Data
     public static class MonsterDefenseRatioMap {
         Map<MonsterClass, Double> monsterDefenseRatioMap;
+    }
+
+    @Data
+    public static class PlayerAttackRatioMap {
+        Map<WeaponAttackType, Double> playerAttackRatioMap;
+    }
+
+    @Data
+    public static class MonsterAttackRatioMap {
+        Map<MonsterAttackType, Double> monsterAttackRatioMap;
     }
 }
