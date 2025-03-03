@@ -33,7 +33,7 @@ public class AsyncJobHandler {
     @Autowired
     private TaskMetrics taskMetrics;
 
-    @Async
+    @Async(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME)
     public Future<?> submitTask(Runnable job, TaskType taskType, long chatId, Optional<Long> clusterId) {
         val phaser = getPhaser(chatId);
         phaser.register();
@@ -72,12 +72,12 @@ public class AsyncJobHandler {
         }
     }
 
-    @Async
+    @Async(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME)
     public void awaitPhaser(long chatId) {
         phasersByChat.get(chatId).arriveAndAwaitAdvance();
     }
 
-    @Async
+    @Async(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME)
     public void deregisterPhaser(long chatId) {
         phasersByChat.get(chatId).arriveAndDeregister();
     }
