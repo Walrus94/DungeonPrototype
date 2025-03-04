@@ -200,7 +200,9 @@ services:
   postgres:
     image: postgres:15
     container_name: postgres
-    restart: always
+    restart: unless-stopped
+    networks:
+      - shared_net
     environment:
       POSTGRES_USER: ${POSTGRES_DATABASE_USER}
       POSTGRES_PASSWORD: ${POSTGRES_DATABASE_PASSWORD}
@@ -210,6 +212,10 @@ services:
     labels:
       environment: shared
       service: postgres
+    logging:
+      driver: "json-file"
+      options:
+        labels: environment,service
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d
