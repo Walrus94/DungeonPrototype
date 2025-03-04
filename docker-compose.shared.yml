@@ -202,9 +202,9 @@ services:
     container_name: postgres
     restart: always
     environment:
-      POSTGRES_USER: postgres
+      POSTGRES_USER: ${POSTGRES_DATABASE_USER}
       POSTGRES_PASSWORD: ${POSTGRES_DATABASE_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DATABASE_NAME}
+      POSTGRES_DB: postgres
     ports:
       - ${POSTGRES_DATABASE_PORT}:${POSTGRES_DATABASE_PORT}
     labels:
