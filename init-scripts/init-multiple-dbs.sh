@@ -4,7 +4,7 @@ set -e
 # Use the PostgreSQL user from environment variables
 POSTGRES_USER="${POSTGRES_DATABASE_USER:-postgres}"
 
-DATABASES=("dev_db" "prod_db" "test_db")
+DATABASES=("balance_matrices_dev" "balance_matrices_prod" "balance_matrices_test")
 
 for db in "${DATABASES[@]}"; do
   echo "Creating database: $db"
