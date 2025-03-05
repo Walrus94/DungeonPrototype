@@ -2,8 +2,8 @@
 set -e
 
 # Use the PostgreSQL user from environment variables
-POSTGRES_USER="${POSTGRES_DATABASE_USER:-postgres}"
-POSTGRES_PASSWORD="${POSTGRES_DATABASE_PASSWORD:-}"
+POSTGRES_USER="${POSTGRES_USER:-postgres}"
+POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-}"
 
 DATABASES=("balance_matrices_dev" "balance_matrices_prod" "balance_matrices_test")
 
