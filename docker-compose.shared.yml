@@ -56,9 +56,7 @@ services:
       driver: "json-file"
       options:
         labels: environment,service
-    command:
-      - --storage.tsdb.retention.time=7d
-      - --storage.tsdb.path=/prometheus
+    command: --storage.tsdb.retention.time=7d
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     restart: unless-stopped
