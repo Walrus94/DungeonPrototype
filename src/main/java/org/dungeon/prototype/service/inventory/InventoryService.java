@@ -2,6 +2,9 @@ package org.dungeon.prototype.service.inventory;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.dungeon.prototype.async.AsyncJobHandler;
+import org.dungeon.prototype.async.TaskType;
+import org.dungeon.prototype.exception.DungeonPrototypeException;
 import org.dungeon.prototype.exception.RestrictedOperationException;
 import org.dungeon.prototype.model.inventory.Inventory;
 import org.dungeon.prototype.model.inventory.attributes.wearable.WearableType;
@@ -23,6 +26,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.dungeon.prototype.properties.CallbackType.MERCHANT_BUY_MENU;
 
@@ -41,6 +47,8 @@ public class InventoryService {
     private MessageService messageService;
     @Autowired
     private InventoryRepository inventoryRepository;
+    @Autowired
+    private AsyncJobHandler asyncJobService;
 
     /**
      * Builds default inventory for start of the game
@@ -50,12 +58,18 @@ public class InventoryService {
     public Inventory getDefaultInventory(Long chatId) {
         log.info("Setting default inventory");
         messageService.sendPlayerGeneratingInfoMessage(chatId);
-        Inventory inventory = new Inventory();
-        inventory.setItems(new ArrayList<>());
-        inventory.setVest(getDefaultVest(chatId));
-        inventory.setPrimaryWeapon(getDefaultWeapon(chatId));
-        inventory = saveOrUpdateInventory(inventory);
-        return inventory;
+        try {
+            return asyncJobService.submitTask(() -> {
+                Inventory inventory = new Inventory();
+                inventory.setItems(new ArrayList<>());
+                inventory.setVest(getDefaultVest(chatId));
+                inventory.setPrimaryWeapon(getDefaultWeapon(chatId));
+                inventory = saveOrUpdateInventory(inventory);
+                return inventory;
+            }, TaskType.GET_DEFAULT_INVENTORY, chatId).get(1, TimeUnit.SECONDS);
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            throw new DungeonPrototypeException(e.getMessage());
+        }
     }
 
     /**

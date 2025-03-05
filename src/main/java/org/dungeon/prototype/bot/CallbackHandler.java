@@ -3,7 +3,6 @@ package org.dungeon.prototype.bot;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.annotations.aspect.AnswerCallback;
-import org.dungeon.prototype.async.AsyncJobHandler;
 import org.dungeon.prototype.exception.CallbackParsingException;
 import org.dungeon.prototype.exception.RestrictedOperationException;
 import org.dungeon.prototype.model.player.PlayerAttribute;
@@ -16,7 +15,6 @@ import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.inventory.InventoryService;
 import org.dungeon.prototype.service.item.generation.ItemGenerator;
 import org.dungeon.prototype.service.level.LevelService;
-import org.dungeon.prototype.service.level.generation.LevelGenerationService;
 import org.dungeon.prototype.service.room.RoomService;
 import org.dungeon.prototype.service.room.TreasureService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +24,15 @@ import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.dungeon.prototype.properties.CallbackType.*;
+import static org.dungeon.prototype.properties.CallbackType.BOOTS;
+import static org.dungeon.prototype.properties.CallbackType.GLOVES;
+import static org.dungeon.prototype.properties.CallbackType.HEAD;
+import static org.dungeon.prototype.properties.CallbackType.INVENTORY;
+import static org.dungeon.prototype.properties.CallbackType.LEFT_HAND;
+import static org.dungeon.prototype.properties.CallbackType.MENU_BACK;
+import static org.dungeon.prototype.properties.CallbackType.MERCHANT_SELL_MENU;
+import static org.dungeon.prototype.properties.CallbackType.RIGHT_HAND;
+import static org.dungeon.prototype.properties.CallbackType.VEST;
 import static org.dungeon.prototype.util.LevelUtil.getDirectionSwitchByCallBackData;
 import static org.dungeon.prototype.util.LevelUtil.getErrorMessageByCallBackData;
 import static org.dungeon.prototype.util.LevelUtil.getNextPointInDirection;
@@ -36,8 +42,6 @@ import static org.dungeon.prototype.util.LevelUtil.getNextPointInDirection;
 public class CallbackHandler {
     @Autowired
     BotCommandHandler botCommandHandler;
-    @Autowired
-    AsyncJobHandler asyncJobHandler;
     @Autowired
     private PlayerService playerService;
     @Autowired
@@ -215,13 +219,7 @@ public class CallbackHandler {
     }
 
     private void handleStartingNewGame(Long chatId) {
-        val itemsGeneration = itemGenerator.generateItems(chatId);
-        while (!itemsGeneration.isEmpty()) {
-            if (itemsGeneration.peek().isDone()) {
-                itemsGeneration.poll();
-            }
-        }
-        asyncJobHandler.deregisterPhaser(chatId);
+        itemGenerator.generateItems(chatId);
         val defaultInventory = inventoryService.getDefaultInventory(chatId);
         var player = playerService.getPlayerPreparedForNewGame(chatId, defaultInventory);
         player = effectService.updatePlayerEffects(player);

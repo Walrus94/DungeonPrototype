@@ -31,8 +31,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
-import java.util.concurrent.Future;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -103,15 +110,12 @@ public class ItemGenerator {
      * @param chatId id of chat where game runs
      */
     @Transactional
-    public Queue<Future<?>> generateItems(Long chatId) {
+    public void generateItems(Long chatId) {
         messageService.sendItemsGeneratingInfoMessage(chatId);
         itemService.dropCollection(chatId);
 
-        Queue<Future<?>> futures = new LinkedList<>();
-        futures.offer(asyncJobHandler.submitTask(() -> generateWeapons(chatId), TaskType.WEAPON_GENERATION, chatId, Optional.empty()));
-        futures.offer(asyncJobHandler.submitTask(() -> generateWearables(chatId), TaskType.WEARABLE_GENERATION, chatId, Optional.empty()));
-
-        return futures;
+        asyncJobHandler.submitTask(() -> generateWeapons(chatId), TaskType.WEAPON_GENERATION, chatId);
+        asyncJobHandler.submitTask(() -> generateWearables(chatId), TaskType.WEARABLE_GENERATION, chatId);
     }
 
     private void generateWeapons(Long chatId) {

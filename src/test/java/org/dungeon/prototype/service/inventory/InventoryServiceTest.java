@@ -1,6 +1,8 @@
 package org.dungeon.prototype.service.inventory;
 
 import lombok.val;
+import org.dungeon.prototype.async.AsyncJobHandler;
+import org.dungeon.prototype.async.TaskType;
 import org.dungeon.prototype.model.document.player.InventoryDocument;
 import org.dungeon.prototype.model.inventory.Inventory;
 import org.dungeon.prototype.model.inventory.Item;
@@ -40,6 +42,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 
 import static org.dungeon.prototype.TestData.getPlayer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -73,6 +77,8 @@ class InventoryServiceTest extends BaseServiceUnitTest {
     private MessageService messageService;
     @Mock
     private InventoryRepository inventoryRepository;
+    @Mock
+    private AsyncJobHandler asyncJobHandler;
 
     @Test
     @DisplayName("Sets default inventory with items from repository and returns it")
@@ -108,14 +114,10 @@ class InventoryServiceTest extends BaseServiceUnitTest {
         expectedInventory.setPrimaryWeapon(weapon);
         expectedInventory.setItems(new ArrayList<>());
 
-        when(itemService.getMostLightweightWearable(CHAT_ID, WearableType.VEST)).thenReturn(vest);
-        when(itemService.getMostLightWeightMainWeapon(CHAT_ID)).thenReturn(weapon);
-        ArgumentCaptor<InventoryDocument> inventoryDocumentArgumentCaptor = ArgumentCaptor.forClass(InventoryDocument.class);
-        when(inventoryRepository.save(inventoryDocumentArgumentCaptor.capture())).thenReturn(new InventoryDocument());
+        when(asyncJobHandler.submitTask(any(Callable.class), eq(TaskType.GET_DEFAULT_INVENTORY), eq(CHAT_ID))).thenReturn(CompletableFuture.completedFuture(expectedInventory));
 
-        inventoryService.getDefaultInventory(CHAT_ID);
+        Inventory actualInventory = inventoryService.getDefaultInventory(CHAT_ID);
 
-        val actualInventory = inventoryDocumentArgumentCaptor.getValue();
 
         assertEquals(expectedInventory.getPrimaryWeapon().getId(), actualInventory.getPrimaryWeapon().getId());
         assertEquals(expectedInventory.getPrimaryWeapon().getAttack(), actualInventory.getPrimaryWeapon().getAttack());

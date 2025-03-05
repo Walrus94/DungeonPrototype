@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.async.AsyncJobHandler;
 import org.dungeon.prototype.async.TaskType;
+import org.dungeon.prototype.exception.DungeonPrototypeException;
 import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.level.Level;
 import org.dungeon.prototype.model.Point;
@@ -36,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -69,10 +71,20 @@ public class LevelGenerationService {
     private GenerationProperties generationProperties;
 
     public Level generateAndPopulateLevel(Long chatId, Player player, Integer levelNumber) {
-        var level = generateLevelMap(chatId, levelNumber);
-        asyncJobHandler.awaitPhaser(chatId);
-        level = populateLevel(chatId, player, levelNumber, level);
-        return level;
+        var level = asyncJobHandler.submitTask(() -> generateLevelMap(chatId, levelNumber), TaskType.LEVEL_GENERATION, chatId);
+        while (!level.isDone()) {
+            log.info("Waiting for level generation...");
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                log.error("Level generation interrupted", e);
+            }
+        }
+        try {
+            return populateLevel(chatId, player, levelNumber, level.get());
+        } catch (InterruptedException | ExecutionException e) {
+            throw new DungeonPrototypeException(e.getMessage());
+        }
     }
 
 
@@ -131,7 +143,7 @@ public class LevelGenerationService {
                     log.info("Processing dead ends...");
                     processDeadEnds(grid, cluster);
                 }
-            }, TaskType.LEVEL_GENERATION, chatId, Optional.of(cluster.getId()));
+            }, TaskType.LEVEL_GENERATION, chatId, cluster.getId());
 
             log.debug("Clusters data: {}", clusters);
             log.debug("Current grid state\n{}", printMapGridToLogs(grid));
