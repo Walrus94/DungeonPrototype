@@ -14,7 +14,7 @@ import java.util.concurrent.Executors;
 
 
 @Configuration
-@EnableAsync(proxyTargetClass = true)
+@EnableAsync
 public class AsyncConfig {
 
     @Bean(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME)

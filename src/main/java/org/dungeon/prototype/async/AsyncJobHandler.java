@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
-public class AsyncJobHandler {
+public class AsyncJobHandler implements AsyncJobService {
 
     @Qualifier(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME)
     private AsyncTaskExecutor asyncTaskExecutor;
@@ -33,7 +33,7 @@ public class AsyncJobHandler {
     @Autowired
     private TaskMetrics taskMetrics;
 
-    @Async(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME)
+    @Async
     public Future<?> submitTask(Runnable job, TaskType taskType, long chatId, Optional<Long> clusterId) {
         val phaser = getPhaser(chatId);
         phaser.register();
@@ -72,12 +72,12 @@ public class AsyncJobHandler {
         }
     }
 
-    @Async(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME)
+    @Async
     public void awaitPhaser(long chatId) {
         phasersByChat.get(chatId).arriveAndAwaitAdvance();
     }
 
-    @Async(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME)
+    @Async
     public void deregisterPhaser(long chatId) {
         phasersByChat.get(chatId).arriveAndDeregister();
     }
