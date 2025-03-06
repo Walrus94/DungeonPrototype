@@ -34,7 +34,7 @@ public class AsyncJobHandler implements AsyncJobService {
 
     @Async
     @Override
-    public Future<?> submitTask(Runnable job, TaskType taskType, long chatId) {
+    public Future<?> submitItemGenerationTask(Runnable job, TaskType taskType, long chatId) {
         CountDownLatch latch = chatLatches.computeIfAbsent(chatId, k -> new CountDownLatch(2));//TODO: increment when Usable items generation is implemented
         return asyncTaskExecutor.submit(() -> {
             try {
@@ -65,7 +65,7 @@ public class AsyncJobHandler implements AsyncJobService {
 
     @Async
     @Override
-    public Future<?> submitTask(Runnable job, TaskType taskType, long chatId, long clusterId) {
+    public Future<?> submitMapPopulationTask(Runnable job, TaskType taskType, long chatId, long clusterId) {
         return asyncTaskExecutor.submit(() -> {
             try {
                 chatLatches.get(chatId).await();

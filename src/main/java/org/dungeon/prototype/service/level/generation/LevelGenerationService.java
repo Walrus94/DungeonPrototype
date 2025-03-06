@@ -126,7 +126,7 @@ public class LevelGenerationService {
 
         clusters.values().forEach(cluster -> {
             log.info("Processing cluster: {}", cluster);
-            asyncJobHandler.submitTask(() -> {
+            asyncJobHandler.submitMapPopulationTask(() -> {
                 while (!cluster.getWalkers().isEmpty()) {
                     for (WalkerBuilder walker : cluster.getWalkers()) {
                         walker.nextStep(grid);

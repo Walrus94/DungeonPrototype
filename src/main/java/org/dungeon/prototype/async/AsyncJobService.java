@@ -10,8 +10,8 @@ public interface AsyncJobService {
     <T> Future<T> submitTask(Callable<T> job, TaskType taskType, long chatId);
 
     @Async
-    Future<?> submitTask(Runnable job, TaskType taskType, long chatId, long clusterId);
+    Future<?> submitMapPopulationTask(Runnable job, TaskType taskType, long chatId, long clusterId);
 
     @Async
-    Future<?> submitTask(Runnable job, TaskType taskType, long chatId);
+    Future<?> submitItemGenerationTask(Runnable job, TaskType taskType, long chatId);
 }
