@@ -1,13 +1,13 @@
 import asyncpg
 from config.settings import POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, POSTGRES_PORT
 
-async def load_template_matrix():
+async def load_template_matrix(chat_id, database):
     """Loads predefined template matrix from PostgreSQL."""
     conn = await asyncpg.connect("postgresql://{}:{}@postgres:{}/{}".format(
-        POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_PORT, POSTGRES_DB
+        POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_PORT, database
     ))
 
-    row = await conn.fetchrow("SELECT data FROM balance_matrices WHERE chat_id = 'TEMPLATE' LIMIT 1")
+    row = await conn.fetchrow("SELECT data FROM {} WHERE chat_id = {} and is_template = false LIMIT 1".format(database, chat_id))
     await conn.close()
 
     return np.array(row["data"]) if row else None

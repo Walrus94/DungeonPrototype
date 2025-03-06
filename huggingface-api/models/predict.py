@@ -3,9 +3,9 @@ from models.rl_env import BalanceAdjustmentEnv
 from db.postgres import load_template_matrix
 import asyncio
 
-async def generate_balance_matrix():
+async def generate_balance_matrix(chat_id, database):
     """Use trained RL model to generate a balanced matrix."""
-    template_matrix = await load_template_matrix()
+    template_matrix = await load_template_matrix(chat_id, database)
     model = PPO.load("balance_rl_model")
 
     env = BalanceAdjustmentEnv(template_matrix)
