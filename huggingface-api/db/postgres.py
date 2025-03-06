@@ -19,8 +19,8 @@ async def save_balance_matrix(chat_id, name, matrix):
     ))
 
     await conn.execute(
-        "INSERT INTO balance_matrices (chat_id, name, data) VALUES ($1, $2, $3)",
-        chat_id, name, matrix.tolist()
+        "INSERT INTO $1 (chat_id, name, data) VALUES ($2, $3, $4)",
+        POSTGRES_DB, chat_id, name, matrix.tolist()
     )
 
     await conn.close()
