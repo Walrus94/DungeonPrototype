@@ -5,10 +5,10 @@ import org.dungeon.prototype.async.metrics.TaskContext;
 import org.dungeon.prototype.async.metrics.TaskContextData;
 import org.dungeon.prototype.async.metrics.TaskMetrics;
 import org.dungeon.prototype.exception.DungeonPrototypeException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration;
 import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -22,21 +22,21 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
-public class AsyncJobHandler implements AsyncJobService {
+public class AsyncJobHandler {
 
     private final AsyncTaskExecutor asyncTaskExecutor;
     private final Map<Long, CountDownLatch> chatLatches;
 
-    @Autowired
-    private TaskMetrics taskMetrics;
+    private final TaskMetrics taskMetrics;
 
     public AsyncJobHandler(@Qualifier(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME)
-                           AsyncTaskExecutor asyncTaskExecutor) {
+                           AsyncTaskExecutor asyncTaskExecutor, TaskMetrics taskMetrics) {
         this.asyncTaskExecutor = asyncTaskExecutor;
         this.chatLatches = new ConcurrentHashMap<>();
+        this.taskMetrics = taskMetrics;
     }
 
-    @Override
+    @Async
     public Future<?> submitItemGenerationTask(Runnable job, TaskType taskType, long chatId) {
         CountDownLatch latch = chatLatches.computeIfAbsent(chatId, k -> new CountDownLatch(2));//TODO: increment when Usable items generation is implemented
         return asyncTaskExecutor.submit(() -> {
@@ -49,7 +49,7 @@ public class AsyncJobHandler implements AsyncJobService {
         });
     }
 
-    @Override
+    @Async
     public <T> Future<T> submitTask(Callable<T> job, TaskType taskType, long chatId) {
         return (Future<T>) asyncTaskExecutor.submit(() -> {
             try {
@@ -65,7 +65,7 @@ public class AsyncJobHandler implements AsyncJobService {
         });
     }
 
-    @Override
+    @Async
     public Future<?> submitMapPopulationTask(Runnable job, TaskType taskType, long chatId, long clusterId) {
         return asyncTaskExecutor.submit(() -> {
             try {

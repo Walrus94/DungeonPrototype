@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.math3.util.Pair;
-import org.dungeon.prototype.async.AsyncJobService;
+import org.dungeon.prototype.async.AsyncJobHandler;
 import org.dungeon.prototype.async.TaskType;
 import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.inventory.attributes.MagicType;
@@ -93,7 +93,7 @@ public class ItemGenerator {
     @Autowired
     private ItemService itemService;
     @Autowired
-    AsyncJobService asyncJobHandler;
+    AsyncJobHandler asyncJobHandler;
     @Autowired
     private MessageService messageService;
     @Autowired

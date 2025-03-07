@@ -2,7 +2,7 @@ package org.dungeon.prototype.service.inventory;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.dungeon.prototype.async.AsyncJobService;
+import org.dungeon.prototype.async.AsyncJobHandler;
 import org.dungeon.prototype.async.TaskType;
 import org.dungeon.prototype.exception.DungeonPrototypeException;
 import org.dungeon.prototype.exception.RestrictedOperationException;
@@ -48,7 +48,7 @@ public class InventoryService {
     @Autowired
     private InventoryRepository inventoryRepository;
     @Autowired
-    private AsyncJobService asyncJobService;
+    private AsyncJobHandler asyncJobHandler;
 
     /**
      * Builds default inventory for start of the game
@@ -59,7 +59,7 @@ public class InventoryService {
         log.info("Setting default inventory");
         messageService.sendPlayerGeneratingInfoMessage(chatId);
         try {
-            return asyncJobService.submitTask(() -> {
+            return asyncJobHandler.submitTask(() -> {
                 Inventory inventory = new Inventory();
                 inventory.setItems(new ArrayList<>());
                 inventory.setVest(getDefaultVest(chatId));
