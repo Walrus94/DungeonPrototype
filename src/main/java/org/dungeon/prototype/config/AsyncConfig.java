@@ -2,6 +2,7 @@ package org.dungeon.prototype.config;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import org.dungeon.prototype.async.metrics.TaskMetrics;
+import org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration;
 import org.springframework.boot.web.embedded.tomcat.TomcatProtocolHandlerCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,8 +18,7 @@ import java.util.concurrent.Executors;
 @EnableAsync
 public class AsyncConfig {
 
-    @Bean
-    @Primary
+    @Bean(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME)
     public AsyncTaskExecutor asyncTaskExecutor() {
         return new TaskExecutorAdapter(Executors.newVirtualThreadPerTaskExecutor());
     }

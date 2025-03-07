@@ -6,6 +6,8 @@ import org.dungeon.prototype.async.metrics.TaskContextData;
 import org.dungeon.prototype.async.metrics.TaskMetrics;
 import org.dungeon.prototype.exception.DungeonPrototypeException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
 
@@ -22,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class AsyncJobHandler implements AsyncJobService {
 
-    @Autowired
+    @Qualifier(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME)
     private AsyncTaskExecutor asyncTaskExecutor;
     private static final Map<Long, CountDownLatch> chatLatches = new ConcurrentHashMap<>();
 
