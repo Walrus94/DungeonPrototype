@@ -2,7 +2,7 @@ package org.dungeon.prototype.service.level.generation;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.dungeon.prototype.async.AsyncJobHandler;
+import org.dungeon.prototype.async.AsyncJobService;
 import org.dungeon.prototype.async.TaskType;
 import org.dungeon.prototype.exception.DungeonPrototypeException;
 import org.dungeon.prototype.model.inventory.Item;
@@ -66,7 +66,7 @@ public class LevelGenerationService {
     @Autowired
     private WeightCalculationService weightCalculationService;
     @Autowired
-    private AsyncJobHandler asyncJobHandler;
+    private AsyncJobService asyncJobHandler;
     @Autowired
     private GenerationProperties generationProperties;
 

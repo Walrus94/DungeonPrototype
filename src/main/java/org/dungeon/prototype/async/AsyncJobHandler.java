@@ -7,7 +7,6 @@ import org.dungeon.prototype.async.metrics.TaskMetrics;
 import org.dungeon.prototype.exception.DungeonPrototypeException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.AsyncTaskExecutor;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -21,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
-public class AsyncJobHandler {
+public class AsyncJobHandler implements AsyncJobService {
 
     @Autowired
     private AsyncTaskExecutor asyncTaskExecutor;
@@ -30,7 +29,7 @@ public class AsyncJobHandler {
     @Autowired
     private TaskMetrics taskMetrics;
 
-    @Async
+    @Override
     public Future<?> submitItemGenerationTask(Runnable job, TaskType taskType, long chatId) {
         CountDownLatch latch = chatLatches.computeIfAbsent(chatId, k -> new CountDownLatch(2));//TODO: increment when Usable items generation is implemented
         return asyncTaskExecutor.submit(() -> {
@@ -43,7 +42,7 @@ public class AsyncJobHandler {
         });
     }
 
-    @Async
+    @Override
     public <T> Future<T> submitTask(Callable<T> job, TaskType taskType, long chatId) {
         return (Future<T>) asyncTaskExecutor.submit(() -> {
             try {
@@ -59,7 +58,7 @@ public class AsyncJobHandler {
         });
     }
 
-    @Async
+    @Override
     public Future<?> submitMapPopulationTask(Runnable job, TaskType taskType, long chatId, long clusterId) {
         return asyncTaskExecutor.submit(() -> {
             try {

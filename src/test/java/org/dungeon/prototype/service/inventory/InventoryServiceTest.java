@@ -1,7 +1,7 @@
 package org.dungeon.prototype.service.inventory;
 
 import lombok.val;
-import org.dungeon.prototype.async.AsyncJobHandler;
+import org.dungeon.prototype.async.AsyncJobService;
 import org.dungeon.prototype.async.TaskType;
 import org.dungeon.prototype.model.document.player.InventoryDocument;
 import org.dungeon.prototype.model.inventory.Inventory;
@@ -78,7 +78,7 @@ class InventoryServiceTest extends BaseServiceUnitTest {
     @Mock
     private InventoryRepository inventoryRepository;
     @Mock
-    private AsyncJobHandler asyncJobHandler;
+    private AsyncJobService asyncJobHandler;
 
     @Test
     @DisplayName("Sets default inventory with items from repository and returns it")
