@@ -24,14 +24,14 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class AsyncJobHandler implements AsyncJobService {
 
-    @Qualifier(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME)
     private final AsyncTaskExecutor asyncTaskExecutor;
     private final Map<Long, CountDownLatch> chatLatches;
 
     @Autowired
     private TaskMetrics taskMetrics;
 
-    public AsyncJobHandler(AsyncTaskExecutor asyncTaskExecutor) {
+    public AsyncJobHandler(@Qualifier(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME)
+                           AsyncTaskExecutor asyncTaskExecutor) {
         this.asyncTaskExecutor = asyncTaskExecutor;
         this.chatLatches = new ConcurrentHashMap<>();
     }
