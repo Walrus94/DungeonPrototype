@@ -25,14 +25,15 @@ import java.util.concurrent.TimeUnit;
 public class AsyncJobHandler implements AsyncJobService {
 
     @Qualifier(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME)
-    private AsyncTaskExecutor asyncTaskExecutor;
-    private static final Map<Long, CountDownLatch> chatLatches = new ConcurrentHashMap<>();
+    private final AsyncTaskExecutor asyncTaskExecutor;
+    private final Map<Long, CountDownLatch> chatLatches;
 
     @Autowired
     private TaskMetrics taskMetrics;
 
     public AsyncJobHandler(AsyncTaskExecutor asyncTaskExecutor) {
         this.asyncTaskExecutor = asyncTaskExecutor;
+        this.chatLatches = new ConcurrentHashMap<>();
     }
 
     @Override
