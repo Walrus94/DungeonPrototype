@@ -18,7 +18,6 @@ import org.dungeon.prototype.service.item.generation.ItemNamingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -47,7 +46,6 @@ public class ItemService {
      * @param item to save
      * @return saved item
      */
-    @Transactional
     public Item saveItem(Item item) {
         val itemDocument = ItemMapper.INSTANCE.mapToDocument(item);
         val savedItemDocument = itemRepository.save(itemDocument);
@@ -66,7 +64,6 @@ public class ItemService {
      * @param wearableType to look for
      * @return found item
      */
-    @Transactional
     public Wearable getMostLightweightWearable(Long chatId, WearableType wearableType) {
         List<ItemDocument> documents = itemRepository.findWearablesByChatIdTypeAndMinWeight(chatId, wearableType, PageRequest.of(0, 1));
         if (isNull(documents) || documents.isEmpty()) {
@@ -94,7 +91,6 @@ public class ItemService {
      * @param chatId current chat id
      * @return found item
      */
-    @Transactional
     public Weapon getMostLightWeightMainWeapon(Long chatId) {
         val documents = itemRepository.findMainWeaponByChatIdAndMinWeight(chatId, PageRequest.of(0, 1));
         if (isNull(documents) || documents.isEmpty()) {
@@ -222,7 +218,6 @@ public class ItemService {
      * @param <T>   class, extending {@link Item}
      * @return saved items
      */
-    @Transactional
     public <T extends Item> Set<Item> saveItems(List<T> items) {
         val itemDocuments = items.stream().map(ItemMapper.INSTANCE::mapToDocument).toList();
         val savedItemDocuments = itemRepository.saveAll(itemDocuments);

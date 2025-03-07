@@ -29,7 +29,6 @@ import org.dungeon.prototype.util.RandomUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -109,7 +108,6 @@ public class ItemGenerator {
      *
      * @param chatId id of chat where game runs
      */
-    @Transactional
     public void generateItems(Long chatId) {
         messageService.sendItemsGeneratingInfoMessage(chatId);
         itemService.dropCollection(chatId);
