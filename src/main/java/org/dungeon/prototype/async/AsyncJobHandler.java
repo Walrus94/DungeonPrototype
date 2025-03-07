@@ -31,6 +31,10 @@ public class AsyncJobHandler implements AsyncJobService {
     @Autowired
     private TaskMetrics taskMetrics;
 
+    public AsyncJobHandler(AsyncTaskExecutor asyncTaskExecutor) {
+        this.asyncTaskExecutor = asyncTaskExecutor;
+    }
+
     @Override
     public Future<?> submitItemGenerationTask(Runnable job, TaskType taskType, long chatId) {
         CountDownLatch latch = chatLatches.computeIfAbsent(chatId, k -> new CountDownLatch(2));//TODO: increment when Usable items generation is implemented
@@ -74,107 +78,102 @@ public class AsyncJobHandler implements AsyncJobService {
         });
     }
 
-    private <T> Future<T> executeTask(Callable<T> job, TaskType taskType, long chatId) {
+    private <T> T executeTask(Callable<T> job, TaskType taskType, long chatId) {
         try (var taskScope = new StructuredTaskScope.ShutdownOnFailure()) {
-            return (Future<T>) asyncTaskExecutor.submit(() -> {
-                var context = new TaskContextData(chatId, 0, taskType);
-                taskScope.fork(() -> ScopedValue
-                        .where(TaskContext.CONTEXT, context)
-                        .call(() -> {
-                            long start = System.currentTimeMillis();
-                            taskMetrics.addActiveTask(context);
-                            try {
-                                return job.call();
-                            } catch (Exception e) {
-                                taskMetrics.getTaskFailureCounter(taskType.name()).increment();
-                                throw e;
-                            } finally {
-                                long elapsed = System.currentTimeMillis() - start;
-                                taskMetrics.removeCompletedTask(context);
-                                taskMetrics.getTaskTimer(taskType.name()).record(elapsed, TimeUnit.MILLISECONDS);
-                            }
-                        }));
-                try {
-                    while (!chatLatches.get(chatId).await(1, TimeUnit.SECONDS)) {
-                        log.info("Waiting for chatId map and items generation: {}", chatId);
-                    }
-                    taskScope.join();
-                    taskScope.throwIfFailed();
-                } catch (InterruptedException | ExecutionException e) {
-                    throw new DungeonPrototypeException("Task execution interrupted:" + e.getMessage());
-                } finally {
-                    taskMetrics.removeCompletedTask(context);
+            var context = new TaskContextData(chatId, 0, taskType);
+            taskScope.fork(() -> ScopedValue
+                    .where(TaskContext.CONTEXT, context)
+                    .call(() -> {
+                        long start = System.currentTimeMillis();
+                        taskMetrics.addActiveTask(context);
+                        try {
+                            return job.call();
+                        } catch (Exception e) {
+                            taskMetrics.getTaskFailureCounter(taskType.name()).increment();
+                            throw e;
+                        } finally {
+                            long elapsed = System.currentTimeMillis() - start;
+                            taskMetrics.removeCompletedTask(context);
+                            taskMetrics.getTaskTimer(taskType.name()).record(elapsed, TimeUnit.MILLISECONDS);
+                        }
+                    }));
+            try {
+                while (!chatLatches.get(chatId).await(1, TimeUnit.SECONDS)) {
+                    log.info("Waiting for chatId map and items generation: {}", chatId);
                 }
-            });
+                taskScope.join();
+                taskScope.throwIfFailed();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new DungeonPrototypeException("Task execution interrupted:" + e.getMessage());
+            } finally {
+                taskMetrics.removeCompletedTask(context);
+            }
         }
+        return null;
     }
 
     private void executeTask(Runnable job, TaskType taskType, long chatId) {
         try (var taskScope = new StructuredTaskScope.ShutdownOnFailure()) {
-            asyncTaskExecutor.submit(() -> {
-                var context = new TaskContextData(chatId, 0, taskType);
-                taskScope.fork(() -> ScopedValue
-                        .where(TaskContext.CONTEXT, context)
-                        .call(() -> {
-                            long start = System.currentTimeMillis();
-                            taskMetrics.addActiveTask(context);
-                            try {
-                                job.run();
-                            } catch (Exception e) {
-                                taskMetrics.getTaskFailureCounter(taskType.name()).increment();
-                                throw e;
-                            } finally {
-                                long elapsed = System.currentTimeMillis() - start;
-                                taskMetrics.removeCompletedTask(context);
-                                taskMetrics.getTaskTimer(taskType.name()).record(elapsed, TimeUnit.MILLISECONDS);
-                            }
-                            return null;
-                        }));
-                try {
-                    while (!chatLatches.get(chatId).await(1, TimeUnit.SECONDS)) {
-                        log.info("Waiting for chatId map and items generation: {}", chatId);
-                    }
-                    taskScope.join();
-                    taskScope.throwIfFailed();
-                } catch (InterruptedException | ExecutionException e) {
-                    throw new DungeonPrototypeException("Task execution interrupted:" + e.getMessage());
-                } finally {
-                    taskMetrics.removeCompletedTask(context);
+            var context = new TaskContextData(chatId, 0, taskType);
+            taskScope.fork(() -> ScopedValue
+                    .where(TaskContext.CONTEXT, context)
+                    .call(() -> {
+                        long start = System.currentTimeMillis();
+                        taskMetrics.addActiveTask(context);
+                        try {
+                            job.run();
+                        } catch (Exception e) {
+                            taskMetrics.getTaskFailureCounter(taskType.name()).increment();
+                            throw e;
+                        } finally {
+                            long elapsed = System.currentTimeMillis() - start;
+                            taskMetrics.removeCompletedTask(context);
+                            taskMetrics.getTaskTimer(taskType.name()).record(elapsed, TimeUnit.MILLISECONDS);
+                        }
+                        return null;
+                    }));
+            try {
+                while (!chatLatches.get(chatId).await(1, TimeUnit.SECONDS)) {
+                    log.info("Waiting for chatId map and items generation: {}", chatId);
                 }
-            });
+                taskScope.join();
+                taskScope.throwIfFailed();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new DungeonPrototypeException("Task execution interrupted:" + e.getMessage());
+            } finally {
+                taskMetrics.removeCompletedTask(context);
+            }
         }
     }
 
     private void executeTask(Runnable job, TaskType taskType, long chatId, long clusterId) {
         try (var taskScope = new StructuredTaskScope.ShutdownOnFailure()) {
-            asyncTaskExecutor.submit(() -> {
-                var context = new TaskContextData(chatId, clusterId, taskType);
-                taskScope.fork(() -> ScopedValue
-                        .where(TaskContext.CONTEXT, context)
-                        .call(() -> {
-                            long start = System.currentTimeMillis();
-                            taskMetrics.addActiveTask(context);
-                            try {
-                                job.run();
-                            } catch (Exception e) {
-                                taskMetrics.getTaskFailureCounter(taskType.name()).increment();
-                                throw e;
-                            } finally {
-                                long elapsed = System.currentTimeMillis() - start;
-                                taskMetrics.removeCompletedTask(context);
-                                taskMetrics.getTaskTimer(taskType.name()).record(elapsed, TimeUnit.MILLISECONDS);
-                            }
-                            return null;
-                        }));
-                try {
-                    taskScope.join();
-                    taskScope.throwIfFailed();
-                } catch (InterruptedException | ExecutionException e) {
-                    throw new DungeonPrototypeException("Task execution interrupted:" + e.getMessage());
-                } finally {
-                    taskMetrics.removeCompletedTask(context);
-                }
-            });
+            var context = new TaskContextData(chatId, clusterId, taskType);
+            taskScope.fork(() -> ScopedValue
+                    .where(TaskContext.CONTEXT, context)
+                    .call(() -> {
+                        long start = System.currentTimeMillis();
+                        taskMetrics.addActiveTask(context);
+                        try {
+                            job.run();
+                        } catch (Exception e) {
+                            taskMetrics.getTaskFailureCounter(taskType.name()).increment();
+                            throw e;
+                        } finally {
+                            long elapsed = System.currentTimeMillis() - start;
+                            taskMetrics.removeCompletedTask(context);
+                            taskMetrics.getTaskTimer(taskType.name()).record(elapsed, TimeUnit.MILLISECONDS);
+                        }
+                        return null;
+                    }));
+            try {
+                taskScope.join();
+                taskScope.throwIfFailed();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new DungeonPrototypeException("Task execution interrupted:" + e.getMessage());
+            } finally {
+                taskMetrics.removeCompletedTask(context);
+            }
         }
     }
 }
