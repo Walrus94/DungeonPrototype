@@ -21,8 +21,8 @@ import org.dungeon.prototype.model.room.RoomType;
 import org.dungeon.prototype.model.room.content.*;
 import org.dungeon.prototype.model.level.ui.GridSection;
 import org.dungeon.prototype.model.level.ui.LevelMap;
-import org.dungeon.prototype.repository.LevelRepository;
-import org.dungeon.prototype.repository.projections.LevelNumberProjection;
+import org.dungeon.prototype.repository.mongo.LevelRepository;
+import org.dungeon.prototype.repository.mongo.projections.LevelNumberProjection;
 import org.dungeon.prototype.service.BaseServiceUnitTest;
 import org.dungeon.prototype.service.PlayerService;
 import org.dungeon.prototype.service.effect.EffectService;
@@ -86,7 +86,7 @@ class LevelServiceTest extends BaseServiceUnitTest {
     void startNewGame() {
         val player = getPlayer(CHAT_ID);
         val level = TestData.getLevel(1);
-        when(levelGenerationService.generateLevel(CHAT_ID, player, 1)).thenReturn(level);
+        when(levelGenerationService.generateAndPopulateLevel(CHAT_ID, player, 1)).thenReturn(level);
 
         val document = new LevelDocument();
         val start = new RoomDocument();
@@ -108,7 +108,7 @@ class LevelServiceTest extends BaseServiceUnitTest {
 
         levelService.startNewGame(CHAT_ID, player);
 
-        verify(levelGenerationService).generateLevel(CHAT_ID, player, 1);
+        verify(levelGenerationService).generateAndPopulateLevel(CHAT_ID, player, 1);
         verify(messageService).sendLevelGeneratingInfoMessage(CHAT_ID, 1);
     }
 
@@ -120,7 +120,7 @@ class LevelServiceTest extends BaseServiceUnitTest {
         val levelNumber = new LevelNumberProjection();
         levelNumber.setNumber(1);
         when(levelRepository.findNumberByChatId(CHAT_ID)).thenReturn(Optional.of(levelNumber));
-        when(levelGenerationService.generateLevel(CHAT_ID, player, 2)).thenReturn(level);
+        when(levelGenerationService.generateAndPopulateLevel(CHAT_ID, player, 2)).thenReturn(level);
 
         val document = new LevelDocument();
         val start = new RoomDocument();
@@ -143,6 +143,7 @@ class LevelServiceTest extends BaseServiceUnitTest {
         document.setEnd(end.getPoint());
         document.setRoomsMap(Map.of("{\"x\":0, \"y\":0}", start,
                 "{\"x\":5, \"y\":5}", end));
+        when(levelGenerationService.generateAndPopulateLevel(CHAT_ID, player, 2)).thenReturn(level);
         when(levelRepository.save(any(LevelDocument.class))).thenReturn(document);
         when(effectService.updateArmorEffect(player)).thenReturn(player);
         doNothing().when(messageService).sendLevelGeneratingInfoMessage(CHAT_ID, 2);

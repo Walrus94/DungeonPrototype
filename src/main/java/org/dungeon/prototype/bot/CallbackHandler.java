@@ -4,7 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.annotations.aspect.AnswerCallback;
 import org.dungeon.prototype.exception.CallbackParsingException;
-import org.dungeon.prototype.exception.ItemGenerationException;
 import org.dungeon.prototype.exception.RestrictedOperationException;
 import org.dungeon.prototype.model.player.PlayerAttribute;
 import org.dungeon.prototype.model.room.content.MonsterRoom;
@@ -24,9 +23,16 @@ import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
 
-import static org.dungeon.prototype.properties.CallbackType.*;
+import static org.dungeon.prototype.properties.CallbackType.BOOTS;
+import static org.dungeon.prototype.properties.CallbackType.GLOVES;
+import static org.dungeon.prototype.properties.CallbackType.HEAD;
+import static org.dungeon.prototype.properties.CallbackType.INVENTORY;
+import static org.dungeon.prototype.properties.CallbackType.LEFT_HAND;
+import static org.dungeon.prototype.properties.CallbackType.MENU_BACK;
+import static org.dungeon.prototype.properties.CallbackType.MERCHANT_SELL_MENU;
+import static org.dungeon.prototype.properties.CallbackType.RIGHT_HAND;
+import static org.dungeon.prototype.properties.CallbackType.VEST;
 import static org.dungeon.prototype.util.LevelUtil.getDirectionSwitchByCallBackData;
 import static org.dungeon.prototype.util.LevelUtil.getErrorMessageByCallBackData;
 import static org.dungeon.prototype.util.LevelUtil.getNextPointInDirection;
@@ -213,12 +219,7 @@ public class CallbackHandler {
     }
 
     private void handleStartingNewGame(Long chatId) {
-        try {
-            itemGenerator.generateItems(chatId).get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new ItemGenerationException(chatId, e.getMessage(), START_GAME);
-        }
-        log.info("Item generation completed for chat {}!", chatId);
+        itemGenerator.generateItems(chatId);
         val defaultInventory = inventoryService.getDefaultInventory(chatId);
         var player = playerService.getPlayerPreparedForNewGame(chatId, defaultInventory);
         player = effectService.updatePlayerEffects(player);

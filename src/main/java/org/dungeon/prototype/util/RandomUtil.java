@@ -7,7 +7,7 @@ import org.apache.commons.math3.distribution.EnumeratedDistribution;
 import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.random.RandomDataGenerator;
 import org.apache.commons.math3.util.Pair;
-import org.dungeon.prototype.model.Direction;
+import org.dungeon.prototype.model.inventory.attributes.EnumWeightedAttribute;
 import org.dungeon.prototype.model.inventory.attributes.EnumAttribute;
 import org.dungeon.prototype.model.inventory.attributes.MagicType;
 import org.dungeon.prototype.model.monster.MonsterClass;
@@ -16,6 +16,7 @@ import org.dungeon.prototype.model.weight.Weight;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.commons.math3.util.FastMath.PI;
 import static org.apache.commons.math3.util.FastMath.cos;
@@ -41,16 +42,20 @@ import static org.dungeon.prototype.util.RoomGenerationUtils.convertToMonsterCla
 @UtilityClass
 public class RandomUtil {
     private static final RandomDataGenerator random = new RandomDataGenerator();
+    public static <T extends EnumWeightedAttribute> T getRandomWeightedEnumValue(List<T> values) {
+        return new EnumeratedDistribution<>(random.getRandomGenerator(), values.stream().map(t -> new Pair<>(t, t.getProbability())).toList()).sample();
+    }
+
+    public static <T extends EnumAttribute> T getRandomWeightedEnumValue(Map<T, Double> values) {
+        return new EnumeratedDistribution<>(random.getRandomGenerator(), values.entrySet().stream().map(entry -> new Pair<>(entry.getKey(), entry.getValue())).toList()).sample();
+    }
+
     public static  <T extends EnumAttribute> T getRandomEnumValue(List<T> values) {
         return new EnumeratedDistribution<>(random.getRandomGenerator(), values.stream().map(t -> new Pair<>(t, 1.0)).toList()).sample();
     }
 
     public static  <T extends EnumAttribute> T getRandomEnumValue(List<T> values, List<T> exclusions) {
         return new EnumeratedDistribution<>(random.getRandomGenerator(), values.stream().filter(t -> !exclusions.contains(t)).map(t -> new Pair<>(t, 1.0)).toList()).sample();
-    }
-
-    public static Direction getRandomDirection(List<Pair<Direction, Double>> pmf) {
-        return new EnumeratedDistribution<>(random.getRandomGenerator(), pmf).sample();
     }
 
     public static Boolean flipAdjustedCoin(Double trueProbability) {
@@ -60,6 +65,10 @@ public class RandomUtil {
 
     public static Integer getRandomInt(int from, int to) {
         return random.nextInt(from, to);
+    }
+
+    public static Double getRandomUniform(double from, double to) {
+        return random.nextUniform(from, to, true);
     }
 
     public static Double getNormalDistributionRandomDouble(double mean, double sd) {

@@ -9,7 +9,7 @@ import org.dungeon.prototype.model.level.generation.LevelGridCluster;
 import org.dungeon.prototype.model.level.generation.NextRoomDto;
 import org.dungeon.prototype.model.level.ui.GridSection;
 import org.dungeon.prototype.model.room.Room;
-import org.dungeon.prototype.service.WalkerUniqueIdFactory;
+import org.dungeon.prototype.service.UniqueIdFactory;
 
 import java.util.*;
 
@@ -25,7 +25,7 @@ import static org.dungeon.prototype.util.LevelUtil.setMutualAdjacency;
 @Builder
 public class WalkerDistributor {
     @Builder.Default
-    private Long id = WalkerUniqueIdFactory.getInstance().getNextId();
+    private long id = UniqueIdFactory.getInstance().getNextId();
     private long chatId;
     private LevelGridCluster cluster;
     private boolean runSubWalkerOnRouteFork;
@@ -161,7 +161,7 @@ public class WalkerDistributor {
         if (obj == this) {
             return true;
         }
-        return this.id.equals(walkerDistributor.getId()) &&
+        return this.id == walkerDistributor.getId() &&
                 this.chatId == walkerDistributor.getChatId() &&
                 this.cluster.equals(walkerDistributor.getCluster()) &&
                 this.runSubWalkerOnRouteFork == walkerDistributor.isRunSubWalkerOnRouteFork() &&
