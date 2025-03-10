@@ -9,6 +9,7 @@ import org.dungeon.prototype.service.level.generation.WalkerBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Future;
 
 import static org.apache.commons.math3.util.FastMath.abs;
 
@@ -22,6 +23,7 @@ public class LevelGridCluster {
     List<GridSection> deadEnds = new ArrayList<>();
     Weight clusterExpectedWeight;
     List<WalkerBuilder> walkers = new ArrayList<>();
+    Future<GridSection[][]> generatedGrid;
 
     public LevelGridCluster(Point startConnectionPoint, Point endConnectionPoint) {
         this.id = UniqueIdFactory.getInstance().getNextId();

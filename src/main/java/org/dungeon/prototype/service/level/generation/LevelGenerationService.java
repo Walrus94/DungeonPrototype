@@ -27,17 +27,9 @@ import org.dungeon.prototype.service.weight.WeightCalculationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -71,7 +63,7 @@ public class LevelGenerationService {
     private GenerationProperties generationProperties;
 
     public Level generateAndPopulateLevel(Long chatId, Player player, Integer levelNumber) {
-        var level = asyncJobHandler.submitTask(() -> generateLevelMap(chatId, levelNumber), TaskType.LEVEL_GENERATION, chatId);
+        val level = asyncJobHandler.submitTask(() -> generateLevelMap(chatId, levelNumber), TaskType.LEVEL_GENERATION, chatId);
         while (!level.isDone()) {
             log.info("Waiting for level generation...");
             try {
@@ -81,7 +73,7 @@ public class LevelGenerationService {
             }
         }
         try {
-            return populateLevel(chatId, player, levelNumber, level.get());
+            return populateLevel(chatId, player, levelNumber, (Level) level.get());
         } catch (InterruptedException | ExecutionException e) {
             throw new DungeonPrototypeException(e.getMessage());
         }
@@ -99,7 +91,7 @@ public class LevelGenerationService {
     public Level generateLevelMap(long chatId, int levelNumber) {
         log.info("Generating level {}", levelNumber);
         //initializing level and calculating basic attributes
-        val gridSize = calculateGridSize(levelNumber);
+        int gridSize = calculateGridSize(levelNumber);
         var level = new Level();
         level.setChatId(chatId);
         level.setNumber(levelNumber);
@@ -121,39 +113,60 @@ public class LevelGenerationService {
 
         //empty level grid will be filled with rooms during generation
         GridSection[][] grid = generateEmptyMapGrid(gridSize);
-        initConnectionSections(grid, clusterConnectionPoints);//TODO:consider removing after debug
+        initConnectionSections(grid, clusterConnectionPoints);
         level.setClusterConnectionPoints(clusterConnectionPoints);
 
         clusters.values().forEach(cluster -> {
             log.info("Processing cluster: {}", cluster);
-            asyncJobHandler.submitMapPopulationTask(() -> {
+            cluster.setGeneratedGrid((Future<GridSection[][]>) asyncJobHandler.submitMapPopulationTask(() -> {
+                GridSection[][] clusterGrid = generateEmptyMapGrid(cluster.getStartConnectionPoint(), cluster.getEndConnectionPoint());
                 while (!cluster.getWalkers().isEmpty()) {
                     for (WalkerBuilder walker : cluster.getWalkers()) {
-                        walker.nextStep(grid);
+                        clusterGrid = walker.nextStep(clusterGrid);
                         log.debug("Current grid state\n{}", printMapGridToLogs(grid));
                     }
                     cluster.getWalkers().removeIf(WalkerBuilder::isStopped);
                 }
                 if (cluster.hasNegativeRooms()) {
                     log.info("Processing negative rooms of cluster {}", cluster);
-                    GridSection endSection = grid[cluster.getEndConnectionPoint().getX()][cluster.getEndConnectionPoint().getY()];
-                    processNegativeSections(grid, cluster, endSection);
+                    GridSection endSection = clusterGrid[clusterGrid.length][clusterGrid[0].length];
+                    processNegativeSections(clusterGrid, cluster, endSection);
                 }
                 if( cluster.hasDeadEnds()) {
                     log.info("Processing dead ends...");
-                    processDeadEnds(grid, cluster);
+                    processDeadEnds(clusterGrid, cluster);
                 }
-            }, TaskType.LEVEL_GENERATION, chatId, cluster.getId());
-
-            log.debug("Clusters data: {}", clusters);
-            log.debug("Current grid state\n{}", printMapGridToLogs(grid));
+                return clusterGrid;
+            }, TaskType.LEVEL_GENERATION, chatId, cluster.getId()));
         });
 
+        while (clusters.values().stream().anyMatch(cluster -> nonNull(cluster.getGeneratedGrid()))) {
+            clusters.values().stream()
+                    .filter(cluster -> nonNull(cluster.getGeneratedGrid()))
+                    .filter(cluster -> cluster.getGeneratedGrid().isDone())
+                    .findFirst().ifPresent(completedCluster -> {
+                try {
+                    copyGridSection(grid, completedCluster.getStartConnectionPoint(), completedCluster.getEndConnectionPoint(), completedCluster.getGeneratedGrid().get());
+                    completedCluster.setGeneratedGrid(null);
+                } catch (InterruptedException | ExecutionException e) {
+                    throw new DungeonPrototypeException(e.getMessage());
+                }
+            });
+        }
 
         level.setGrid(grid);
         level.setClusters(clusters);
 
         return level;
+    }
+
+    private void copyGridSection(GridSection[][] grid, Point startConnectionPoint, Point endConnectionPoint, GridSection[][] gridSection) {
+        IntStream.range(startConnectionPoint.getX(), endConnectionPoint.getX() + 1)
+                .forEach(x -> IntStream.range(startConnectionPoint.getY(), endConnectionPoint.getY() + 1)
+                        .forEach(y -> {
+                            if (!isStartOrEnd(x, y, startConnectionPoint, endConnectionPoint))
+                                grid[x][y] = gridSection[x - startConnectionPoint.getX()][y - startConnectionPoint.getY()];
+                        }));
     }
 
     /**
@@ -463,6 +476,10 @@ public class LevelGenerationService {
         log.debug("Current grid state\n{}", printMapGridToLogs(grid));
     }
 
+    private boolean isStartOrEnd(int x, int y, Point start, Point end) {
+        return start.equals(new Point(x, y)) || end.equals(new Point(x, y));
+    }
+
     private Optional<Integer> getCrossroadPairMiddlePath(List<GridSection> adjacentSections, int expectedPath) {
         List<Integer> availableOptions = new ArrayList<>();
         for (int i = 0; i < adjacentSections.size(); i++) {
@@ -561,14 +578,14 @@ public class LevelGenerationService {
                                 .isReversed(false)
                                 .cluster(cluster)
                                 .longestPathDefault(true)
-                                .currentPoint(cluster.getStartConnectionPoint())
+                                .currentPoint(new Point(0, 0))
                                 .build(),
                         WalkerBuilder.builder()
                                 .pathFromStart(0)
                                 .isReversed(false)
                                 .longestPathDefault(true)
                                 .cluster(cluster)
-                                .currentPoint(cluster.getStartConnectionPoint())
+                                .currentPoint(new Point(0,0))
                                 .build());
             } else if (cluster.hasSmallSide()) {
                 log.info("Small sided cluster...");
@@ -584,7 +601,8 @@ public class LevelGenerationService {
                                 .longestPathDefault(true)
                                 .pathFromStart(0)
                                 .cluster(cluster)
-                                .currentPoint(cluster.getEndConnectionPoint())
+                                .currentPoint(new Point(cluster.getEndConnectionPoint().getX() - cluster.getStartConnectionPoint().getX(),
+                                        cluster.getEndConnectionPoint().getY() - cluster.getStartConnectionPoint().getY()))
                                 .build());
             }
             int fromStartWalkersNumber = getRandomInt(1, 2);

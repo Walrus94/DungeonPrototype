@@ -1,5 +1,6 @@
 package org.dungeon.prototype.service.inventory;
 
+import lombok.SneakyThrows;
 import lombok.val;
 import org.dungeon.prototype.async.AsyncJobHandler;
 import org.dungeon.prototype.async.TaskType;
@@ -54,6 +55,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.anyDouble;
 import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -80,6 +82,7 @@ class InventoryServiceTest extends BaseServiceUnitTest {
     @Mock
     private AsyncJobHandler asyncJobHandler;
 
+    @SneakyThrows
     @Test
     @DisplayName("Sets default inventory with items from repository and returns it")
     void getDefaultInventory() {
@@ -113,10 +116,9 @@ class InventoryServiceTest extends BaseServiceUnitTest {
         weapon.setEffects(new ArrayList<>());
         expectedInventory.setPrimaryWeapon(weapon);
         expectedInventory.setItems(new ArrayList<>());
-
-        when(asyncJobHandler.submitTask(any(Callable.class), eq(TaskType.GET_DEFAULT_INVENTORY), eq(CHAT_ID))).thenReturn(CompletableFuture.completedFuture(expectedInventory));
-
+        doReturn(CompletableFuture.completedFuture(expectedInventory)).when(asyncJobHandler).submitTask(any(Callable.class), eq(TaskType.GET_DEFAULT_INVENTORY), eq(CHAT_ID));
         Inventory actualInventory = inventoryService.getDefaultInventory(CHAT_ID);
+        verify(messageService).sendPlayerGeneratingInfoMessage(CHAT_ID);
 
 
         assertEquals(expectedInventory.getPrimaryWeapon().getId(), actualInventory.getPrimaryWeapon().getId());

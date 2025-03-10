@@ -39,7 +39,7 @@ public class WalkerBuilder {
     private int pathFromStart = 0;
     private LevelGridCluster cluster;
 
-    public void nextStep(GridSection[][] grid) {
+    public GridSection[][] nextStep(GridSection[][] grid) {
         log.info("Walker id:{} (reversed:{}, overriding:{}, border path:{}) next step...",
                 id, isReversed, overridingReversedPath, longestPathDefault);
         GridSection currentSection = grid[currentPoint.getX()][currentPoint.getY()];
@@ -89,11 +89,12 @@ public class WalkerBuilder {
                 log.info("Stopped walker, setting dead end to {}", currentSection);
             }
         }
+        return grid;
     }
 
     private Optional<GridSection> selectNextStep(GridSection[][] grid) {
         log.info("Choosing next step...");
-        Set<GridSection> adjacentSections = getAdjacentSectionsInCluster(currentPoint, grid, cluster);
+        Set<GridSection> adjacentSections = getAdjacentSections(currentPoint, grid);
         log.info("{} adjacent sections in cluster {}: {}", currentPoint, cluster, adjacentSections);
         if (isReversed) {
             if (adjacentSections.stream().anyMatch(section -> cluster.getStartConnectionPoint().equals(section.getPoint()))) {

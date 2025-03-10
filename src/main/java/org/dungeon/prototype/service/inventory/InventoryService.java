@@ -27,8 +27,6 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static org.dungeon.prototype.properties.CallbackType.MERCHANT_BUY_MENU;
 
@@ -59,15 +57,15 @@ public class InventoryService {
         log.info("Setting default inventory");
         messageService.sendPlayerGeneratingInfoMessage(chatId);
         try {
-            return asyncJobHandler.submitTask(() -> {
+            return (Inventory) asyncJobHandler.submitTask(() -> {
                 Inventory inventory = new Inventory();
                 inventory.setItems(new ArrayList<>());
                 inventory.setVest(getDefaultVest(chatId));
                 inventory.setPrimaryWeapon(getDefaultWeapon(chatId));
                 inventory = saveOrUpdateInventory(inventory);
                 return inventory;
-            }, TaskType.GET_DEFAULT_INVENTORY, chatId).get(1, TimeUnit.SECONDS);
-        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            }, TaskType.GET_DEFAULT_INVENTORY, chatId).get();
+        } catch (InterruptedException | ExecutionException e) {
             throw new DungeonPrototypeException(e.getMessage());
         }
     }

@@ -37,9 +37,9 @@ public class AsyncJobHandler {
     }
 
     @Async
-    public Future<?> submitItemGenerationTask(Runnable job, TaskType taskType, long chatId) {
+    public void submitItemGenerationTask(Runnable job, TaskType taskType, long chatId) {
         CountDownLatch latch = chatLatches.computeIfAbsent(chatId, k -> new CountDownLatch(2));//TODO: increment when Usable items generation is implemented
-        return asyncTaskExecutor.submit(() -> {
+        asyncTaskExecutor.submit(() -> {
             try {
                 executeTask(job, taskType, chatId);
             } finally {
@@ -50,31 +50,31 @@ public class AsyncJobHandler {
     }
 
     @Async
-    public <T> Future<T> submitTask(Callable<T> job, TaskType taskType, long chatId) {
-        return (Future<T>) asyncTaskExecutor.submit(() -> {
+    public Future<?> submitTask(Callable<?> job, TaskType taskType, long chatId) {
+        return asyncTaskExecutor.submit(() -> {
             try {
-                chatLatches.get(chatId).await();
+                if (chatLatches.containsKey(chatId) && chatLatches.get(chatId).getCount() > 0) {
+                    chatLatches.get(chatId).await();
+                    chatLatches.remove(chatId);
+                }
                 executeTask(job, taskType, chatId);
             } catch (InterruptedException e) {
                 throw new DungeonPrototypeException(e.getMessage());
-            } finally {
-                if (taskType == TaskType.GET_DEFAULT_INVENTORY) {
-                    chatLatches.remove(chatId);
-                }
             }
         });
     }
 
     @Async
-    public Future<?> submitMapPopulationTask(Runnable job, TaskType taskType, long chatId, long clusterId) {
+    public Future<?> submitMapPopulationTask(Callable<?> job, TaskType taskType, long chatId, long clusterId) {
         return asyncTaskExecutor.submit(() -> {
             try {
-                chatLatches.get(chatId).await();
+                if (chatLatches.containsKey(chatId) && chatLatches.get(chatId).getCount() > 0) {
+                    chatLatches.get(chatId).await();
+                    chatLatches.remove(chatId);
+                }
                 executeTask(job, taskType, chatId, clusterId);
             } catch (InterruptedException e) {
                 throw new DungeonPrototypeException(e.getMessage());
-            } finally {
-                log.info("Task completed for chatId: {}", chatId);
             }
         });
     }
@@ -100,7 +100,7 @@ public class AsyncJobHandler {
                     }));
             try {
                 while (!chatLatches.get(chatId).await(1, TimeUnit.SECONDS)) {
-                    log.info("Waiting for chatId map and items generation: {}", chatId);
+                    log.info("Waiting for chatId:{} map and items generation", chatId);
                 }
                 taskScope.join();
                 taskScope.throwIfFailed();
@@ -135,7 +135,7 @@ public class AsyncJobHandler {
                     }));
             try {
                 while (!chatLatches.get(chatId).await(1, TimeUnit.SECONDS)) {
-                    log.info("Waiting for chatId map and items generation: {}", chatId);
+                    log.info("Waiting for chatId:{} map and items generation", chatId);
                 }
                 taskScope.join();
                 taskScope.throwIfFailed();
@@ -147,7 +147,7 @@ public class AsyncJobHandler {
         }
     }
 
-    private void executeTask(Runnable job, TaskType taskType, long chatId, long clusterId) {
+    private <T> Future<T> executeTask(Callable<T> job, TaskType taskType, long chatId, long clusterId) {
         try (var taskScope = new StructuredTaskScope.ShutdownOnFailure()) {
             var context = new TaskContextData(chatId, clusterId, taskType);
             taskScope.fork(() -> ScopedValue
@@ -156,7 +156,7 @@ public class AsyncJobHandler {
                         long start = System.currentTimeMillis();
                         taskMetrics.addActiveTask(context);
                         try {
-                            job.run();
+                            job.call();
                         } catch (Exception e) {
                             taskMetrics.getTaskFailureCounter(taskType.name()).increment();
                             throw e;
@@ -176,5 +176,6 @@ public class AsyncJobHandler {
                 taskMetrics.removeCompletedTask(context);
             }
         }
+        return null;
     }
 }
