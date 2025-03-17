@@ -42,7 +42,8 @@ jobs:
           echo "BOT_USERNAME=${{vars.BOT_USERNAME}}" >> .env
           echo "BOT_WEBHOOK_PORT=${{vars.BOT_WEBHOOK_PORT}}" >> .env
           echo "BOT_WEBHOOK_PATH=${{vars.BOT_WEBHOOK_PATH}}" >> .env
-          echo "BOT_WEBHOOK_URL=${{vars.BOT_WEBHOOK_URL}}" >> .env
+          echo "BOT_WEBHOOK_URL=${{vars.BOT_WEBHOOK_URL}}" >> .env          
+          echo "IMAGE_PATH=${{vars.IMAGE_PATH}}" >> .env
           echo "CLOUDFLARE_TOKEN=${{secrets.CLOUDFLARE_TOKEN}}" >> .env
           echo "GRAFANA_USER=${{secrets.GRAFANA_USER}}" >> .env
           echo "GRAFANA_PASSWORD=${{secrets.GRAFANA_PASSWORD}}" >> .env
