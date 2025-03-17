@@ -155,15 +155,17 @@ public class MessageService {
     @ChatStateUpdate(from = {GAME, GAME_MENU}, to = GAME_MENU)
     public void sendInventoryItemMessage(Long chatId, Item item, CallbackType inventoryType, Optional<String> itemType) {
         if (itemType.isPresent()) {
-            messageSender.sendMessage(
+            messageSender.sendPhotoMessage(
                     chatId,
                     getInventoryEquippedItemInfoMessageCaption(item, itemType.get()),
-                    keyboardService.getEquippedItemInfoReplyMarkup(inventoryType, item.getSellingPrice()));
+                    keyboardService.getEquippedItemInfoReplyMarkup(inventoryType, item.getSellingPrice()),
+                    FileUtil.getItemImage(chatId, item.getId()));
         } else {
-            messageSender.sendMessage(
+            messageSender.sendPhotoMessage(
                     chatId,
                     getInventoryUnEquippedItemInfoMessageCaption(item),
-                    keyboardService.getInventoryItemInfoReplyMarkup(item, inventoryType));
+                    keyboardService.getInventoryItemInfoReplyMarkup(item, inventoryType),
+                    FileUtil.getItemImage(chatId, item.getId()));
         }
     }
 
@@ -175,10 +177,11 @@ public class MessageService {
     }
 
     public void sendMerchantBuyItemMessage(Long chatId, Item item) {
-        messageSender.sendMessage(
+        messageSender.sendPhotoMessage(
                 chatId,
                 getMerchantSellItemInfoMessageCaption(item),
-                keyboardService.getMerchantBuyItemInfoReplyMarkup(item));
+                keyboardService.getMerchantBuyItemInfoReplyMarkup(item),
+                FileUtil.getItemImage(chatId, item.getId()));
     }
 
     public void sendMerchantSellMenuMessage(Long chatId, Player player) {

@@ -1,8 +1,13 @@
 import logging
 import json
+import os
 from config.settings import HF_MODEL_FILE;
+from config.setting import IMAGE_PATH;
 from db.mongo import update_mongo_item
+from diffusers import DiffusionPipeline
 from llama_cpp import Llama
+
+pipe = DiffusionPipeline.from_pretrained("proximasanfinetuning/fantassified_icons_v2")
 
 llm = Llama.from_pretrained(
     repo_id="bartowski/llama-3-fantasy-writer-8b-GGUF",
@@ -44,8 +49,13 @@ def process_kafka_item_message(message):
 
         logging.debug(f"Response content: {response}")
         # response = pipe(prompt, max_new_tokens=10)[0]['generated_text']
+        os.makedirs(IMAGE_PATH, exist_ok=True)
         
         logging.debug(f"Generated name: {generated_name}")
+        image = pipe(generated_name).images[0]
+
+        image.save(f"{IMAGE_PATH}/{chat_id}_{item_id}.png")
+
     except Exception as e:
         logging.error(f"Error processing LLM response: {str(e)}")
         # Update MongoDB with the generated name where chatId and id match

@@ -39,6 +39,7 @@ services:
       BOT_WEBHOOK_PORT: ${BOT_WEBHOOK_PORT}
       BOT_AUTH_TOKEN: ${BOT_AUTH_TOKEN}
       BOT_WEBHOOK_PATH: ${BOT_WEBHOOK_PATH}
+      IMAGE_PATH: ${IMAGE_PATH}/${ENV}/
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:${KAFKA_PORT}
       ITEM_NAMING_TOPIC: ${KAFKA_ITEM_NAMING_TOPIC}
       SPRING_DATA_MONGODB_PORT: ${MONGO_DB_PORT}
@@ -49,6 +50,8 @@ services:
       POSTGRES_DATABASE_PORT: ${POSTGRES_DATABASE_PORT}
       POSTGRES_DATABASE_USER: ${POSTGRES_DATABASE_USER}
       POSTGRES_DATABASE_PASSWORD: ${POSTGRES_DATABASE_PASSWORD}
+    volumes:
+        - ./generated_images:${IMAGE_PATH}
 
   huggingface-api:
     image: huggingface-api:latest
@@ -68,6 +71,7 @@ services:
         labels: environment,service
     environment:
       HUGGINGFACE_MODEL_FILE: /app/model
+      IMAGE_PATH: ${IMAGE_PATH}/${ENV}/
       KAFKA_BOOTSTRAP_SERVERS: kafka:${KAFKA_PORT}
       KAFKA_ITEM_NAMING_TOPIC: ${KAFKA_ITEM_NAMING_TOPIC}
       KAFKA_BALANCE_MATRIX_TOPIC: ${KAFKA_BALANCE_MATRIX_TOPIC}
@@ -81,3 +85,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_DATABASE_PASSWORD}
     volumes:
       - ./model:/app/model
+      - ./generated_images:${IMAGE_PATH}
+
+volumes:
+  generated_images:
+    driver: local

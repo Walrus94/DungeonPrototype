@@ -3,6 +3,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+IMAGE_PATH = os.getenv("IMAGE_PATH")
+
 POSTGRES_USER = os.getenv("POSTGRES_USER")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 POSTGRES_DB = os.getenv("POSTGRES_DB")
