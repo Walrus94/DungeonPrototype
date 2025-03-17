@@ -2,7 +2,7 @@ import logging
 import json
 import os
 from config.settings import HF_MODEL_FILE;
-from config.setting import IMAGE_PATH;
+from config.settings import IMAGE_PATH;
 from db.mongo import update_mongo_item
 from diffusers import DiffusionPipeline
 from llama_cpp import Llama
