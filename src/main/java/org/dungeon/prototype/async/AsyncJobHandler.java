@@ -96,7 +96,7 @@ public class AsyncJobHandler {
                 log.info("Waiting for chatId:{} map and items generation", chatId);
             }
             job.run();
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (InterruptedException e) {
             throw new DungeonPrototypeException("Task execution interrupted:" + e.getMessage());
         }
     }

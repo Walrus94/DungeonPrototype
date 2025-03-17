@@ -79,7 +79,7 @@ public class LevelGenerationService {
             try {
                 val generatedLevel = (Level) level.get(1, TimeUnit.SECONDS);
                 return populateLevel(chatId, player, levelNumber, generatedLevel);
-            } catch (ExecutionException e) {
+            } catch (InterruptedException | ExecutionException e) {
                 log.info("Waiting for level generation...");
             } catch (TimeoutException e) {
                 throw new DungeonPrototypeException(e.getMessage());
