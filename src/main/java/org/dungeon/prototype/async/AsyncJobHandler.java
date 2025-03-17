@@ -80,70 +80,24 @@ public class AsyncJobHandler {
     }
 
     private <T> T executeTask(Callable<T> job, TaskType taskType, long chatId) {
-        try (var taskScope = new StructuredTaskScope.ShutdownOnFailure()) {
-            var context = new TaskContextData(chatId, 0, taskType);
-            taskScope.fork(() -> ScopedValue
-                    .where(TaskContext.CONTEXT, context)
-                    .call(() -> {
-                        long start = System.currentTimeMillis();
-                        taskMetrics.addActiveTask(context);
-                        try {
-                            return job.call();
-                        } catch (Exception e) {
-                            taskMetrics.getTaskFailureCounter(taskType.name()).increment();
-                            throw e;
-                        } finally {
-                            long elapsed = System.currentTimeMillis() - start;
-                            taskMetrics.removeCompletedTask(context);
-                            taskMetrics.getTaskTimer(taskType.name()).record(elapsed, TimeUnit.MILLISECONDS);
-                        }
-                    }));
-            try {
-                while (!chatLatches.get(chatId).await(1, TimeUnit.SECONDS)) {
-                    log.info("Waiting for chatId:{} map and items generation", chatId);
-                }
-                taskScope.join();
-                taskScope.throwIfFailed();
-            } catch (InterruptedException | ExecutionException e) {
-                throw new DungeonPrototypeException("Task execution interrupted:" + e.getMessage());
-            } finally {
-                taskMetrics.removeCompletedTask(context);
+        try {
+            while (!chatLatches.get(chatId).await(1, TimeUnit.SECONDS)) {
+                log.info("Waiting for chatId:{} map and items generation", chatId);
             }
+            return job.call();
+        } catch (Exception e) {
+            throw new DungeonPrototypeException("Task execution interrupted:" + e.getMessage());
         }
-        return null;
     }
 
     private void executeTask(Runnable job, TaskType taskType, long chatId) {
-        try (var taskScope = new StructuredTaskScope.ShutdownOnFailure()) {
-            var context = new TaskContextData(chatId, 0, taskType);
-            taskScope.fork(() -> ScopedValue
-                    .where(TaskContext.CONTEXT, context)
-                    .call(() -> {
-                        long start = System.currentTimeMillis();
-                        taskMetrics.addActiveTask(context);
-                        try {
-                            job.run();
-                        } catch (Exception e) {
-                            taskMetrics.getTaskFailureCounter(taskType.name()).increment();
-                            throw e;
-                        } finally {
-                            long elapsed = System.currentTimeMillis() - start;
-                            taskMetrics.removeCompletedTask(context);
-                            taskMetrics.getTaskTimer(taskType.name()).record(elapsed, TimeUnit.MILLISECONDS);
-                        }
-                        return null;
-                    }));
-            try {
-                while (!chatLatches.get(chatId).await(1, TimeUnit.SECONDS)) {
-                    log.info("Waiting for chatId:{} map and items generation", chatId);
-                }
-                taskScope.join();
-                taskScope.throwIfFailed();
-            } catch (InterruptedException | ExecutionException e) {
-                throw new DungeonPrototypeException("Task execution interrupted:" + e.getMessage());
-            } finally {
-                taskMetrics.removeCompletedTask(context);
+        try {
+            while (!chatLatches.get(chatId).await(1, TimeUnit.SECONDS)) {
+                log.info("Waiting for chatId:{} map and items generation", chatId);
             }
+            job.run();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new DungeonPrototypeException("Task execution interrupted:" + e.getMessage());
         }
     }
 

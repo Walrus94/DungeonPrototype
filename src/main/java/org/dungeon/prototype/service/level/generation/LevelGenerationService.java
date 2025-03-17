@@ -27,9 +27,20 @@ import org.dungeon.prototype.service.weight.WeightCalculationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -65,15 +76,17 @@ public class LevelGenerationService {
     public Level generateAndPopulateLevel(Long chatId, Player player, Integer levelNumber) {
         val level = asyncJobHandler.submitTask(() -> generateLevelMap(chatId, levelNumber), TaskType.LEVEL_GENERATION, chatId);
         while (!level.isDone()) {
-            log.info("Waiting for level generation...");
             try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                log.error("Level generation interrupted", e);
+                val generatedLevel = (Level) level.get(1, TimeUnit.SECONDS);
+                return populateLevel(chatId, player, levelNumber, generatedLevel);
+            } catch (ExecutionException e) {
+                log.info("Waiting for level generation...");
+            } catch (TimeoutException e) {
+                throw new DungeonPrototypeException(e.getMessage());
             }
         }
         try {
-            return populateLevel(chatId, player, levelNumber, (Level) level.get());
+            return (Level) level.get();
         } catch (InterruptedException | ExecutionException e) {
             throw new DungeonPrototypeException(e.getMessage());
         }
@@ -84,7 +97,7 @@ public class LevelGenerationService {
      * Generates level map grid with clusters and connection points
      * and no content
      *
-     * @param chatId     id of player's chat
+     * @param chatId      id of player's chat
      * @param levelNumber number of level
      * @return generated level
      */
@@ -132,7 +145,7 @@ public class LevelGenerationService {
                     GridSection endSection = clusterGrid[clusterGrid.length][clusterGrid[0].length];
                     processNegativeSections(clusterGrid, cluster, endSection);
                 }
-                if( cluster.hasDeadEnds()) {
+                if (cluster.hasDeadEnds()) {
                     log.info("Processing dead ends...");
                     processDeadEnds(clusterGrid, cluster);
                 }
@@ -145,13 +158,13 @@ public class LevelGenerationService {
                     .filter(cluster -> nonNull(cluster.getGeneratedGrid()))
                     .filter(cluster -> cluster.getGeneratedGrid().isDone())
                     .findFirst().ifPresent(completedCluster -> {
-                try {
-                    copyGridSection(grid, completedCluster.getStartConnectionPoint(), completedCluster.getEndConnectionPoint(), completedCluster.getGeneratedGrid().get());
-                    completedCluster.setGeneratedGrid(null);
-                } catch (InterruptedException | ExecutionException e) {
-                    throw new DungeonPrototypeException(e.getMessage());
-                }
-            });
+                        try {
+                            copyGridSection(grid, completedCluster.getStartConnectionPoint(), completedCluster.getEndConnectionPoint(), completedCluster.getGeneratedGrid().get());
+                            completedCluster.setGeneratedGrid(null);
+                        } catch (InterruptedException | ExecutionException e) {
+                            throw new DungeonPrototypeException(e.getMessage());
+                        }
+                    });
         }
 
         level.setGrid(grid);
@@ -585,7 +598,7 @@ public class LevelGenerationService {
                                 .isReversed(false)
                                 .longestPathDefault(true)
                                 .cluster(cluster)
-                                .currentPoint(new Point(0,0))
+                                .currentPoint(new Point(0, 0))
                                 .build());
             } else if (cluster.hasSmallSide()) {
                 log.info("Small sided cluster...");
@@ -712,12 +725,5 @@ public class LevelGenerationService {
         startSection.setStepsFromStart(0);
         startSection.setEmoji(getIcon(Optional.of(RoomType.START)));
         return startSection;
-    }
-
-    private GridSection setEndSection(GridSection[][] grid, Point endPoint) {
-        val endSection = grid[endPoint.getX()][endPoint.getY()];
-        endSection.setStepsFromStart(0);
-        endSection.setEmoji(getIcon(Optional.of(RoomType.END)));
-        return endSection;
     }
 }
