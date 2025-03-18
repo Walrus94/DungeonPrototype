@@ -16,9 +16,13 @@ import org.dungeon.prototype.repository.mongo.converters.mapstruct.ItemMapper;
 import org.dungeon.prototype.repository.mongo.projections.ItemWeightProjection;
 import org.dungeon.prototype.service.item.generation.ItemNamingService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -34,6 +38,8 @@ import static org.apache.commons.math3.util.FastMath.abs;
 @Component
 public class ItemService {
     private final ItemMapper itemMapper = ItemMapper.INSTANCE;
+    @Value("${bot.files.images}")
+    private String imgPath;
     @Autowired
     private ItemNamingService itemNamingService;
     @Autowired
@@ -208,6 +214,16 @@ public class ItemService {
      * @param chatId id of current chat
      */
     public void dropCollection(Long chatId) {
+        String filenamePattern = chatId + "_*.png";
+
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(Path.of(imgPath), filenamePattern)) {
+            for (Path filePath : stream) {
+                Files.deleteIfExists(filePath);
+                System.out.println("Deleted: " + filePath);
+            }
+        } catch (Exception e) {
+            System.err.println("Error deleting images for chatId " + chatId + ": " + e.getMessage());
+        }
         itemRepository.deleteAllByChatId(chatId);
     }
 
