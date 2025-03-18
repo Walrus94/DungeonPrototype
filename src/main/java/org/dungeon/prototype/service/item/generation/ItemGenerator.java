@@ -92,7 +92,7 @@ public class ItemGenerator {
     @Autowired
     private ItemService itemService;
     @Autowired
-    AsyncJobHandler asyncJobHandler;
+    private AsyncJobHandler asyncJobHandler;
     @Autowired
     private MessageService messageService;
     @Autowired

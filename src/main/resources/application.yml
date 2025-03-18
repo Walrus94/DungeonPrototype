@@ -51,7 +51,7 @@ bot:
   token: ${BOT_AUTH_TOKEN}
   auth-users: ${AUTH_USERS}
   files:
-    images: ${IMAGES_PATH}
+    images: ${IMAGE_PATH}
 
 kafka-topics:
   item-naming-topic: ${ITEM_NAMING_TOPIC}
