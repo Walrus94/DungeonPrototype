@@ -7,7 +7,10 @@ from db.mongo import update_mongo_item
 from diffusers import DiffusionPipeline
 from llama_cpp import Llama
 
-pipe = DiffusionPipeline.from_pretrained("proximasanfinetuning/fantassified_icons_v2")
+pipe = DiffusionPipeline.from_pretrained(
+    "proximasanfinetuning/fantassified_icons_v2",
+    cache_dir = HF_MODEL_FILE
+)
 
 llm = Llama.from_pretrained(
     repo_id="bartowski/llama-3-fantasy-writer-8b-GGUF",
