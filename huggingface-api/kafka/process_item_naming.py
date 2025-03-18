@@ -9,15 +9,15 @@ from llama_cpp import Llama
 
 pipe = DiffusionPipeline.from_pretrained(
     "proximasanfinetuning/fantassified_icons_v2",
-    cache_dir = HF_MODEL_FILE
-)
+    cache_dir = HF_MODEL_FILE,
+    torch_dtype="auto"
+).to("cpu")
 
 llm = Llama.from_pretrained(
     repo_id="bartowski/llama-3-fantasy-writer-8b-GGUF",
     filename="llama-3-fantasy-writer-8b-Q6_K.gguf",
-    local_dir=HF_MODEL_FILE,
-    torch_dtype="auto"
-).to("cpu")
+    local_dir=HF_MODEL_FILE
+)
 
 def process_kafka_item_message(message):
     try:
