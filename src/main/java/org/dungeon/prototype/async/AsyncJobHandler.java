@@ -38,6 +38,7 @@ public class AsyncJobHandler {
 
     @Async
     public void submitItemGenerationTask(Runnable job, TaskType taskType, long chatId) {
+        log.debug("Submitting item generation {} task for chatId: {}", taskType, chatId);
         CountDownLatch latch = chatLatches.computeIfAbsent(chatId, k -> new CountDownLatch(2));//TODO: increment when Usable items generation is implemented
         asyncTaskExecutor.submit(() -> {
             try {
@@ -51,6 +52,7 @@ public class AsyncJobHandler {
 
     @Async
     public Future<?> submitTask(Callable<?> job, TaskType taskType, long chatId) {
+        log.debug("Submitting task for of type {} chatId: {}", taskType, chatId);
         return asyncTaskExecutor.submit(() -> {
             try {
                 if (chatLatches.containsKey(chatId) && chatLatches.get(chatId).getCount() > 0) {
@@ -66,9 +68,11 @@ public class AsyncJobHandler {
 
     @Async
     public Future<?> submitMapPopulationTask(Callable<?> job, TaskType taskType, long chatId, long clusterId) {
+        log.debug("Submitting map population task for chatId: {}, clusterId: {}", chatId, clusterId);
         return asyncTaskExecutor.submit(() -> {
             try {
                 if (chatLatches.containsKey(chatId) && chatLatches.get(chatId).getCount() > 0) {
+                    log.debug("Awaiting for chatId: {} ", chatId);
                     chatLatches.get(chatId).await();
                     chatLatches.remove(chatId);
                 }
