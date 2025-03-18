@@ -36,11 +36,12 @@ def process_kafka_item_message(message):
                 "role": "system", 
                 "content": "Generate short (1-3 words) name for item from fantasy dungeon crawler rpg by given "
                            "description. Respond with one line of text containing item name, without formatting, "
-                           "quotation marks, dots, or additional text"},
+                           "quotation marks, dots, or additional text"
+            },
             {
                 "role": "user",
                 "content": prompt
-            }r
+            }
         ],
         temperature = 0.8,
         max_tokens = 10

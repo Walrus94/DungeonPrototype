@@ -18,7 +18,7 @@ import org.dungeon.prototype.service.item.generation.ItemNamingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -35,7 +35,7 @@ import static java.util.Objects.nonNull;
 import static org.apache.commons.math3.util.FastMath.abs;
 
 @Slf4j
-@Component
+@Service
 public class ItemService {
     private final ItemMapper itemMapper = ItemMapper.INSTANCE;
     @Value("${bot.files.images}")
