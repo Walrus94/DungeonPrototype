@@ -15,8 +15,9 @@ pipe = DiffusionPipeline.from_pretrained(
 llm = Llama.from_pretrained(
     repo_id="bartowski/llama-3-fantasy-writer-8b-GGUF",
     filename="llama-3-fantasy-writer-8b-Q6_K.gguf",
-    local_dir=HF_MODEL_FILE
-)
+    local_dir=HF_MODEL_FILE,
+    torch_dtype="auto"
+).to("cpu")
 
 def process_kafka_item_message(message):
     try:
@@ -41,7 +42,7 @@ def process_kafka_item_message(message):
             {
                 "role": "user",
                 "content": prompt
-            }
+            }r
         ],
         temperature = 0.8,
         max_tokens = 10
