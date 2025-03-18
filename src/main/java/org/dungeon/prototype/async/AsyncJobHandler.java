@@ -41,7 +41,7 @@ public class AsyncJobHandler {
         CountDownLatch latch = chatLatches.computeIfAbsent(chatId, k -> new CountDownLatch(2));//TODO: increment when Usable items generation is implemented
         asyncTaskExecutor.submit(() -> {
             try {
-                executeTask(job, taskType, chatId);
+                job.run();
             } finally {
                 log.info("Counting down latch for chatId: {}", chatId);
                 latch.countDown();
@@ -57,7 +57,7 @@ public class AsyncJobHandler {
                     chatLatches.get(chatId).await();
                     chatLatches.remove(chatId);
                 }
-                executeTask(job, taskType, chatId);
+                return job.call();
             } catch (InterruptedException e) {
                 throw new DungeonPrototypeException(e.getMessage());
             }
@@ -77,28 +77,6 @@ public class AsyncJobHandler {
                 throw new DungeonPrototypeException(e.getMessage());
             }
         });
-    }
-
-    private <T> T executeTask(Callable<T> job, TaskType taskType, long chatId) {
-        try {
-            while (!chatLatches.get(chatId).await(1, TimeUnit.SECONDS)) {
-                log.info("Waiting for chatId:{} map and items generation", chatId);
-            }
-            return job.call();
-        } catch (Exception e) {
-            throw new DungeonPrototypeException("Task execution interrupted:" + e.getMessage());
-        }
-    }
-
-    private void executeTask(Runnable job, TaskType taskType, long chatId) {
-        try {
-            while (!chatLatches.get(chatId).await(1, TimeUnit.SECONDS)) {
-                log.info("Waiting for chatId:{} map and items generation", chatId);
-            }
-            job.run();
-        } catch (InterruptedException e) {
-            throw new DungeonPrototypeException("Task execution interrupted:" + e.getMessage());
-        }
     }
 
     private <T> Future<T> executeTask(Callable<T> job, TaskType taskType, long chatId, long clusterId) {
