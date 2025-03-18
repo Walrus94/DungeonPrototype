@@ -10,8 +10,7 @@ COPY . /app
 RUN pip install --no-cache-dir -r requirements.txt
 
 RUN pip install llama-cpp-python \
-    --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --verbose \
-    && pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+    --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --verbose
 
 # Run the application
 ENTRYPOINT python app.py tail -f /dev/null

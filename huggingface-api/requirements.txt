@@ -1,5 +1,4 @@
 confluent-kafka
-diffusers
 huggingface-hub
 python-dotenv
 pymongo

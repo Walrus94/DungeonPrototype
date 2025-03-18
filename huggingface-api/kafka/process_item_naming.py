@@ -1,17 +1,15 @@
 import logging
 import json
 import os
-from config.settings import HF_MODEL_FILE;
-from config.settings import IMAGE_PATH;
+from config.settings import HF_MODEL_FILE, HF_API_KEY, IMAGE_PATH;
+from huggingface_hub import IntereferenceClient
 from db.mongo import update_mongo_item
-from diffusers import DiffusionPipeline
 from llama_cpp import Llama
 
-pipe = DiffusionPipeline.from_pretrained(
-    "proximasanfinetuning/fantassified_icons_v2",
-    cache_dir = HF_MODEL_FILE,
-    torch_dtype="auto"
-).to("cpu")
+client = InferenceClient(
+    provider="hf-inference",
+    api_key=HF_API_KEY,
+)
 
 llm = Llama.from_pretrained(
     repo_id="bartowski/llama-3-fantasy-writer-8b-GGUF",
@@ -56,7 +54,10 @@ def process_kafka_item_message(message):
         os.makedirs(IMAGE_PATH, exist_ok=True)
         
         logging.debug(f"Generated name: {generated_name}")
-        image = pipe(generated_name).images[0]
+        image = client.text_to_image(
+            generated_name+ ": " + prompt,
+            model="proximasanfinetuning/fantassified_icons_v2"
+        )
 
         image.save(f"{IMAGE_PATH}/{chat_id}_{item_id}.png")
 
