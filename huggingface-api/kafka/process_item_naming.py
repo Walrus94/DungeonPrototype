@@ -2,7 +2,7 @@ import logging
 import json
 import os
 from config.settings import HF_MODEL_FILE, HF_API_KEY, IMAGE_PATH;
-from huggingface_hub import IntereferenceClient
+from huggingface_hub import InferenceClient
 from db.mongo import update_mongo_item
 from llama_cpp import Llama
 
@@ -55,7 +55,7 @@ def process_kafka_item_message(message):
         
         logging.debug(f"Generated name: {generated_name}")
         image = client.text_to_image(
-            generated_name+ ": " + prompt,
+            generated_name + ": " + prompt,
             model="proximasanfinetuning/fantassified_icons_v2"
         )
 
