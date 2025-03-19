@@ -55,9 +55,9 @@ public class InventoryService {
      */
     public Inventory getDefaultInventory(Long chatId) {
         log.info("Setting default inventory");
-        messageService.sendPlayerGeneratingInfoMessage(chatId);
         try {
             return (Inventory) asyncJobHandler.submitTask(() -> {
+                messageService.sendPlayerGeneratingInfoMessage(chatId);
                 Inventory inventory = new Inventory();
                 inventory.setItems(new ArrayList<>());
                 inventory.setVest(getDefaultVest(chatId));

@@ -57,11 +57,12 @@ public class AsyncJobHandler {
             try {
                 if (chatLatches.containsKey(chatId) && chatLatches.get(chatId).getCount() > 0) {
                     chatLatches.get(chatId).await();
-                    chatLatches.remove(chatId);
                 }
                 return job.call();
             } catch (InterruptedException e) {
                 throw new DungeonPrototypeException(e.getMessage());
+            } finally {
+                chatLatches.remove(chatId);
             }
         });
     }
@@ -74,11 +75,12 @@ public class AsyncJobHandler {
                 if (chatLatches.containsKey(chatId) && chatLatches.get(chatId).getCount() > 0) {
                     log.debug("Awaiting for chatId: {} ", chatId);
                     chatLatches.get(chatId).await();
-                    chatLatches.remove(chatId);
                 }
                 executeTask(job, taskType, chatId, clusterId);
             } catch (InterruptedException e) {
                 throw new DungeonPrototypeException(e.getMessage());
+            } finally {
+                chatLatches.remove(chatId);
             }
         });
     }
