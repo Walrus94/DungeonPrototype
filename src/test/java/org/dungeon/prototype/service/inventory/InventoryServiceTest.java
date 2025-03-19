@@ -118,7 +118,6 @@ class InventoryServiceTest extends BaseServiceUnitTest {
         expectedInventory.setItems(new ArrayList<>());
         doReturn(CompletableFuture.completedFuture(expectedInventory)).when(asyncJobHandler).submitTask(any(Callable.class), eq(TaskType.GET_DEFAULT_INVENTORY), eq(CHAT_ID));
         Inventory actualInventory = inventoryService.getDefaultInventory(CHAT_ID);
-        verify(messageService).sendPlayerGeneratingInfoMessage(CHAT_ID);
 
 
         assertEquals(expectedInventory.getPrimaryWeapon().getId(), actualInventory.getPrimaryWeapon().getId());

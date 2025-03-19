@@ -51,9 +51,8 @@ public class FileUtil {
     private static final String RIGHT_DOOR_ASSET = "static/images/room/door/right.png";
     private static final String FORWARD_DOOR_ASSET = "static/images/room/door/forward.png";
 
-    @Value("${bot.file.images}")
+    @Value("${bot.files.images}")
     private String GENERATED_IMAGE_PATH;
-
 
     public static InputFile getSplashScreenImage(long chatId) {
         ClassPathResource imgFile = new ClassPathResource(SPLASH_SCREEN_IMAGE);
