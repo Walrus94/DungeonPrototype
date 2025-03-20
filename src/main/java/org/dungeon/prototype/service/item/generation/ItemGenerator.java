@@ -117,6 +117,7 @@ public class ItemGenerator {
     }
 
     private void generateWeapons(Long chatId) {
+        log.info("Generation weapons for chatId:{}...", chatId);
         Set<WeaponAttributes> generatedAttributesCombinations = new HashSet<>();
         while (generatedAttributesCombinations.size() < weaponAttributesPoolSize) {
             val type = getRandomEnumValue(List.of(WeaponType.values()));
@@ -202,6 +203,7 @@ public class ItemGenerator {
 
 
     private void generateWearables(Long chatId) {
+        log.info("Generation wearables for chatId:{}...", chatId);
         Set<WearableAttributes> attributesCombinations = new HashSet<>();
         Map<WearableType, Integer> typesCount = new HashMap<>();
         while (attributesCombinations.size() < wearableAttributesPoolSize) {
