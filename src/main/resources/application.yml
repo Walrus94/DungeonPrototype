@@ -1,4 +1,6 @@
 spring:
+  application:
+    name: ${ENV}_dungeon_prototype_app
   datasource:
     url: jdbc:postgresql://localhost:${POSTGRES_DATABASE_PORT}/${POSTGRES_DATABASE_NAME}
     name: ${POSTGRES_DATABASE_NAME}
@@ -33,6 +35,8 @@ management:
         include: prometheus
       base-path: /actuator
   metrics:
+    tags:
+      application: ${spring.application.name}
     export:
       prometheus:
         enabled: true
