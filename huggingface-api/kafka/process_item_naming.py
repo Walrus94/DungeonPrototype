@@ -55,14 +55,16 @@ def process_kafka_item_message(message):
         os.makedirs(IMAGE_PATH, exist_ok=True)
         
         logging.debug(f"Generated name: {generated_name}")
+        # Update MongoDB with the generated name where chatId and id match
+        update_mongo_item(chat_id, item_id, generated_name)
+    except Exception as e:
+        logging.error(f"Error processing LLM response: {str(e)}")
+    try:
         image = client.text_to_image(
             generated_name + ": " + prompt,
             model="proximasanfinetuning/fantassified_icons_v2"
         )
 
         image.save(f"{IMAGE_PATH}/{chat_id}_{item_id}.png")
-
     except Exception as e:
-        logging.error(f"Error processing LLM response: {str(e)}")
-        # Update MongoDB with the generated name where chatId and id match
-    update_mongo_item(chat_id, item_id, generated_name)
+        logging.error(f"Error generating image: {str(e)}")
