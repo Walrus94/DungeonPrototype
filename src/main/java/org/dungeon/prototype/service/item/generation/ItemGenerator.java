@@ -190,7 +190,6 @@ public class ItemGenerator {
 
         val vanillaWeapons = generatedAttributesCombinations.stream()
                 .flatMap(attributes -> Stream.of(generateVanillaWeapon(attributes, chatId)))
-                .limit(weaponPerGame)
                 .collect(Collectors.toList());
         val savedItems = itemService.saveItems(chatId, vanillaWeapons);
 
@@ -297,8 +296,6 @@ public class ItemGenerator {
                     val oldValue = weightScale.get(point);
                     weightScale.remove(point);
                     insertNewItem(Pair.create(oldValue.getKey(), updatedWeight.get()), weightScale);
-                } else {
-
                 }
             }
         }

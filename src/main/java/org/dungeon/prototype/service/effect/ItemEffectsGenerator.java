@@ -2,6 +2,8 @@ package org.dungeon.prototype.service.effect;
 
 import lombok.val;
 import org.apache.commons.math3.util.Pair;
+import org.dungeon.prototype.async.AsyncJobHandler;
+import org.dungeon.prototype.exception.DungeonPrototypeException;
 import org.dungeon.prototype.model.effect.Effect;
 import org.dungeon.prototype.model.effect.attributes.Action;
 import org.dungeon.prototype.model.effect.attributes.EffectAttribute;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 
 import static java.util.Objects.nonNull;
 import static org.dungeon.prototype.model.effect.attributes.Action.MULTIPLY;
@@ -29,6 +32,8 @@ public class ItemEffectsGenerator {
     @Autowired
     private EffectFactory effectFactory;
     @Autowired
+    private AsyncJobHandler asyncJobHandler;
+    @Autowired
     private ItemsGenerationProperties itemsGenerationProperties;
 
     /**
@@ -39,27 +44,33 @@ public class ItemEffectsGenerator {
      * @return added effect's weight norm
      */
     public Optional<Double> addItemEffect(Long chatId, String itemId, double expectedWeightChange) {
-        val item = itemService.findItem(chatId, itemId);
-        if (nonNull(item)) {
-            if (item instanceof Usable) {
-                //TODO: fix after implementing usable
-                return Optional.empty();
-            }
-            val minEffectsAmount = itemsGenerationProperties.getEffects().getMinimumAmountPerItemMap().get(item.getAttributes().getQuality());
-            val maxEffectsAmount = itemsGenerationProperties.getEffects().getMaximumAmountPerItemMap().get(item.getAttributes().getQuality());
+        try {
+            return (Optional<Double>) asyncJobHandler.submitItemUpdateTask(() -> {
+                val item = itemService.findItem(chatId, itemId);
+                if (nonNull(item)) {
+                    if (item instanceof Usable) {
+                        //TODO: fix after implementing usable
+                        return Optional.empty();
+                    }
+                    val minEffectsAmount = itemsGenerationProperties.getEffects().getMinimumAmountPerItemMap().get(item.getAttributes().getQuality());
+                    val maxEffectsAmount = itemsGenerationProperties.getEffects().getMaximumAmountPerItemMap().get(item.getAttributes().getQuality());
 
-            if (item.getEffects().size() < minEffectsAmount) {
-                val amount = minEffectsAmount - item.getEffects().size();
-                double sum = 0.0;
-                for (int i = 0; i < amount; i++) {
-                     sum += generateAndAddItemEffect(expectedWeightChange / amount, item).orElse(0.0);
+                    if (item.getEffects().size() < minEffectsAmount) {
+                        val amount = minEffectsAmount - item.getEffects().size();
+                        double sum = 0.0;
+                        for (int i = 0; i < amount; i++) {
+                            sum += generateAndAddItemEffect(expectedWeightChange / amount, item).orElse(0.0);
+                        }
+                        return Optional.of(sum);
+                    } else if (item.getEffects().size() < maxEffectsAmount) {
+                        return generateAndAddItemEffect(expectedWeightChange, item);
+                    }
                 }
-                return Optional.of(sum);
-            } else if (item.getEffects().size() < maxEffectsAmount) {
-                return generateAndAddItemEffect(expectedWeightChange, item);
-            }
+                return Optional.empty();
+            }, chatId).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new DungeonPrototypeException(e.getMessage());
         }
-        return Optional.empty();
     }
 
     /**
@@ -71,30 +82,36 @@ public class ItemEffectsGenerator {
      * @return id and weight norm of newly created item
      */
     public Pair<String, Double> copyItemAndAddEffect(Long chatId, String itemId, double expectedWeightChange) {
-        val vanillaItem = itemService.findItem(chatId, itemId);
-        if (nonNull(vanillaItem)) {
-            switch (vanillaItem.getItemType()) {
-                case WEAPON -> {
-                    val weapon = new Weapon((Weapon) vanillaItem);
-                    if (generateAndAddItemEffect(expectedWeightChange, weapon).isPresent()) {
-                        return Pair.create(weapon.getId(), weapon.getWeight().toVector().getNorm());
+        try {
+            return (Pair<String, Double>) asyncJobHandler.submitItemUpdateTask(() -> {
+                val vanillaItem = itemService.findItem(chatId, itemId);
+                if (nonNull(vanillaItem)) {
+                    switch (vanillaItem.getItemType()) {
+                        case WEAPON -> {
+                            val weapon = new Weapon((Weapon) vanillaItem);
+                            if (generateAndAddItemEffect(expectedWeightChange, weapon).isPresent()) {
+                                return Pair.create(weapon.getId(), weapon.getWeight().toVector().getNorm());
+                            }
+                        }
+                        case WEARABLE -> {
+                            val wearable = new Wearable((Wearable) vanillaItem);
+                            if (generateAndAddItemEffect(expectedWeightChange, wearable).isPresent()) {
+                                return Pair.create(wearable.getId(), wearable.getWeight().toVector().getNorm());
+                            }
+                        }
+                        case USABLE -> {
+                            val usable = new Usable((Usable) vanillaItem);
+                            if (generateAndAddItemEffect(expectedWeightChange, usable).isPresent()) {
+                                return Pair.create(usable.getId(), usable.getWeight().toVector().getNorm());
+                            }
+                        }
                     }
                 }
-                case WEARABLE -> {
-                    val wearable = new Wearable((Wearable) vanillaItem);
-                    if (generateAndAddItemEffect(expectedWeightChange, wearable).isPresent()) {
-                        return Pair.create(wearable.getId(), wearable.getWeight().toVector().getNorm());
-                    }
-                }
-                case USABLE -> {
-                    val usable = new Usable((Usable) vanillaItem);
-                    if (generateAndAddItemEffect(expectedWeightChange, usable).isPresent()) {
-                        return Pair.create(usable.getId(), usable.getWeight().toVector().getNorm());
-                    }
-                }
-            }
+                return null;
+            }, chatId).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new DungeonPrototypeException(e.getMessage());
         }
-        return null;
     }
 
     private Optional<Double> generateAndAddItemEffect(double expectedWeightChange, Item item) {

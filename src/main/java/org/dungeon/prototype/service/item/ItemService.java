@@ -251,7 +251,7 @@ public class ItemService {
                     case WEARABLE -> ItemMapper.INSTANCE.mapToWearable(itemDocument);
                     case USABLE -> ItemMapper.INSTANCE.mapToUsable(itemDocument);
                 }).collect(Collectors.toSet());
-            }, chatId).get(1, TimeUnit.MINUTES);
+            }, chatId).get(15, TimeUnit.SECONDS);
         } catch (TimeoutException | InterruptedException | ExecutionException e) {
             throw new DungeonPrototypeException(e.getMessage());
         }
