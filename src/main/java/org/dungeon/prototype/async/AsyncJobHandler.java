@@ -43,6 +43,8 @@ public class AsyncJobHandler {
             chatLatches.computeIfAbsent(chatId, k -> new CountDownLatch(2));//TODO: increment when Usable items generation is implemented
             try {
                 job.run();
+            } catch (Exception e) {
+                throw new DungeonPrototypeException(e.getMessage());
             } finally {
                 log.info("Counting down ({}) latch for chatId: {}", chatLatches.get(chatId).getCount(), chatId);
                 chatLatches.get(chatId).countDown();
