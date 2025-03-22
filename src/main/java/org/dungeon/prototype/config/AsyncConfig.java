@@ -46,7 +46,7 @@ public class AsyncConfig {
 
         registry.config().commonTags("application", "dungeon-prototype");
         AtomicInteger activeThreads = new AtomicInteger(Thread.activeCount());
-        Gauge.builder("jfr.virtual_threads", activeThreads, AtomicInteger::get)
+        Gauge.builder("jfr_virtual_threads", activeThreads, AtomicInteger::get)
                 .description("The number of virtual threads in the JVM")
                 .register(registry);
         return registry;
