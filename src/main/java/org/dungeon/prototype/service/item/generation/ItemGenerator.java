@@ -1,6 +1,5 @@
 package org.dungeon.prototype.service.item.generation;
 
-import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.math3.util.Pair;
@@ -339,7 +338,7 @@ public class ItemGenerator {
 
         val weaponMaterialAdjustmentAttributes = properties.getWeaponMaterialAdjustmentAttributes().get(weapon.getAttributes().getWeaponMaterial());
         applyAdjustment(weapon, weaponMaterialAdjustmentAttributes);
-        if (ENCHANTED_WOOD.equals(weapon.getAttributes().getWeaponMaterial())) {
+        if (ENCHANTED_WOOD.equals(weapon.getAttributes().getWeaponMaterial()) && isNull(weapon.getMagicType())) {
             weapon.setMagicType(getRandomMagicType());
         }
         if (DRAGON_BONE.equals(weapon.getAttributes().getWeaponMaterial()) && WeaponHandlerMaterial.DRAGON_BONE.equals(weapon.getAttributes().getWeaponHandlerMaterial())) {
@@ -367,9 +366,6 @@ public class ItemGenerator {
 
         val attackTypeAdjustment = properties.getAttackTypeAdjustmentAttributes().get(weapon.getAttributes().getWeaponAttackType());
         applyAdjustment(weapon, attackTypeAdjustment);
-        if (STRIKE.equals(weapon.getAttributes().getWeaponAttackType())) {
-            weapon.setMagicType(getRandomMagicType());
-        }
         val qualityAdjustmentRatio = properties.getQualityAdjustmentRatio().get(weapon.getAttributes().getQuality());
         multiplyAllParametersBy(weapon, qualityAdjustmentRatio);
         if (isNull(weapon.getMagicType())) {
@@ -378,13 +374,12 @@ public class ItemGenerator {
         return weapon;
     }
 
-    @NotNull
     private static Optional<WeaponHandlerMaterial> getEqualWeaponHandlerMaterial(Weapon weapon) {
         try {
             val weaponHandlerMaterial = WeaponHandlerMaterial.valueOf(weapon.getAttributes().getWeaponMaterial().toString());
             return Optional.of(weaponHandlerMaterial);
 
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             log.debug("Handler material doesn't match! Exception thrown: {}", e.getMessage());
             return Optional.empty();
         }
