@@ -1,5 +1,7 @@
 package org.dungeon.prototype.config;
 
+import com.github.marschall.micrometer.jfr.JfrMeterRegistry;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import org.dungeon.prototype.async.metrics.TaskMetrics;
@@ -12,6 +14,7 @@ import org.springframework.core.task.support.TaskExecutorAdapter;
 import org.springframework.scheduling.annotation.EnableAsync;
 
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor;
 
@@ -23,7 +26,7 @@ public class AsyncConfig {
     @Bean(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME)
     public AsyncTaskExecutor asyncTaskExecutor(MeterRegistry meterRegistry) {
         ExecutorService executorService = newVirtualThreadPerTaskExecutor();
-        ExecutorServiceMetrics.monitor(meterRegistry, executorService, "dungeon_task_executor");
+        ExecutorServiceMetrics.monitor(meterRegistry, executorService, "virtual_threads");
         return new TaskExecutorAdapter(executorService);
     }
 
@@ -35,5 +38,17 @@ public class AsyncConfig {
     @Bean
     public TaskMetrics taskMetrics(MeterRegistry meterRegistry) {
         return new TaskMetrics(meterRegistry);
+    }
+
+    @Bean
+    public MeterRegistry meterRegistry() {
+        MeterRegistry registry = new JfrMeterRegistry();
+
+        registry.config().commonTags("application", "dungeon-prototype");
+        AtomicInteger activeThreads = new AtomicInteger(Thread.activeCount());
+        Gauge.builder("jfr.virtual_threads", activeThreads, AtomicInteger::get)
+                .description("The number of virtual threads in the JVM")
+                .register(registry);
+        return registry;
     }
 }

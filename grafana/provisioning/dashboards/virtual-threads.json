@@ -1,0 +1,73 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "java21-vt-metrics",
+    "title": "Java 21 Virtual Threads & Structured Task Metrics",
+    "timezone": "browser",
+    "schemaVersion": 37,
+    "version": 1,
+    "refresh": "10s",
+    "panels": [
+      {
+        "title": "Active Virtual Threads",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "jfr_virtual_threads",
+            "legendFormat": "Active Virtual Threads"
+          }
+        ]
+      },
+      {
+        "title": "Virtual Threads Created (Rate)",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(jfr_virtual_threads_created[1m])",
+            "legendFormat": "New Virtual Threads/sec"
+          }
+        ]
+      },
+      {
+        "title": "Structured Task Execution Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(jfr_structured_task_execution_time_seconds_bucket[1m]))",
+            "legendFormat": "95th Percentile Execution Time"
+          }
+        ]
+      },
+      {
+        "title": "CPU Time Spent in Virtual Threads",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(jfr_virtual_thread_cpu_time_seconds[1m])",
+            "legendFormat": "CPU Time in Virtual Threads"
+          }
+        ]
+      },
+      {
+        "title": "Loki - Virtual Thread Logs",
+        "type": "logs",
+        "targets": [
+          {
+            "expr": "{job='java-app-logs'} |= \"VirtualThread\"",
+            "datasource": "loki"
+          }
+        ]
+      },
+      {
+        "title": "Loki - Thread Stack Traces",
+        "type": "logs",
+        "targets": [
+          {
+            "expr": "{job='java-app-logs'} |= \"java.lang.Thread.getStackTrace\"",
+            "datasource": "loki"
+          }
+        ]
+      }
+    ]
+  }
+}

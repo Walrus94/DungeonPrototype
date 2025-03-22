@@ -50,6 +50,7 @@ dependencies {
 
     implementation 'org.springframework.boot:spring-boot-starter-actuator:3.3.5'
     implementation 'io.micrometer:micrometer-registry-prometheus:1.14.1'
+    implementation 'com.github.marschall:micrometer-jfr:1.13.0'
     implementation 'com.google.code.findbugs:jsr305:3.0.2'
 
     compileOnly 'org.projectlombok:lombok:1.18.32'
