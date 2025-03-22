@@ -9,8 +9,8 @@ import org.dungeon.prototype.model.monster.Monster;
 import org.dungeon.prototype.model.player.Player;
 import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.content.MonsterRoom;
-import org.dungeon.prototype.properties.BattleProperties;
 import org.dungeon.prototype.properties.CallbackType;
+import org.dungeon.prototype.service.balancing.BalanceMatrixService;
 import org.dungeon.prototype.service.level.LevelService;
 import org.dungeon.prototype.service.message.MessageService;
 import org.dungeon.prototype.service.room.MonsterService;
@@ -36,7 +36,7 @@ public class BattleService {
     @Autowired
     private MessageService messageService;
     @Autowired
-    private BattleProperties battleProperties;
+    private BalanceMatrixService balanceMatrixService;
 
     /**
      * Processes "attack" action, which performs attacking monster with selected weapon,
@@ -72,6 +72,8 @@ public class BattleService {
     }
 
     private void monsterAttacks(Player player, Monster monster) {
+        val attackMatrix = balanceMatrixService.getMonsterAttackMatrix(player.getChatId());
+        val defenseMatrix = balanceMatrixService.getPlayerDefenceMatrix(player.getChatId());
         if (nonNull(monster.getEffects()) && monster.getEffects().stream().anyMatch(monsterEffect -> MOVING.equals(monsterEffect.getAttribute()))) {
             return;
         }
@@ -88,13 +90,13 @@ public class BattleService {
             log.info("Monster attack dodged!");
             return;
         }
-        val attackTypeMap = battleProperties.getPlayerDefenseRatioMatrix().get(monsterAttack.getAttackType()).getMaterialDefenseRatioMap();
+        val defense = defenseMatrix[monsterAttack.getAttackType().ordinal()][player.getInventory().getVest().getAttributes().getWearableMaterial().ordinal()];
         log.info("Monster attack: {}", monsterAttack.getAttackType());
         val diff = switch (monsterAttack.getAttackType()) {
             case SLASH, GROWL ->
-                    (int) (monsterAttack.getAttack() * (inventory.getHelmet() == null ? 1.0 : attackTypeMap.get(inventory.getHelmet().getAttributes().getWearableMaterial())));
+                    (int) (monsterAttack.getAttack() * (inventory.getHelmet() == null ? 1.0 : attackMatrix[inventory.getHelmet().getAttributes().getWearableMaterial().ordinal()][monsterAttack.getAttackType().ordinal()]) / defense);
             default ->
-                    (int) (monsterAttack.getAttack() * (inventory.getVest() == null ? 1.0 : attackTypeMap.get(inventory.getVest().getAttributes().getWearableMaterial())));
+                    (int) (monsterAttack.getAttack() * (inventory.getVest() == null ? 1.0 : attackMatrix[inventory.getVest().getAttributes().getWearableMaterial().ordinal()][monsterAttack.getAttackType().ordinal()])/ defense);
         };
 
         if (player.getDefense() > 0) {
@@ -108,6 +110,8 @@ public class BattleService {
     }
 
     private void playerAttacks(Monster monster, Player player, CallbackType attackType) {
+        val attackMatrix = balanceMatrixService.getPlayerAttackMatrix(player.getChatId());
+        val defenseMatrix = balanceMatrixService.getMonsterDefenseMatrix(player.getChatId());
         val attack = ATTACK.equals(attackType) ? player.getPrimaryAttack() :
                 player.getSecondaryAttack();
         val chanceToMiss = attack.getChanceToMiss();
@@ -116,7 +120,7 @@ public class BattleService {
             log.info("Player missed!");
             return;
         }
-        var attackPower = attack.getAttack();
+        var attackPower = attack.getAttack() * attackMatrix[attack.getAttackType().ordinal()][monster.getMonsterClass().ordinal()];
         val criticalHitChance = attack.getCriticalHitChance();
         log.info("Critical hit chance: {}", criticalHitChance);
 
@@ -134,8 +138,8 @@ public class BattleService {
             monster.addEffect(knockOut);
         }
         log.info("Player attacks with attack type: {}", attack.getAttackType());
-        val monsterDefenseRatioMap = battleProperties.getMonsterDefenseRatioMatrix().get(attack.getAttackType()).getMonsterDefenseRatioMap();
-        val decreaseAmount = (int) (attackPower * monsterDefenseRatioMap.get(monster.getMonsterClass()));
+        val monsterDefense = defenseMatrix[attack.getAttackType().ordinal()][monster.getMonsterClass().ordinal()];
+        val decreaseAmount = (int) (attackPower * monsterDefense);
         monster.decreaseHp(decreaseAmount);
         log.info("Monster health decreased by {}", decreaseAmount);
     }

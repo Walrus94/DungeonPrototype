@@ -7,11 +7,25 @@ scrape_configs:
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['prod-dungeon-prototype-app:8080']
+      - labels:
+          application: 'dungeon-prototype-app'
+          instance: 'prod'
 
   - job_name: 'dev-dungeon-prototype-app'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: [ 'dev-dungeon-prototype-app:8081' ]
+      - labels:
+          application: 'dungeon-prototype-app'
+          instance: 'dev'
+
+  - job_name: 'test-dungeon-prototype-app'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: [ 'test-dungeon-prototype-app:8081' ]
+      - labels:
+          application: 'dungeon-prototype-app'
+          instance: 'test'
 
   - job_name: 'loki'
     metrics_path: '/metrics'

@@ -1,0 +1,11 @@
+confluent-kafka
+huggingface-hub
+python-dotenv
+pymongo
+asyncpg
+stable-baselines3
+transformers
+gym
+numpy
+ujson
+loguru
