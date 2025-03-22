@@ -3,7 +3,6 @@ package org.dungeon.prototype.service.item;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.math3.util.Pair;
-import org.dungeon.prototype.async.AsyncJobHandler;
 import org.dungeon.prototype.exception.EntityNotFoundException;
 import org.dungeon.prototype.model.document.item.ItemDocument;
 import org.dungeon.prototype.model.inventory.Item;
@@ -41,8 +40,6 @@ public class ItemService {
     private final ItemMapper itemMapper = ItemMapper.INSTANCE;
     @Value("${bot.files.images}")
     private String imgPath;
-    @Autowired
-    private AsyncJobHandler asyncJobHandler;
     @Autowired
     private ItemNamingService itemNamingService;
     @Autowired
