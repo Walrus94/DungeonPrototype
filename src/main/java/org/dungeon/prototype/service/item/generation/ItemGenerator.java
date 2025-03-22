@@ -391,7 +391,7 @@ public class ItemGenerator {
     }
 
     private Wearable generateVanillaWearable(WearableAttributes wearableAttributes, Long chatId) {
-        log.info("Generating wearable...");
+        log.debug("Generating wearable...");
         val wearable = new Wearable();
         wearable.setAttributes(wearableAttributes);
         wearable.setChatId(chatId);
@@ -400,7 +400,7 @@ public class ItemGenerator {
     }
 
     private Wearable calculateParameters(Wearable wearable) {
-        log.info("Calculating wearable params...");
+        log.debug("Calculating wearable params...");
         if (wearable.getAttributes().getWearableMaterial().equals(WearableMaterial.ENCHANTED_LEATHER)) {
             wearable.setMagicType(getRandomMagicType());
         } else {

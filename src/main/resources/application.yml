@@ -230,7 +230,7 @@ generation:
     selling-price-ratio: 0.9
     buying-price-ratio: 1.2
     weapon:
-      weapon-attributes-pool-size: 1000
+      weapon-attributes-pool-size: 500
       weapon-per-game: 200
       default-attributes:
         sword:
