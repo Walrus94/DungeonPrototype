@@ -4,7 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.math3.util.Pair;
 import org.dungeon.prototype.async.AsyncJobHandler;
-import org.dungeon.prototype.exception.DungeonPrototypeException;
 import org.dungeon.prototype.exception.EntityNotFoundException;
 import org.dungeon.prototype.model.document.item.ItemDocument;
 import org.dungeon.prototype.model.inventory.Item;
@@ -30,9 +29,6 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;
@@ -241,20 +237,14 @@ public class ItemService {
      * @param <T>   class, extending {@link Item}
      * @return saved items
      */
-    public <T extends Item> Set<Item> saveItems(long chatId, List<T> items) {
-        try {
-            return (Set<Item>) asyncJobHandler.submitItemUpdateTask(() -> {
-                val itemDocuments = items.stream().map(ItemMapper.INSTANCE::mapToDocument).toList();
-                val savedItemDocuments = itemRepository.saveAll(itemDocuments);
-                return savedItemDocuments.stream().map(itemDocument -> switch (itemDocument.getItemType()) {
-                    case WEAPON -> ItemMapper.INSTANCE.mapToWeapon(itemDocument);
-                    case WEARABLE -> ItemMapper.INSTANCE.mapToWearable(itemDocument);
-                    case USABLE -> ItemMapper.INSTANCE.mapToUsable(itemDocument);
-                }).collect(Collectors.toSet());
-            }, chatId).get(15, TimeUnit.SECONDS);
-        } catch (TimeoutException | InterruptedException | ExecutionException e) {
-            throw new DungeonPrototypeException(e.getMessage());
-        }
+    public <T extends Item> Set<Item> saveItems(List<T> items) {
+        val itemDocuments = items.stream().map(ItemMapper.INSTANCE::mapToDocument).toList();
+        val savedItemDocuments = itemRepository.saveAll(itemDocuments);
+        return savedItemDocuments.stream().map(itemDocument -> switch (itemDocument.getItemType()) {
+            case WEAPON -> ItemMapper.INSTANCE.mapToWeapon(itemDocument);
+            case WEARABLE -> ItemMapper.INSTANCE.mapToWearable(itemDocument);
+            case USABLE -> ItemMapper.INSTANCE.mapToUsable(itemDocument);
+        }).collect(Collectors.toSet());
     }
 
     private Set<Item> findItems(Long chatId, List<String> itemIds) {

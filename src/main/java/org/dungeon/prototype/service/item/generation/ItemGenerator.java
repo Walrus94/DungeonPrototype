@@ -191,7 +191,7 @@ public class ItemGenerator {
         val vanillaWeapons = generatedAttributesCombinations.stream()
                 .flatMap(attributes -> Stream.of(generateVanillaWeapon(attributes, chatId)))
                 .collect(Collectors.toList());
-        val savedItems = itemService.saveItems(chatId, vanillaWeapons);
+        val savedItems = itemService.saveItems(vanillaWeapons);
 
         log.info("{} weapons without effects generated.", savedItems.size());
 
@@ -256,7 +256,7 @@ public class ItemGenerator {
         val vanillaWearables = attributesCombinations.stream()
                 .flatMap(attributes -> Stream.of(generateVanillaWearable(attributes, chatId)))
                 .collect(Collectors.toList());
-        val savedItems = itemService.saveItems(chatId, vanillaWearables);
+        val savedItems = itemService.saveItems(vanillaWearables);
         log.info("{} wearables without effects generated.", savedItems.size());
         log.info("Adding effects to wearables...");
         addEffects(chatId, savedItems, wearablesPerGame);
