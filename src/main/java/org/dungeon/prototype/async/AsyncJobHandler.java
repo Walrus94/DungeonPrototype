@@ -51,6 +51,18 @@ public class AsyncJobHandler {
     }
 
     @Async
+    public Future<?> submitItemUpdateTask(Callable<?> job, long chatId) {
+        log.debug("Submitting item update task for chatId: {}", chatId);
+        return asyncTaskExecutor.submit(() -> {
+            try {
+                job.call();
+            } catch (Exception e) {
+                throw new DungeonPrototypeException(e.getMessage());
+            }
+        });
+    }
+
+    @Async
     public Future<?> submitTask(Callable<?> job, TaskType taskType, long chatId) {
         log.debug("Submitting task of type {} for chatId: {}", taskType, chatId);
         return asyncTaskExecutor.submit(() -> {
