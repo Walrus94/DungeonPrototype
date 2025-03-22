@@ -10,13 +10,15 @@ async def process_kafka_balance_message(message):
         chat_id = data['chatId']
         database = data['database']
         matrix_name = data['name']
+        columns = data['cols']
+        rows = data['rows']
     except Exception as e:
         logging.error(f"Error processing message: {str(e)}")
         return
 
     logging.debug(f"Generating balance matrix for chatId: {chat_id}, name: {matrix_name}")
 
-    new_matrix = await generate_balance_matrix(chat_id, database)
+    new_matrix = await generate_balance_matrix(chat_id, database, columns, rows)
     await save_balance_matrix(chat_id, matrix_name, new_matrix)
 
     logging.debug(f"Balance matrix saved for chatId: {chat_id}")

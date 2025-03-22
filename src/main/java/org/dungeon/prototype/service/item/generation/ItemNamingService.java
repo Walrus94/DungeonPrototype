@@ -4,9 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.dungeon.prototype.kafka.KafkaProducer;
 import org.dungeon.prototype.model.effect.Effect;
 import org.dungeon.prototype.model.inventory.Item;
-import org.dungeon.prototype.model.inventory.items.naming.api.dto.ItemNameRequestDto;
+import org.dungeon.prototype.model.kafka.request.naming.ItemNameRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.stream.Collectors;
@@ -16,8 +15,6 @@ import static java.util.Objects.nonNull;
 @Slf4j
 @Component
 public class ItemNamingService {
-    @Value("${kafka-topics.item-naming-topic}")
-    private String topic;
     @Autowired
     private KafkaProducer kafkaProducer;
 
@@ -28,8 +25,8 @@ public class ItemNamingService {
      */
     public void requestNameGeneration(Item item) {
         log.info("Preparing item {} for naming request...", item.getId());
-        kafkaProducer.sendItemNamingRequest(topic,
-                new ItemNameRequestDto(item.getChatId(), item.getId(), generatePrompt(item)));
+        kafkaProducer.sendItemNamingRequest(
+                new ItemNameRequest(item.getChatId(), item.getId(), generatePrompt(item)));
     }
 
     private String generatePrompt(Item item) {

@@ -35,11 +35,12 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
-    export:
-      prometheus:
-        enabled: true
     endpoint:
       prometheus:
+        enabled: true
+  prometheus:
+    metrics:
+      export:
         enabled: true
 
 
@@ -57,6 +58,7 @@ bot:
 
 kafka-topics:
   item-naming-topic: ${ITEM_NAMING_TOPIC}
+  balance-matrix-topic: ${KAFKA_BALANCE_MATRIX_TOPIC}
 
 messaging:
   bar-blocks: 6
@@ -497,88 +499,6 @@ generation:
         legendary: 3
         mythic: 4
 
-battle:
-  player-defense-ratio-matrix:
-    slash:
-      material-defense-ratio-map:
-        iron: 0.7
-        steel: 0.8
-        mithril: 1.1
-    growl:
-      material-defense-ratio-map:
-        iron: 1.0
-        steel: 0.9
-        mithril: 0.7
-    vampire-bite:
-      material-defense-ratio-map:
-        cloth: 0.6
-        leather: 0.7
-        iron: 0.85
-        steel: 0.9
-        chain-mail: 0.95
-        enchanted-leather: 1.2
-        treated-leather: 0.8
-        mithril: 1.3
-    bite:
-      material-defense-ratio-map:
-        cloth: 0.6
-        leather: 0.7
-        iron: 1.1
-        steel: 1.15
-        chain-mail: 1.2
-        enchanted-leather: 0.7
-        treated-leather: 0.8
-        mithril: 1.2
-    fire-spit:
-      material-defense-ratio-map:
-        cloth: 0.3
-        leather: 0.35
-        iron: 0.7
-        steel: 0.8
-        chain-mail: 0.85
-        enchanted-leather: 0.75
-        treated-leather: 0.65
-        mithril: 1.1
-    poison-spit:
-      material-defense-ratio-map:
-        cloth: 0.4
-        leather: 0.65
-        iron: 0.5
-        steel: 0.55
-        chain-mail: 0.6
-        enchanted-leather: 0.8
-        treated-leather: 0.7
-        mithril: 1.15
-  #  TODO: adjust values
-  monster-defense-ratio-matrix:
-    slash:
-      monster-defense-ratio-map:
-        dragon: 1.0
-        swamp-beast: 1.0
-        vampire: 1.0
-        werewolf: 1.0
-        zombie: 1.0
-    strike:
-      monster-defense-ratio-map:
-        dragon: 1.0
-        swamp-beast: 1.0
-        vampire: 1.0
-        werewolf: 1.0
-        zombie: 1.0
-    blunt:
-      monster-defense-ratio-map:
-        dragon: 1.0
-        swamp-beast: 1.0
-        vampire: 1.0
-        werewolf: 1.0
-        zombie: 1.0
-    stab:
-      monster-defense-ratio-map:
-        dragon: 1.0
-        swamp-beast: 1.0
-        vampire: 1.0
-        werewolf: 1.0
-        zombie: 1.0
 
 player:
   attributes: #TODO: consider different classes
