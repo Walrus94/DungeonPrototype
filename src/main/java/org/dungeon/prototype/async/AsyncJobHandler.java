@@ -40,12 +40,12 @@ public class AsyncJobHandler {
     public void submitItemGenerationTask(Runnable job, TaskType taskType, long chatId) {
         log.debug("Submitting item generation {} task for chatId: {}", taskType, chatId);
         asyncTaskExecutor.submit(() -> {
-            CountDownLatch latch = chatLatches.computeIfAbsent(chatId, k -> new CountDownLatch(2));//TODO: increment when Usable items generation is implemented
+            chatLatches.computeIfAbsent(chatId, k -> new CountDownLatch(2));//TODO: increment when Usable items generation is implemented
             try {
                 job.run();
             } finally {
-                log.info("Counting down latch for chatId: {}", chatId);
-                latch.countDown();
+                log.info("Counting down ({}) latch for chatId: {}", chatLatches.get(chatId).getCount(), chatId);
+                chatLatches.get(chatId).countDown();
             }
         });
     }
