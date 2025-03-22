@@ -30,7 +30,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;
@@ -59,10 +58,10 @@ public class LevelService {
      *
      * @param chatId id of chat where game starts
      */
-    public void startNewGame(Long chatId, Player player) {
-        Level level = startNewLevel(chatId, player, 1);
+    public void startNewGame(Long chatId) {
+        Level level = startNewLevel(chatId, 1);
         log.info("Starting new game...");
-        messageService.sendNewLevelMessage(chatId, player, level, 1);
+        messageService.sendNewLevelMessage(chatId, playerService.getPlayer(chatId), level, 1);
     }
 
     /**
@@ -72,7 +71,7 @@ public class LevelService {
      */
     public void nextLevel(Long chatId, Player player) {
         val number = getLevelNumber(chatId) + 1;
-        val level = startNewLevel(chatId, player, number);
+        val level = startNewLevel(chatId, number);
         player = effectService.updateArmorEffect(player);
         player.restoreArmor();
         playerService.updatePlayer(player);
@@ -234,22 +233,14 @@ public class LevelService {
         return projection.getNumber();
     }
 
-    public Level startNewLevel(Long chatId, Player player, Integer levelNumber) {
+    public Level startNewLevel(Long chatId, Integer levelNumber) {
         messageService.sendLevelGeneratingInfoMessage(chatId, levelNumber);
-        var level = levelGenerationService.generateAndPopulateLevel(chatId, player, levelNumber);
+        var level = levelGenerationService.generateAndPopulateLevel(chatId, levelNumber);
         if (levelRepository.existsByChatId(chatId)) {
             levelRepository.removeByChatId(chatId);
         }
         level = saveOrUpdateLevel(level);
         log.info("Level generated: {}", level);
-        val direction = level.getRoomsMap().get(level.getStart()).getAdjacentRooms().entrySet().stream()
-                .filter(entry -> Objects.nonNull(entry.getValue()) && entry.getValue())
-                .map(Map.Entry::getKey)
-                .findFirst().orElse(null);
-        player.setDirection(direction);
-        player.setCurrentRoom(level.getStart());
-        player.setCurrentRoomId(level.getRoomsMap().get(level.getStart()).getId());
-        playerService.updatePlayer(player);
         return level;
     }
 

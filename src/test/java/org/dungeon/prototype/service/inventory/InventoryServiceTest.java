@@ -2,8 +2,6 @@ package org.dungeon.prototype.service.inventory;
 
 import lombok.SneakyThrows;
 import lombok.val;
-import org.dungeon.prototype.async.AsyncJobHandler;
-import org.dungeon.prototype.async.TaskType;
 import org.dungeon.prototype.model.document.player.InventoryDocument;
 import org.dungeon.prototype.model.inventory.Inventory;
 import org.dungeon.prototype.model.inventory.Item;
@@ -43,8 +41,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
 
 import static org.dungeon.prototype.TestData.getPlayer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -55,7 +51,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.anyDouble;
 import static org.mockito.Mockito.anyInt;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -79,8 +74,6 @@ class InventoryServiceTest extends BaseServiceUnitTest {
     private MessageService messageService;
     @Mock
     private InventoryRepository inventoryRepository;
-    @Mock
-    private AsyncJobHandler asyncJobHandler;
 
     @SneakyThrows
     @Test
@@ -116,7 +109,8 @@ class InventoryServiceTest extends BaseServiceUnitTest {
         weapon.setEffects(new ArrayList<>());
         expectedInventory.setPrimaryWeapon(weapon);
         expectedInventory.setItems(new ArrayList<>());
-        doReturn(CompletableFuture.completedFuture(expectedInventory)).when(asyncJobHandler).submitTask(any(Callable.class), eq(TaskType.GET_DEFAULT_INVENTORY), eq(CHAT_ID));
+        when(itemService.getMostLightweightWearable(CHAT_ID, WearableType.VEST)).thenReturn(vest);
+        when(itemService.getMostLightWeightMainWeapon(CHAT_ID)).thenReturn(weapon);
         Inventory actualInventory = inventoryService.getDefaultInventory(CHAT_ID);
 
 

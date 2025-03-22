@@ -3,6 +3,8 @@ package org.dungeon.prototype.bot;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.annotations.aspect.AnswerCallback;
+import org.dungeon.prototype.async.AsyncJobHandler;
+import org.dungeon.prototype.async.TaskType;
 import org.dungeon.prototype.exception.CallbackParsingException;
 import org.dungeon.prototype.exception.RestrictedOperationException;
 import org.dungeon.prototype.model.player.PlayerAttribute;
@@ -43,6 +45,8 @@ public class CallbackHandler {
     @Autowired
     BotCommandHandler botCommandHandler;
     @Autowired
+    AsyncJobHandler asyncJobHandler;
+    @Autowired
     private PlayerService playerService;
     @Autowired
     private LevelService levelService;
@@ -64,7 +68,8 @@ public class CallbackHandler {
     /**
      * Handles callbacks from incoming updates
      * and executes corresponding services methods
-     * @param chatId id of updated chat
+     *
+     * @param chatId        id of updated chat
      * @param callbackQuery query with callback data
      */
     @AnswerCallback
@@ -74,36 +79,21 @@ public class CallbackHandler {
             val callBackData = getCallbackType(callData);
 
             switch (callBackData) {
-                case START_GAME ->
-                        handleStartingNewGame(chatId);
-                case CONTINUE_GAME ->
-                        handleContinuingGame(chatId);
-                case NEXT_LEVEL ->
-                        handleNextLevel(chatId);
-                case LEFT, RIGHT, FORWARD, BACK ->
-                        handleMovingToRoom(chatId, callBackData);
-                case ATTACK, SECONDARY_ATTACK ->
-                        handleAttack(chatId, callBackData);
-                case TREASURE_OPEN ->
-                        handleOpeningTreasure(chatId);
-                case TREASURE_GOLD_COLLECTED ->
-                        handleCollectingTreasureGold(chatId);
-                case SHRINE ->
-                        handleShrineRefill(chatId);
-                case MERCHANT_BUY_MENU, MERCHANT_BUY_MENU_BACK ->
-                        handleOpenMerchantBuyMenu(chatId);
-                case MERCHANT_SELL_MENU, MERCHANT_SELL_MENU_BACK ->
-                        handleOpenMerchantSellMenu(chatId);
-                case MAP ->
-                        handleSendingMapMessage(chatId);
-                case INVENTORY, ITEM_INVENTORY_BACK ->
-                        handleSendingInventoryMessage(chatId);
-                case PLAYER_STATS ->
-                        playerService.sendPlayerStatsMessage(chatId);
-                case MENU_BACK ->
-                        handleSendingRoomMessage(chatId);
-                case TREASURE_COLLECT_ALL ->
-                        handleCollectingTreasure(chatId);
+                case START_GAME -> handleStartingNewGame(chatId);
+                case CONTINUE_GAME -> handleContinuingGame(chatId);
+                case NEXT_LEVEL -> handleNextLevel(chatId);
+                case LEFT, RIGHT, FORWARD, BACK -> handleMovingToRoom(chatId, callBackData);
+                case ATTACK, SECONDARY_ATTACK -> handleAttack(chatId, callBackData);
+                case TREASURE_OPEN -> handleOpeningTreasure(chatId);
+                case TREASURE_GOLD_COLLECTED -> handleCollectingTreasureGold(chatId);
+                case SHRINE -> handleShrineRefill(chatId);
+                case MERCHANT_BUY_MENU, MERCHANT_BUY_MENU_BACK -> handleOpenMerchantBuyMenu(chatId);
+                case MERCHANT_SELL_MENU, MERCHANT_SELL_MENU_BACK -> handleOpenMerchantSellMenu(chatId);
+                case MAP -> handleSendingMapMessage(chatId);
+                case INVENTORY, ITEM_INVENTORY_BACK -> handleSendingInventoryMessage(chatId);
+                case PLAYER_STATS -> playerService.sendPlayerStatsMessage(chatId);
+                case MENU_BACK -> handleSendingRoomMessage(chatId);
+                case TREASURE_COLLECT_ALL -> handleCollectingTreasure(chatId);
                 case RESTORE_ARMOR -> roomService.restoreArmor(chatId);
                 case SHARPEN_WEAPON -> inventoryService.sharpenWeapon(chatId);
             }
@@ -220,12 +210,15 @@ public class CallbackHandler {
 
     private void handleStartingNewGame(Long chatId) {
         itemGenerator.generateItems(chatId);
-        val defaultInventory = inventoryService.getDefaultInventory(chatId);
-        var player = playerService.getPlayerPreparedForNewGame(chatId, defaultInventory);
-        player = effectService.updatePlayerEffects(player);
-        player = effectService.updateArmorEffect(player);
-        log.info("Player loaded: {}", player);
-        levelService.startNewGame(chatId, player);
+        asyncJobHandler.submitTask(() -> {
+            val defaultInventory = inventoryService.getDefaultInventory(chatId);
+            var player = playerService.getPlayerPreparedForNewGame(chatId, defaultInventory);
+            player = effectService.updatePlayerEffects(player);
+            player = effectService.updateArmorEffect(player);
+            inventoryService.saveOrUpdateInventory(defaultInventory);
+            playerService.updatePlayer(player);
+        }, TaskType.PREPARE_PLAYER, chatId);
+        levelService.startNewGame(chatId);
     }
 
     private void handleContinuingGame(Long chatId) {

@@ -52,13 +52,30 @@ public class AsyncJobHandler {
 
     @Async
     public Future<?> submitTask(Callable<?> job, TaskType taskType, long chatId) {
-        log.debug("Submitting task for of type {} chatId: {}", taskType, chatId);
+        log.debug("Submitting task of type {} for chatId: {}", taskType, chatId);
         return asyncTaskExecutor.submit(() -> {
             try {
                 if (chatLatches.containsKey(chatId) && chatLatches.get(chatId).getCount() > 0) {
                     chatLatches.get(chatId).await();
                 }
                 return job.call();
+            } catch (InterruptedException e) {
+                throw new DungeonPrototypeException(e.getMessage());
+            } finally {
+                chatLatches.remove(chatId);
+            }
+        });
+    }
+
+    @Async
+    public void submitTask(Runnable job, TaskType taskType, long chatId) {
+        log.debug("Submitting task of type {} for chatId: {}", taskType, chatId);
+        asyncTaskExecutor.submit(() -> {
+            try {
+                if (chatLatches.containsKey(chatId) && chatLatches.get(chatId).getCount() > 0) {
+                    chatLatches.get(chatId).await();
+                }
+                job.run();
             } catch (InterruptedException e) {
                 throw new DungeonPrototypeException(e.getMessage());
             } finally {

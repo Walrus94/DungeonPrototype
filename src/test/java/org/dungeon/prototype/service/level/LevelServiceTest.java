@@ -84,9 +84,8 @@ class LevelServiceTest extends BaseServiceUnitTest {
     @Test
     @DisplayName("Successfully starts new game")
     void startNewGame() {
-        val player = getPlayer(CHAT_ID);
         val level = TestData.getLevel(1);
-        when(levelGenerationService.generateAndPopulateLevel(CHAT_ID, player, 1)).thenReturn(level);
+        when(levelGenerationService.generateAndPopulateLevel(CHAT_ID, 1)).thenReturn(level);
 
         val document = new LevelDocument();
         val start = new RoomDocument();
@@ -106,9 +105,9 @@ class LevelServiceTest extends BaseServiceUnitTest {
         when(levelRepository.save(any(LevelDocument.class))).thenReturn(document);
         doNothing().when(messageService).sendLevelGeneratingInfoMessage(CHAT_ID, 1);
 
-        levelService.startNewGame(CHAT_ID, player);
+        levelService.startNewGame(CHAT_ID);
 
-        verify(levelGenerationService).generateAndPopulateLevel(CHAT_ID, player, 1);
+        verify(levelGenerationService).generateAndPopulateLevel(CHAT_ID, 1);
         verify(messageService).sendLevelGeneratingInfoMessage(CHAT_ID, 1);
     }
 
@@ -120,7 +119,7 @@ class LevelServiceTest extends BaseServiceUnitTest {
         val levelNumber = new LevelNumberProjection();
         levelNumber.setNumber(1);
         when(levelRepository.findNumberByChatId(CHAT_ID)).thenReturn(Optional.of(levelNumber));
-        when(levelGenerationService.generateAndPopulateLevel(CHAT_ID, player, 2)).thenReturn(level);
+        when(levelGenerationService.generateAndPopulateLevel(CHAT_ID, 2)).thenReturn(level);
 
         val document = new LevelDocument();
         val start = new RoomDocument();
@@ -143,7 +142,7 @@ class LevelServiceTest extends BaseServiceUnitTest {
         document.setEnd(end.getPoint());
         document.setRoomsMap(Map.of("{\"x\":0, \"y\":0}", start,
                 "{\"x\":5, \"y\":5}", end));
-        when(levelGenerationService.generateAndPopulateLevel(CHAT_ID, player, 2)).thenReturn(level);
+        when(levelGenerationService.generateAndPopulateLevel(CHAT_ID, 2)).thenReturn(level);
         when(levelRepository.save(any(LevelDocument.class))).thenReturn(document);
         when(effectService.updateArmorEffect(player)).thenReturn(player);
         doNothing().when(messageService).sendLevelGeneratingInfoMessage(CHAT_ID, 2);

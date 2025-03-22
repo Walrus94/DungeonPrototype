@@ -22,21 +22,13 @@ import org.dungeon.prototype.model.room.content.RoomContent;
 import org.dungeon.prototype.model.room.content.StartRoom;
 import org.dungeon.prototype.model.weight.Weight;
 import org.dungeon.prototype.properties.GenerationProperties;
+import org.dungeon.prototype.service.PlayerService;
 import org.dungeon.prototype.service.room.generation.room.content.RoomContentGenerationService;
 import org.dungeon.prototype.service.weight.WeightCalculationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
@@ -71,22 +63,24 @@ public class LevelGenerationService {
     @Autowired
     private AsyncJobHandler asyncJobHandler;
     @Autowired
+    private PlayerService playerService;
+    @Autowired
     private GenerationProperties generationProperties;
 
-    public Level generateAndPopulateLevel(Long chatId, Player player, Integer levelNumber) {
-        val level = asyncJobHandler.submitTask(() -> generateLevelMap(chatId, levelNumber), TaskType.LEVEL_GENERATION, chatId);
-        while (!level.isDone()) {
+    public Level generateAndPopulateLevel(Long chatId, Integer levelNumber) {
+        var levelMap = generateLevelMap(chatId, levelNumber);
+        val futureLevel = (Future<Level>) asyncJobHandler.submitTask(() -> populateLevel(chatId, levelNumber, levelMap) , TaskType.LEVEL_GENERATION, chatId);
+        while (!futureLevel.isDone()) {
             try {
-                val generatedLevel = (Level) level.get(1, TimeUnit.SECONDS);
-                return populateLevel(chatId, player, levelNumber, generatedLevel);
+                return futureLevel.get(1, TimeUnit.SECONDS);
             } catch (InterruptedException | ExecutionException e) {
-                log.info("Waiting for level generation...");
-            } catch (TimeoutException e) {
                 throw new DungeonPrototypeException(e.getMessage());
+            } catch (TimeoutException e) {
+                log.info("Waiting for level generation...");
             }
         }
         try {
-            return (Level) level.get();
+            return futureLevel.get();
         } catch (InterruptedException | ExecutionException e) {
             throw new DungeonPrototypeException(e.getMessage());
         }
@@ -142,7 +136,7 @@ public class LevelGenerationService {
                 }
                 if (cluster.hasNegativeRooms()) {
                     log.info("Processing negative rooms of cluster {}", cluster);
-                    GridSection endSection = clusterGrid[clusterGrid.length][clusterGrid[0].length];
+                    GridSection endSection = clusterGrid[clusterGrid.length - 1][clusterGrid[0].length - 1];
                     processNegativeSections(clusterGrid, cluster, endSection);
                 }
                 if (cluster.hasDeadEnds()) {
@@ -186,12 +180,12 @@ public class LevelGenerationService {
      * Generates level and fills with content
      *
      * @param chatId      id of player's chat
-     * @param player      player starting level
      * @param levelNumber number of level
+     * @param level       generated level map
      * @return generated level
      */
-    public Level populateLevel(long chatId, Player player, int levelNumber, Level level) {
-
+    public Level populateLevel(long chatId, int levelNumber, Level level) {
+        val player = playerService.getPlayer(chatId);
         log.info("Generating level {}", levelNumber);
 
         Set<String> usedItemIds = new HashSet<>();
@@ -270,6 +264,15 @@ public class LevelGenerationService {
         level.setLevelMap(new LevelMap(setStartSection(level.getGrid(), level.getClusterConnectionPoints().getFirst())));
         log.debug("Current map state\n{}", printMapToLogs(level.getGrid(), roomsMap));
         log.debug("Current grid state\n{}", printMapGridToLogs(level.getGrid()));
+        val direction = level.getRoomsMap().get(level.getStart()).getAdjacentRooms().entrySet().stream()
+                .filter(entry -> Objects.nonNull(entry.getValue()) && entry.getValue())
+                .map(Map.Entry::getKey)
+                .findFirst().orElse(null);
+        player.setDirection(direction);
+        player.setCurrentRoom(level.getStart());
+        player.setCurrentRoomId(level.getRoomsMap().get(level.getStart()).getId());
+        playerService.updatePlayer(player);
+
         return level;
     }
 
