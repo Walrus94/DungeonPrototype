@@ -39,8 +39,8 @@ public class AsyncJobHandler {
     @Async
     public void submitItemGenerationTask(Runnable job, TaskType taskType, long chatId) {
         log.debug("Submitting item generation {} task for chatId: {}", taskType, chatId);
-        CountDownLatch latch = chatLatches.computeIfAbsent(chatId, k -> new CountDownLatch(2));//TODO: increment when Usable items generation is implemented
         asyncTaskExecutor.submit(() -> {
+            CountDownLatch latch = chatLatches.computeIfAbsent(chatId, k -> new CountDownLatch(2));//TODO: increment when Usable items generation is implemented
             try {
                 job.run();
             } finally {

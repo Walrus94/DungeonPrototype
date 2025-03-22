@@ -110,7 +110,6 @@ public class ItemGenerator {
      */
     public void generateItems(Long chatId) {
         messageService.sendItemsGeneratingInfoMessage(chatId);
-        itemService.dropCollection(chatId);
 
         asyncJobHandler.submitItemGenerationTask(() -> generateWeapons(chatId), TaskType.WEAPON_GENERATION, chatId);
         asyncJobHandler.submitItemGenerationTask(() -> generateWearables(chatId), TaskType.WEARABLE_GENERATION, chatId);
