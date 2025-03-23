@@ -6,6 +6,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import org.dungeon.prototype.async.metrics.TaskMetrics;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
 import org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration;
 import org.springframework.boot.web.embedded.tomcat.TomcatProtocolHandlerCustomizer;
 import org.springframework.context.annotation.Bean;
@@ -45,14 +46,21 @@ public class AsyncConfig {
     }
 
     @Bean
-    public MeterRegistry meterRegistry() {
-        MeterRegistry registry = new JfrMeterRegistry();
+    public MeterRegistryCustomizer<MeterRegistry> configureCommonTags() {
+        return registry -> registry.config()
+                .commonTags("environment", env);
+    }
 
-        registry.config().commonTags("environment", env);
+    @Bean
+    public MeterRegistry meterRegistry() {
+        return new JfrMeterRegistry();
+    }
+
+    @Bean
+    public Gauge activeVirtualThreadsGauge(MeterRegistry registry) {
         AtomicInteger activeThreads = new AtomicInteger(Thread.activeCount());
-        Gauge.builder("jfr_virtual_threads", activeThreads, AtomicInteger::get)
+        return Gauge.builder("jfr_virtual_threads", activeThreads, AtomicInteger::get)
                 .description("The number of virtual threads in the JVM")
                 .register(registry);
-        return registry;
     }
 }
