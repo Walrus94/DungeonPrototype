@@ -50,7 +50,7 @@ public class AsyncConfig {
     public MeterRegistryCustomizer<MeterRegistry> configureCommonTags() {
         return registry -> registry.config()
                 .commonTags("environment", env)
-                .meterFilter(MeterFilter.ignoreTags("code.function", "main.application.class"));//TODO: remove when fixed
+                .meterFilter(MeterFilter.ignoreTags("code.function", "main.application.class", "code.namespace"));//TODO: remove when fixed
     }
 
     @Bean
