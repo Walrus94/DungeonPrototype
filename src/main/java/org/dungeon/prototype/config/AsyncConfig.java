@@ -4,6 +4,7 @@ import com.github.marschall.micrometer.jfr.JfrMeterRegistry;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
+import io.micrometer.core.instrument.config.MeterFilter;
 import org.dungeon.prototype.async.metrics.TaskMetrics;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
@@ -48,7 +49,8 @@ public class AsyncConfig {
     @Bean
     public MeterRegistryCustomizer<MeterRegistry> configureCommonTags() {
         return registry -> registry.config()
-                .commonTags("environment", env);
+                .commonTags("environment", env)
+                .meterFilter(MeterFilter.ignoreTags("code.function", "main.application.class"));//TODO: remove when fixed
     }
 
     @Bean
