@@ -34,7 +34,7 @@ management:
       base-path: /actuator
   metrics:
     tags:
-      application: ${spring.application.name}
+      application: "dungeon-bot"
   prometheus:
     metrics:
       export:
