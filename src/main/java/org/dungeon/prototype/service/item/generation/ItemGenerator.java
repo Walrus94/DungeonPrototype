@@ -339,6 +339,7 @@ public class ItemGenerator {
     private Weapon calculateParameters(Weapon weapon) {
         log.info("Calculating weapon params...");
         val properties = generationProperties.getItems().getWeapon();
+        log.debug("Loaded properties: {}", properties);
         val defaultAttributesMap = properties.getDefaultAttributes();
         val defaultAttributes = defaultAttributesMap.get(weapon.getAttributes().getWeaponType());
         weapon.setAttack(defaultAttributes.getAttack());
@@ -395,7 +396,6 @@ public class ItemGenerator {
         try {
             val weaponHandlerMaterial = WeaponHandlerMaterial.valueOf(weapon.getAttributes().getWeaponMaterial().toString());
             return Optional.of(weaponHandlerMaterial);
-
         } catch (IllegalArgumentException e) {
             log.debug("Handler material doesn't match! Exception thrown: {}", e.getMessage());
             return Optional.empty();
