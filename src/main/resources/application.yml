@@ -275,6 +275,18 @@ generation:
           chance-to-miss: 0.2
           chance-to-knock-out: 0.0
       handling-adjustment-attributes:
+        main:
+          attack-ratio: 1.0
+          chance-to-miss-ratio: 1.0
+          critical-chance-ratio: 1.0
+          critical-multiplier-ratio: 1.0
+          knock-out-chance-ratio: 1.0
+        secondary:
+          attack-ratio: 1.0
+          chance-to-miss-ratio: 1.0
+          critical-chance-ratio: 1.0
+          critical-multiplier-ratio: 1.0
+          knock-out-chance-ratio: 1.0
         single-handed:
           attack-ratio: 0.95
           chance-to-miss-ratio: 0.9
