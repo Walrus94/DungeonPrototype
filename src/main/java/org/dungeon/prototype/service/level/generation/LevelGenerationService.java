@@ -79,7 +79,7 @@ public class LevelGenerationService {
 
     public Level generateAndPopulateLevel(Long chatId, Integer levelNumber) {
         var levelMap = generateLevelMap(chatId, levelNumber);
-        val futureLevel = (Future<Level>) asyncJobHandler.submitTask(() -> populateLevel(chatId, levelNumber, levelMap) , TaskType.LEVEL_GENERATION, chatId);
+        val futureLevel = (Future<Level>) asyncJobHandler.submitMapPopulationTask(() -> populateLevel(chatId, levelNumber, levelMap) , TaskType.LEVEL_GENERATION, chatId);
         while (!futureLevel.isDone()) {
             try {
                 return futureLevel.get(1, TimeUnit.SECONDS);
@@ -135,7 +135,7 @@ public class LevelGenerationService {
 
         clusters.values().forEach(cluster -> {
             log.info("Processing cluster: {}", cluster);
-            cluster.setGeneratedGrid((Future<GridSection[][]>) asyncJobHandler.submitMapPopulationTask(() -> {
+            cluster.setGeneratedGrid((Future<GridSection[][]>) asyncJobHandler.submitMapClusterGenerationTask(() -> {
                 GridSection[][] clusterGrid = generateEmptyMapGrid(cluster.getStartConnectionPoint(), cluster.getEndConnectionPoint());
                 while (!cluster.getWalkers().isEmpty()) {
                     for (WalkerBuilder walker : cluster.getWalkers()) {

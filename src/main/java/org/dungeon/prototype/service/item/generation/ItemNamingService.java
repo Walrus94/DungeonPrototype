@@ -23,10 +23,12 @@ public class ItemNamingService {
      *
      * @param item to be named
      */
-    public void requestNameGeneration(Item item) {
+    public Item requestNameGeneration(Item item) {
         log.info("Preparing item {} for naming request...", item.getId());
         kafkaProducer.sendItemNamingRequest(
                 new ItemNameRequest(item.getChatId(), item.getId(), generatePrompt(item)));
+        item.setHfRequestSent(true);
+        return item;
     }
 
     private String generatePrompt(Item item) {

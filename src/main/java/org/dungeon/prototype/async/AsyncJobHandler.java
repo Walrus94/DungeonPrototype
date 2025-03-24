@@ -56,7 +56,7 @@ public class AsyncJobHandler {
     }
 
     @Async
-    public Future<?> submitTask(Callable<?> job, TaskType taskType, long chatId) {
+    public Future<?> submitMapPopulationTask(Callable<?> job, TaskType taskType, long chatId) {
         log.debug("Submitting task of type {} for chatId: {}", taskType, chatId);
         return asyncTaskExecutor.submit(() -> {
             try {
@@ -90,20 +90,10 @@ public class AsyncJobHandler {
     }
 
     @Async
-    public Future<?> submitMapPopulationTask(Callable<?> job, TaskType taskType, long chatId, long clusterId) {
+    public Future<?> submitMapClusterGenerationTask(Callable<?> job, TaskType taskType, long chatId, long clusterId) {
         log.debug("Submitting map population task for chatId: {}, clusterId: {}", chatId, clusterId);
         return asyncTaskExecutor.submit(() -> {
-            try {
-                if (chatLatches.containsKey(chatId) && chatLatches.get(chatId).getCount() > 0) {
-                    log.debug("Awaiting for chatId: {} ", chatId);
-                    chatLatches.get(chatId).await();
-                }
-                executeTask(job, taskType, chatId, clusterId);
-            } catch (InterruptedException e) {
-                throw new DungeonPrototypeException(e.getMessage());
-            } finally {
-                chatLatches.remove(chatId);
-            }
+            executeTask(job, taskType, chatId, clusterId);
         });
     }
 

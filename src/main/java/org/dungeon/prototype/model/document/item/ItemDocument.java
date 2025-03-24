@@ -36,6 +36,7 @@ public class ItemDocument {
     //usable specs
     private Integer amount;
     private String name;
+    private boolean hfRequestSent;
     @Indexed
     private Double weightAbs;
     private MagicType magicType;

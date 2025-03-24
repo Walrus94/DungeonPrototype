@@ -80,7 +80,12 @@ public class ItemService {
         //TODO: refactor
         var document = documents.getFirst();
         if (nonNull(document) && isNull(document.getName())) {
-            itemNamingService.requestNameGeneration(itemMapper.mapToWearable(document));
+            if (!document.isHfRequestSent()) {
+                var item = itemMapper.mapToWearable(document);
+                item = (Wearable) itemNamingService.requestNameGeneration(item);
+                document = itemMapper.mapToDocument(item);
+                itemRepository.save(document);
+            }
             log.info("Waiting for name generation of item {} for chat {}...", document.getId(), chatId);
             while (isNull(document.getName())) {
                 document = itemRepository.findByChatIdAndId(document.getChatId(), document.getId()).orElse(null);
@@ -107,7 +112,13 @@ public class ItemService {
         //TODO: refactor
         var document = documents.getFirst();
         if (nonNull(document) && isNull(document.getName())) {
-            itemNamingService.requestNameGeneration(itemMapper.mapToWeapon(document));
+            if (!document.isHfRequestSent()) {
+                var item = itemMapper.mapToWeapon(document);
+                item = (Weapon) itemNamingService.requestNameGeneration(item);
+                document = itemMapper.mapToDocument(item);
+                itemRepository.save(document);
+
+            }
             log.info("Waiting for name generation of item {} for chat {}...", document.getId(), chatId);
             while (isNull(document.getName())) {
                 document = itemRepository.findByChatIdAndId(document.getChatId(), document.getId()).orElse(null);
@@ -254,8 +265,9 @@ public class ItemService {
                             case USABLE -> ItemMapper.INSTANCE.mapToUsable(itemDocument);
                         })
                 .peek(item -> {
-                    if (isNull(item.getName())) {
-                        itemNamingService.requestNameGeneration(item);
+                    if (isNull(item.getName()) && !item.isHfRequestSent()) {
+                        item = itemNamingService.requestNameGeneration(item);
+                        saveItem(item);
                     }
                 })
                 .collect(Collectors.toCollection(HashSet::new));
