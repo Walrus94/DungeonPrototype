@@ -42,7 +42,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -202,7 +201,7 @@ public class ItemGenerator {
         }
 
         val vanillaWeapons = generatedAttributesCombinations.stream()
-                .flatMap(attributes -> Stream.of(generateVanillaWeapon(attributes, chatId)))
+                .map(attributes -> generateVanillaWeapon(attributes, chatId))
                 .collect(Collectors.toList());
         val savedItems = itemService.saveItems(vanillaWeapons);
         log.info("{} weapons without effects generated.", savedItems.size());
@@ -264,7 +263,7 @@ public class ItemGenerator {
             attributesCombinations.add(wearableAttributes);
         }
         val vanillaWearables = attributesCombinations.stream()
-                .flatMap(attributes -> Stream.of(generateVanillaWearable(attributes, chatId)))
+                .map(attributes -> generateVanillaWearable(attributes, chatId))
                 .collect(Collectors.toList());
         val savedItems = itemService.saveItems(vanillaWearables);
         log.info("{} wearables without effects generated.", savedItems.size());
@@ -342,6 +341,7 @@ public class ItemGenerator {
         log.debug("Loaded properties: {}", properties);
         val defaultAttributesMap = properties.getDefaultAttributes();
         val defaultAttributes = defaultAttributesMap.get(weapon.getAttributes().getWeaponType());
+        log.debug("Default attributes: {}", defaultAttributes);
         weapon.setAttack(defaultAttributes.getAttack());
         weapon.setCriticalHitChance(defaultAttributes.getCriticalHitChance());
         weapon.setCriticalHitMultiplier(defaultAttributes.getCriticalHitMultiplier());
@@ -352,9 +352,11 @@ public class ItemGenerator {
         }
 
         val handlingAdjustmentAttributes = properties.getHandlingAdjustmentAttributes().get(weapon.getAttributes().getHandling());
+        log.debug("Handling adjustment attributes: {}", handlingAdjustmentAttributes);
         applyAdjustment(weapon, handlingAdjustmentAttributes);
 
         val weaponMaterialAdjustmentAttributes = properties.getWeaponMaterialAdjustmentAttributes().get(weapon.getAttributes().getWeaponMaterial());
+        log.debug("Weapon material adjustment attributes: {}", weaponMaterialAdjustmentAttributes);
         applyAdjustment(weapon, weaponMaterialAdjustmentAttributes);
         if (ENCHANTED_WOOD.equals(weapon.getAttributes().getWeaponMaterial()) && isNull(weapon.getMagicType())) {
             weapon.setMagicType(getRandomMagicType());
@@ -372,19 +374,24 @@ public class ItemGenerator {
         if (handlerMaterial.isPresent() && completeMaterialAdjustmentAttributes.containsKey(handlerMaterial.get())) {
             log.info("Weapon and handler materials matched, {}", handlerMaterial.get());
             val completeMaterialAdjustment = completeMaterialAdjustmentAttributes.get(handlerMaterial.get());
+            log.debug("Complete material adjustment attributes: {}", completeMaterialAdjustment);
             applyAdjustment(weapon, completeMaterialAdjustment);
         } else {
             log.info("Weapon and handler materials differs!");
             val weaponHandlerAdjustment = properties.getWeaponHandlerMaterialAdjustmentAttributes().get(weapon.getAttributes().getWeaponHandlerMaterial());
+            log.debug("Weapon handler adjustment attributes: {}", weaponHandlerAdjustment);
             applyAdjustment(weapon, weaponHandlerAdjustment);
         }
         val sizeAdjustment = properties.getSizeAdjustmentAttributes().get(weapon.getAttributes().getSize());
+        log.debug("Size adjustment attributes: {}", sizeAdjustment);
         weapon.setAttack((int) (weapon.getAttack() * sizeAdjustment.getAttackRatio()));
         weapon.setChanceToMiss(weapon.getChanceToMiss() * sizeAdjustment.getChanceToMissRatio());
 
         val attackTypeAdjustment = properties.getAttackTypeAdjustmentAttributes().get(weapon.getAttributes().getWeaponAttackType());
+        log.debug("Attack type adjustment attributes: {}", attackTypeAdjustment);
         applyAdjustment(weapon, attackTypeAdjustment);
         val qualityAdjustmentRatio = properties.getQualityAdjustmentRatio().get(weapon.getAttributes().getQuality());
+        log.debug("Quality adjustment ratio: {}", qualityAdjustmentRatio);
         multiplyAllParametersBy(weapon, qualityAdjustmentRatio);
         if (isNull(weapon.getMagicType())) {
             weapon.setMagicType(MagicType.of(0.0, 0.0));
