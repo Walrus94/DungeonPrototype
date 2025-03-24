@@ -5,6 +5,7 @@ import org.dungeon.prototype.async.metrics.TaskContext;
 import org.dungeon.prototype.async.metrics.TaskContextData;
 import org.dungeon.prototype.async.metrics.TaskMetrics;
 import org.dungeon.prototype.exception.DungeonPrototypeException;
+import org.dungeon.prototype.model.inventory.Item;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration;
 import org.springframework.core.task.AsyncTaskExecutor;
@@ -12,7 +13,9 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -37,19 +40,19 @@ public class AsyncJobHandler {
     }
 
     @Async
-    public void submitItemGenerationTask(Runnable job, TaskType taskType, long chatId) {
+    public CompletableFuture<Set<Item>> submitItemGenerationTask(Callable<Set<Item>> job, TaskType taskType, long chatId) {
         log.debug("Submitting item generation {} task for chatId: {}", taskType, chatId);
-        asyncTaskExecutor.submit(() -> {
+        return CompletableFuture.supplyAsync(() -> {
             chatLatches.computeIfAbsent(chatId, k -> new CountDownLatch(2));//TODO: increment when Usable items generation is implemented
             try {
-                job.run();
+                return job.call();
             } catch (Exception e) {
                 throw new DungeonPrototypeException(e.getMessage());
             } finally {
                 log.info("Counting down ({}) latch for chatId: {}", chatLatches.get(chatId).getCount(), chatId);
                 chatLatches.get(chatId).countDown();
             }
-        });
+        }, asyncTaskExecutor);
     }
 
     @Async

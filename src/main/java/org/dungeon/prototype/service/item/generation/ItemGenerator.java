@@ -5,6 +5,7 @@ import lombok.val;
 import org.apache.commons.math3.util.Pair;
 import org.dungeon.prototype.async.AsyncJobHandler;
 import org.dungeon.prototype.async.TaskType;
+import org.dungeon.prototype.exception.EntityNotFoundException;
 import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.inventory.attributes.MagicType;
 import org.dungeon.prototype.model.inventory.attributes.Quality;
@@ -20,6 +21,7 @@ import org.dungeon.prototype.model.inventory.attributes.wearable.WearableMateria
 import org.dungeon.prototype.model.inventory.attributes.wearable.WearableType;
 import org.dungeon.prototype.model.inventory.items.Weapon;
 import org.dungeon.prototype.model.inventory.items.Wearable;
+import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.properties.GenerationProperties;
 import org.dungeon.prototype.service.effect.ItemEffectsGenerator;
 import org.dungeon.prototype.service.item.ItemService;
@@ -38,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -110,11 +113,22 @@ public class ItemGenerator {
     public void generateItems(Long chatId) {
         messageService.sendItemsGeneratingInfoMessage(chatId);
 
-        asyncJobHandler.submitItemGenerationTask(() -> generateWeapons(chatId), TaskType.WEAPON_GENERATION, chatId);
-        asyncJobHandler.submitItemGenerationTask(() -> generateWearables(chatId), TaskType.WEARABLE_GENERATION, chatId);
+        CompletableFuture<Set<Item>> futureWeapons = asyncJobHandler.submitItemGenerationTask(() -> generateWeapons(chatId), TaskType.WEAPON_GENERATION, chatId);
+        CompletableFuture<Set<Item>> futureWearables = asyncJobHandler.submitItemGenerationTask(() -> generateWearables(chatId), TaskType.WEARABLE_GENERATION, chatId);
+
+        CompletableFuture<Set<Item>> futureItems = futureWeapons
+                .thenCombine(futureWearables, (weapons, wearables) -> {
+                    Set<Item> allItems = new HashSet<>();
+                    allItems.addAll(weapons);
+                    allItems.addAll(wearables);
+                    return allItems;
+                });
+
+        val items = futureItems.join();
+        addEffects(chatId, items, weaponPerGame, wearablesPerGame);
     }
 
-    private void generateWeapons(Long chatId) {
+    private Set<Item> generateWeapons(Long chatId) {
         log.info("Generation weapons for chatId:{}...", chatId);
         Set<WeaponAttributes> generatedAttributesCombinations = new HashSet<>();
         while (generatedAttributesCombinations.size() < weaponAttributesPoolSize) {
@@ -191,15 +205,12 @@ public class ItemGenerator {
                 .flatMap(attributes -> Stream.of(generateVanillaWeapon(attributes, chatId)))
                 .collect(Collectors.toList());
         val savedItems = itemService.saveItems(vanillaWeapons);
-
         log.info("{} weapons without effects generated.", savedItems.size());
-
-        log.info("Adding effects to weapons...");
-        addEffects(chatId, savedItems, weaponPerGame);
+        return savedItems;
     }
 
 
-    private void generateWearables(Long chatId) {
+    private Set<Item> generateWearables(Long chatId) {
         log.info("Generation wearables for chatId:{}...", chatId);
         Set<WearableAttributes> attributesCombinations = new HashSet<>();
         Map<WearableType, Integer> typesCount = new HashMap<>();
@@ -257,20 +268,21 @@ public class ItemGenerator {
                 .collect(Collectors.toList());
         val savedItems = itemService.saveItems(vanillaWearables);
         log.info("{} wearables without effects generated.", savedItems.size());
-        log.info("Adding effects to wearables...");
-        addEffects(chatId, savedItems, wearablesPerGame);
+        return savedItems;
     }
 
-    private void addEffects(Long chatId, Set<Item> savedItems, Integer limit) {
-        val weightScale = savedItems.stream()
+    private void addEffects(Long chatId, Set<Item> items, int weaponLimit, int wearableLimit) {
+        val weightScale = items.stream()
                 .map(item -> Pair.create(item.getId(), item.getWeight().toVector().getNorm()))
                 .sorted(Comparator.comparing(Pair::getValue))
                 .collect(Collectors.toCollection(ArrayList::new));
-        log.info("Adding effects to generated items, amount: {}", savedItems.size());
+        log.info("Adding effects to generated items, amount: {}", items.size());
         double largestSegment = 0.0;
         int startSegmentIndex = 0;
+        int weaponCount = 0;
+        int wearableCount = 0;
         val vanillaItemsIds = weightScale.stream().map(Pair::getKey).toList();
-        while (weightScale.size() < limit) {
+        while (weightScale.size() < wearableLimit + weaponLimit && weaponCount < weaponLimit && wearableCount < wearableLimit) {
             for (int i = 1; i < weightScale.size(); i++) {
                 //TODO: add loop and proceed further in selected direction by scale to next itemId
                 double segment = weightScale.get(i).getValue() - weightScale.get(i - 1).getValue();
@@ -296,6 +308,11 @@ public class ItemGenerator {
                     weightScale.remove(point);
                     insertNewItem(Pair.create(oldValue.getKey(), updatedWeight.get()), weightScale);
                 }
+            }
+
+            switch (items.stream().filter(item -> item.getId().equals(itemId)).findFirst().orElseThrow(() -> new EntityNotFoundException(chatId, "item", CallbackType.MENU_BACK)).getItemType()) {
+                case WEAPON: weaponCount++;
+                case WEARABLE: wearableCount++;
             }
         }
     }
