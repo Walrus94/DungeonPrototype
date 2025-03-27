@@ -100,6 +100,22 @@ public class LevelGridCluster {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        LevelGridCluster that = (LevelGridCluster) o;
+        return id == that.id &&
+                size == that.size &&
+                negativeRoomsCount == that.negativeRoomsCount &&
+                Objects.equals(startConnectionPoint, that.startConnectionPoint) &&
+                Objects.equals(endConnectionPoint, that.endConnectionPoint) &&
+                Objects.equals(deadEnds, that.deadEnds) &&
+                Objects.equals(clusterExpectedWeight, that.clusterExpectedWeight) &&
+                Objects.equals(walkers, that.walkers) &&
+                Objects.equals(generatedGrid, that.generatedGrid);
+    }
+
+    @Override
     public int hashCode() {
         return Objects.hash(id, startConnectionPoint, endConnectionPoint, size, negativeRoomsCount, deadEnds, clusterExpectedWeight, walkers, generatedGrid);
     }
