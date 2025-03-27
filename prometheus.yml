@@ -3,6 +3,10 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
+  - job_name: 'kafka'
+    static_configs:
+      - targets: ['jmx-exporter:7071']
+
   - job_name: 'prod-dungeon-prototype-app'
     metrics_path: '/actuator/prometheus'
     static_configs:

@@ -160,6 +160,7 @@ services:
       - zookeeper
     ports:
       - ${KAFKA_PORT}:${KAFKA_PORT}
+      - "9999:9999"
     labels:
       environment: shared
       service: kafka
@@ -178,6 +179,22 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_LOG4J_LOGGERS: "kafka.consumer.logger=INFO"
+      KAFKA_JMX_PORT: 9999  # Expose JMX metrics
+
+  jmx-exporter:
+    image: bitnami/jmx-exporter:latest
+    container_name: jmx-exporter
+    restart: unless-stopped
+    networks:
+      - shared_net
+    ports:
+      - "7071:7071"
+    volumes:
+      - ./jmx_exporter/config.yml:/config.yml
+    command:
+      - "--web.listen-address=0.0.0.0:7071"
+      - "--config.file=/config.yml"
+      - "kafka:9999"  # Connect to Kafka JMX
 
   mongo:
     image: mongo:latest

@@ -1,0 +1,3 @@
+hostPort: 7071
+rules:
+  - pattern: ".*"
