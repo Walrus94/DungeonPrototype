@@ -97,6 +97,17 @@ public class AsyncJobHandler {
         });
     }
 
+    @Async
+    public void submitCallbackTask(Runnable task) {
+        asyncTaskExecutor.submit(() -> {
+            try {
+                task.run();
+            } catch (Exception e) {
+                throw new DungeonPrototypeException(e.getMessage());
+            }
+        });
+    }
+
     private <T> Future<T> executeTask(Callable<T> job, TaskType taskType, long chatId, long clusterId) {
         try (var taskScope = new StructuredTaskScope.ShutdownOnFailure()) {
             var context = new TaskContextData(chatId, clusterId, taskType);
@@ -127,15 +138,5 @@ public class AsyncJobHandler {
             }
         }
         return null;
-    }
-
-    public void submitCallbackTask(Runnable task) {
-        asyncTaskExecutor.submit(() -> {
-            try {
-                task.run();
-            } catch (Exception e) {
-                throw new DungeonPrototypeException(e.getMessage());
-            }
-        });
     }
 }
