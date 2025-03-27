@@ -135,7 +135,7 @@ public class LevelGenerationService {
 
         clusters.values().forEach(cluster -> {
             log.info("Processing cluster: {}", cluster);
-            cluster.setGeneratedGrid((Future<GridSection[][]>) asyncJobHandler.submitMapClusterGenerationTask(() -> {
+            cluster.setGeneratedGrid((Future<GridSection[][]>) asyncJobHandler.submitMapGenerationTask(() -> {
                 GridSection[][] clusterGrid = generateEmptyMapGrid(cluster.getStartConnectionPoint(), cluster.getEndConnectionPoint());
                 while (!cluster.getWalkers().isEmpty()) {
                     for (WalkerBuilder walker : cluster.getWalkers()) {

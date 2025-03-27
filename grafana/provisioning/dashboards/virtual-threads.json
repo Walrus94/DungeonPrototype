@@ -106,6 +106,38 @@
             "datasource": "loki"
           }
         ]
+      },
+      {
+        "title": "Virtual Thread Blocked Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(jfr_virtual_thread_blocked_time_seconds[1m])",
+            "legendFormat": "Blocked Time in Virtual Threads"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "color": { "mode": "continuous-GrYlRd" }
+          }
+        }
+      },
+      {
+        "title": "Virtual Thread Wait Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(jfr_virtual_thread_wait_time_seconds[1m])",
+            "legendFormat": "Wait Time in Virtual Threads"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "color": { "mode": "continuous-GrYlRd" }
+          }
+        }
       }
     ]
   }

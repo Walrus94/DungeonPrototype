@@ -74,34 +74,35 @@ public class CallbackHandler {
      */
     @AnswerCallback
     public void handleCallbackQuery(Long chatId, CallbackQuery callbackQuery) {
-        val callData = callbackQuery.getData();
-        try {
-            val callBackData = getCallbackType(callData);
+        asyncJobHandler.submitCallbackTask(() -> {
+            val callData = callbackQuery.getData();
+            try {
+                val callBackData = getCallbackType(callData);
 
-            switch (callBackData) {
-                case START_GAME -> handleStartingNewGame(chatId);
-                case CONTINUE_GAME -> handleContinuingGame(chatId);
-                case NEXT_LEVEL -> handleNextLevel(chatId);
-                case LEFT, RIGHT, FORWARD, BACK -> handleMovingToRoom(chatId, callBackData);
-                case ATTACK, SECONDARY_ATTACK -> handleAttack(chatId, callBackData);
-                case TREASURE_OPEN -> handleOpeningTreasure(chatId);
-                case TREASURE_GOLD_COLLECTED -> handleCollectingTreasureGold(chatId);
-                case SHRINE -> handleShrineRefill(chatId);
-                case MERCHANT_BUY_MENU, MERCHANT_BUY_MENU_BACK -> handleOpenMerchantBuyMenu(chatId);
-                case MERCHANT_SELL_MENU, MERCHANT_SELL_MENU_BACK -> handleOpenMerchantSellMenu(chatId);
-                case MAP -> handleSendingMapMessage(chatId);
-                case INVENTORY, ITEM_INVENTORY_BACK -> handleSendingInventoryMessage(chatId);
-                case PLAYER_STATS -> playerService.sendPlayerStatsMessage(chatId);
-                case MENU_BACK -> handleSendingRoomMessage(chatId);
-                case TREASURE_COLLECT_ALL -> handleCollectingTreasure(chatId);
-                case RESTORE_ARMOR -> roomService.restoreArmor(chatId);
-                case SHARPEN_WEAPON -> inventoryService.sharpenWeapon(chatId);
+                switch (callBackData) {
+                    case START_GAME -> handleStartingNewGame(chatId);
+                    case CONTINUE_GAME -> handleContinuingGame(chatId);
+                    case NEXT_LEVEL -> handleNextLevel(chatId);
+                    case LEFT, RIGHT, FORWARD, BACK -> handleMovingToRoom(chatId, callBackData);
+                    case ATTACK, SECONDARY_ATTACK -> handleAttack(chatId, callBackData);
+                    case TREASURE_OPEN -> handleOpeningTreasure(chatId);
+                    case TREASURE_GOLD_COLLECTED -> handleCollectingTreasureGold(chatId);
+                    case SHRINE -> handleShrineRefill(chatId);
+                    case MERCHANT_BUY_MENU, MERCHANT_BUY_MENU_BACK -> handleOpenMerchantBuyMenu(chatId);
+                    case MERCHANT_SELL_MENU, MERCHANT_SELL_MENU_BACK -> handleOpenMerchantSellMenu(chatId);
+                    case MAP -> handleSendingMapMessage(chatId);
+                    case INVENTORY, ITEM_INVENTORY_BACK -> handleSendingInventoryMessage(chatId);
+                    case PLAYER_STATS -> playerService.sendPlayerStatsMessage(chatId);
+                    case MENU_BACK -> handleSendingRoomMessage(chatId);
+                    case TREASURE_COLLECT_ALL -> handleCollectingTreasure(chatId);
+                    case RESTORE_ARMOR -> roomService.restoreArmor(chatId);
+                    case SHARPEN_WEAPON -> inventoryService.sharpenWeapon(chatId);
+                }
+            } catch (CallbackParsingException e) {
+                log.warn("Processing composite callback, parsing failed: {}", e.getMessage());
+                parseCompositeCallbackData(chatId, callData);
             }
-        } catch (CallbackParsingException e) {
-            log.warn("Processing composite callback, parsing failed: {}", e.getMessage());
-            parseCompositeCallbackData(chatId, callData);
-        }
-
+        });
     }
 
     private void parseCompositeCallbackData(Long chatId, String callData) {

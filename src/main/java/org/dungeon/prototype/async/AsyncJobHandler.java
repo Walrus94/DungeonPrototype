@@ -90,8 +90,8 @@ public class AsyncJobHandler {
     }
 
     @Async
-    public Future<?> submitMapClusterGenerationTask(Callable<?> job, TaskType taskType, long chatId, long clusterId) {
-        log.debug("Submitting map population task for chatId: {}, clusterId: {}", chatId, clusterId);
+    public Future<?> submitMapGenerationTask(Callable<?> job, TaskType taskType, long chatId, long clusterId) {
+        log.debug("Submitting map generation task for chatId: {}, clusterId: {}", chatId, clusterId);
         return asyncTaskExecutor.submit(() -> {
             executeTask(job, taskType, chatId, clusterId);
         });
@@ -127,5 +127,15 @@ public class AsyncJobHandler {
             }
         }
         return null;
+    }
+
+    public void submitCallbackTask(Runnable task) {
+        asyncTaskExecutor.submit(() -> {
+            try {
+                task.run();
+            } catch (Exception e) {
+                throw new DungeonPrototypeException(e.getMessage());
+            }
+        });
     }
 }
