@@ -9,6 +9,7 @@ import org.dungeon.prototype.service.level.generation.WalkerBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.Future;
 
 import static org.apache.commons.math3.util.FastMath.abs;
@@ -81,5 +82,25 @@ public class LevelGridCluster {
 
     public void addDeadEnds(List<GridSection> processedDeadEnds) {
         deadEnds.addAll(processedDeadEnds);
+    }
+
+    @Override
+    public String toString() {
+        return "LevelGridCluster{" +
+                "id=" + id +
+                ", startConnectionPoint=" + startConnectionPoint +
+                ", endConnectionPoint=" + endConnectionPoint +
+                ", size=" + size +
+                ", negativeRoomsCount=" + negativeRoomsCount +
+                ", deadEnds=" + deadEnds +
+                ", clusterExpectedWeight=" + clusterExpectedWeight +
+                ", walkers=" + walkers +
+                ", generatedGrid=" + generatedGrid +
+                '}';
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, startConnectionPoint, endConnectionPoint, size, negativeRoomsCount, deadEnds, clusterExpectedWeight, walkers, generatedGrid);
     }
 }
