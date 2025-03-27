@@ -32,11 +32,15 @@ management:
   endpoints:
     web:
       exposure:
-        include: prometheus
+        include: metrics,prometheus
       base-path: /actuator
   metrics:
     tags:
       application: "dungeon-bot"
+    enable:
+      jvm.threads.peak: true
+      jvm.threads.live: true
+      jvm.threads.daemon: true
   prometheus:
     metrics:
       export:

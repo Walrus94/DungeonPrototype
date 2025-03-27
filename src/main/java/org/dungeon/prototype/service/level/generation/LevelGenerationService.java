@@ -141,12 +141,12 @@ public class LevelGenerationService {
                 while (!cluster.getWalkers().isEmpty()) {
                     for (WalkerBuilder walker : cluster.getWalkers()) {
                         clusterGrid = walker.nextStep(clusterGrid);
-                        log.debug("Current grid state\n{}", printMapGridToLogs(grid));
+                        log.debug("Current cluster grid state\n{}", printMapGridToLogs(clusterGrid));
                     }
                     cluster.getWalkers().removeIf(WalkerBuilder::isStopped);
                 }
                 if (cluster.hasNegativeRooms()) {
-                    log.info("Processing negative rooms of cluster {}", cluster);
+                    log.info("Processing negative rooms of cluster {}", clusterGrid);
                     GridSection endSection = clusterGrid[clusterGrid.length - 1][clusterGrid[0].length - 1];
                     processNegativeSections(clusterGrid, cluster, endSection);
                 }
