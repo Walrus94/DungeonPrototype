@@ -206,7 +206,6 @@ public class WalkerBuilder {
                 ", overridingReversedPath=" + overridingReversedPath +
                 ", longestPathDefault= " + longestPathDefault +
                 ", stopped=" + stopped +
-                ", pathFromStart=" + pathFromStart +
-                ", cluster" + cluster;
+                ", pathFromStart=" + pathFromStart;
     }
 }

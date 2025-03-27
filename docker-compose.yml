@@ -14,6 +14,8 @@ services:
     networks:
       - env_net
       - shared_net
+    depends_on:
+      - huggingface-api
     build:
       context: .
       args:
