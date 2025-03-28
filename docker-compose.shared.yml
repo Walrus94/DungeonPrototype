@@ -67,11 +67,11 @@ services:
       - shared_net
 
   mongodb-exporter:
-    image: bitnami/mongodb-exporter:latest
+    image: percona/mongodb_exporter:0.44.0
     container_name: mongodb-exporter
     command:
       - "--web.listen-address=:9001"
-      - "--mongodb.uri=mongodb://${MONGO_DB_USER}:${MONGO_DB_PASSWORD}@mongo:${MONGO_DB_PORT}"
+      - "--mongodb.uri=mongodb://${MONGO_DB_USER}:${MONGO_DB_PASSWORD}@mongo:${MONGO_DB_PORT}/admin?ssl=true"
     ports:
       - "9001:9001"
     restart: unless-stopped
