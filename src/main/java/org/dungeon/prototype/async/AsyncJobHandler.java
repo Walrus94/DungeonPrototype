@@ -99,6 +99,7 @@ public class AsyncJobHandler {
 
     @Async
     public void submitCallbackTask(Runnable task) {
+        log.debug("Submitting callback task");
         asyncTaskExecutor.submit(() -> {
             try {
                 task.run();
