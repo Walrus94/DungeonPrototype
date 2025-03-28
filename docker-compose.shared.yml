@@ -69,7 +69,7 @@ services:
   mongodb-exporter:
     image: elarasu/mongodb_exporter:latest
     container_name: mongodb-exporter
-    command: --mongodb.uri=mongodb://${MONGO_DB_USER}:${MONGO_DB_PASSWORD}@mongo:${MONGO_DB_PORT}/admin
+    command: --mongodb.uri=mongodb://${MONGO_DB_USER}:${MONGO_DB_PASSWORD}@mongo:${MONGO_DB_PORT}/?authMechanism=SCRAM-SHA-1
     ports:
       - "9001:9001"
     restart: unless-stopped
@@ -84,6 +84,27 @@ services:
       - shared_net
     depends_on:
       - mongo
+
+  jmx-exporter:
+    image: bitnami/jmx-exporter:latest
+    container_name: jmx-kafka-exporter
+    restart: unless-stopped
+    networks:
+      - shared_net
+    ports:
+      - "7071:7071"
+    labels:
+      environment: logging
+      service: jmx-exporter
+    logging:
+      driver: "json-file"
+      options:
+        labels: environment,service
+    volumes:
+      - ./jmx_exporter/config.yml:/etc/jmx_exporter/config.yml
+    command:
+      - "--web.listen-address=0.0.0.0:7071"
+      - "--config.file=/etc/jmx_exporter/config.yml"
 
   grafana:
     environment:
@@ -160,27 +181,6 @@ services:
       KAFKA_LOG4J_LOGGERS: "kafka.consumer.logger=INFO"
       KAFKA_JMX_HOSTNAME: kafka
       KAFKA_JMX_PORT: 9999
-
-  jmx-exporter:
-    image: bitnami/jmx-exporter:latest
-    container_name: jmx-exporter
-    restart: unless-stopped
-    networks:
-      - shared_net
-    ports:
-      - "7071:7071"
-    labels:
-      environment: logging
-      service: jmx-exporter
-    logging:
-      driver: "json-file"
-      options:
-        labels: environment,service
-    volumes:
-      - ./jmx_exporter/config.yml:/config.yml
-    command:
-      - "--web.listen-address=0.0.0.0:7071"
-      - "--config.file=/config.yml"
 
   mongo:
     image: mongo:latest

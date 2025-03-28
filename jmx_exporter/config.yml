@@ -1,3 +1,6 @@
 hostPort: 7071
+startDelaySeconds: 0
+ssl: false
+lowercaseOutputName: true
 rules:
   - pattern: ".*"
