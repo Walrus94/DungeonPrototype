@@ -106,11 +106,10 @@ services:
         labels: environment,service
     environment:
       - JMX_EXPORTER_PORT=7071
-      - JMX_EXPORTER_CONFIG=/jmx_exporter/config.yml
+      - JMX_EXPORTER_CONFIG=/opt/bitnami/jmx_exporter/config.yml
     volumes:
-      - ./jmx_exporter/config.yml:/jmx_exporter/config.yml
-    command:
-      - "--web.listen-address=:7071"
+      - ./jmx_exporter/config.yml:/opt/bitnami/jmx_exporter/config.yml
+    command: ["/opt/bitnami/jmx-exporter/bin/jmx_exporter", "7071", "/opt/bitnami/jmx-exporter/config.yml"]
 
   grafana:
     environment:
