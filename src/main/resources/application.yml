@@ -40,6 +40,8 @@ management:
     enable:
       tomcat: true
       jetty: true
+      jvm: true
+      process: true
       jvm.threads.peak: true
       jvm.threads.live: true
       jvm.threads.daemon: true
