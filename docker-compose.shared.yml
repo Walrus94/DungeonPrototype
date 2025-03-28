@@ -111,7 +111,6 @@ services:
       - ./jmx_exporter/config.yml:/jmx_exporter/config.yml
     command:
       - "--web.listen-address=:7071"
-      - "--config.file=/jmx_exporter/config.yml"
 
   grafana:
     environment:
