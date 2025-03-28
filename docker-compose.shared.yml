@@ -169,7 +169,7 @@ services:
     ports:
       - "7071:7071"
     labels:
-      environment: shared
+      environment: logging
       service: jmx-exporter
     logging:
       driver: "json-file"
