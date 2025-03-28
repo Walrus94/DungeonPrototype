@@ -69,7 +69,7 @@ services:
   mongodb-exporter:
     image: elarasu/mongodb_exporter:latest
     container_name: mongodb-exporter
-    command: --mongodb.uri=mongodb://${MONGO_DB_USER}:${MONGO_DB_PASSWORD}@mongodb:${MONGO_DB_PORT}/admin
+    command: --mongodb.uri=mongodb://${MONGO_DB_USER}:${MONGO_DB_PASSWORD}@mongo:${MONGO_DB_PORT}/admin
     ports:
       - "9001:9001"
     restart: unless-stopped
