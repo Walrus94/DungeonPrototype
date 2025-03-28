@@ -71,7 +71,7 @@ services:
     container_name: mongodb-exporter
     command:
       - "--web.listen-address=:9001"
-      - "--mongodb.uri=mongodb://monitoring:monitoringpassword@mongo:${MONGO_DB_PORT}/admin"
+      - "--mongodb.uri=mongodb://monitoring:monitoringpassword@mongo:${MONGO_DB_PORT}/admin?authSource=admin&ssl=false"
     ports:
       - "9001:9001"
     restart: unless-stopped
@@ -107,7 +107,7 @@ services:
     volumes:
       - ./jmx_exporter/config.yml:/etc/jmx_exporter/config.yml
     command:
-      - "--web.listen-address=0.0.0.0:7071"
+      - "--web.listen-address=:7071"
       - "--config.file=/etc/jmx_exporter/config.yml"
 
   grafana:
@@ -206,6 +206,10 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_DB_USER}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_DB_PASSWORD}
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 10s
+      retries: 5
 
   postgres:
     image: postgres:latest
