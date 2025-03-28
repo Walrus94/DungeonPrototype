@@ -26,7 +26,7 @@ scrape_configs:
   - job_name: 'test-dungeon-prototype-app'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: [ 'test-dungeon-prototype-app:8081' ]
+      - targets: [ 'test-dungeon-prototype-app:8082' ]
       - labels:
           application: 'dungeon-prototype-app'
           instance: 'test'
@@ -39,12 +39,7 @@ scrape_configs:
   - job_name: 'mongodb'
     metrics_path: '/metrics'
     static_configs:
-      - targets: [ 'mongodb-exporter:9216' ]
-
-  - job_name: 'mongodb-percona'
-    metrics_path: '/metrics'
-    static_configs:
-      - targets: [ 'mongodb-exporter-percona:9001' ]
+      - targets: [ 'mongodb-exporter:9001' ]
 
   - job_name: 'prometheus'
     metrics_path: '/metrics'
