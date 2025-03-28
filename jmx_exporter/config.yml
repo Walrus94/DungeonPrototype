@@ -1,4 +1,4 @@
-hostPort: 7071
+hostPort: 7071:7071
 startDelaySeconds: 0
 ssl: false
 lowercaseOutputName: true
