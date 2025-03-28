@@ -168,6 +168,13 @@ services:
       - shared_net
     ports:
       - "7071:7071"
+    labels:
+      environment: shared
+      service: jmx-exporter
+    logging:
+      driver: "json-file"
+      options:
+        labels: environment,service
     volumes:
       - ./jmx_exporter/config.yml:/config.yml
     command:
