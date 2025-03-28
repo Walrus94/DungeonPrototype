@@ -104,11 +104,14 @@ services:
       driver: "json-file"
       options:
         labels: environment,service
+    environment:
+      - JMX_EXPORTER_PORT=7071
+      - JMX_EXPORTER_CONFIG=/jmx_exporter/config.yml
     volumes:
-      - ./jmx_exporter/config.yml:/etc/jmx_exporter/config.yml
+      - ./jmx_exporter/config.yml:/jmx_exporter/config.yml
     command:
       - "--web.listen-address=:7071"
-      - "--config.file=/etc/jmx_exporter/config.yml"
+      - "--config.file=/jmx_exporter/config.yml"
 
   grafana:
     environment:
@@ -185,6 +188,11 @@ services:
       KAFKA_LOG4J_LOGGERS: "kafka.consumer.logger=INFO"
       KAFKA_JMX_HOSTNAME: kafka
       KAFKA_JMX_PORT: 9999
+      KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote=true
+                              -Dcom.sun.management.jmxremote.local.only=false
+                              -Dcom.sun.management.jmxremote.authenticate=false
+                              -Dcom.sun.management.jmxremote.ssl=false
+                              -Djava.rmi.server.hostname=kafka"
 
   mongo:
     image: mongo:latest
