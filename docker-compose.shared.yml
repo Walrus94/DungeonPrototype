@@ -71,7 +71,7 @@ services:
     container_name: mongodb-exporter
     command:
       - "--web.listen-address=:9001"
-      - "--mongodb.uri=mongodb://${MONGO_MONITORING_USER}:${MONGO_MONITORING_PASSWORD}@mongo:${MONGO_DB_PORT}/"
+      - "--mongodb.uri=mongodb://${MONGO_MONITORING_USER}:${MONGO_MONITORING_PASSWORD}@mongo:${MONGO_DB_PORT}/?authSource=admin"
     ports:
       - "9001:9001"
     restart: unless-stopped
