@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.dungeon.prototype.bot.state.ChatState.AWAITING_NICKNAME;
 import static org.dungeon.prototype.bot.state.ChatState.BATTLE;
@@ -66,12 +68,12 @@ public class ChatStateService {
     public Optional<Integer> updateLastMessage(Long chatId, int messageId) {
         if (chatStateByIdMap.containsKey(chatId)) {
             val lastMessageId = chatStateByIdMap.get(chatId).getLastMessageId();
-            chatStateByIdMap.get(chatId).setLastMessageId(messageId);
-            chatStateByIdMap.get(chatId).setLastActiveTime(System.currentTimeMillis());
-            return Optional.of(lastMessageId);
+            chatStateByIdMap.get(chatId).setLastMessageId(new AtomicInteger(messageId));
+            chatStateByIdMap.get(chatId).setLastActiveTime(new AtomicLong(System.currentTimeMillis()));
+            return Optional.of(lastMessageId.intValue());
         } else {
             val chatState = new ChatContext();
-            chatState.setLastMessageId(messageId);
+            chatState.setLastMessageId(new AtomicInteger(messageId));
             chatStateByIdMap.put(chatId, new ChatContext());
             return Optional.empty();
         }
@@ -104,7 +106,7 @@ public class ChatStateService {
         val currentTime = System.currentTimeMillis();
         chatStateByIdMap.forEach((chatId, chatContext) -> {
             if (!IDLE.equals(chatContext.getChatState()) &&
-                    currentTime - chatContext.getLastActiveTime() > TIMEOUT_DURATION) {
+                    currentTime - chatContext.getLastActiveTime().get() > TIMEOUT_DURATION) {
                 clearChatContext(chatId);
             }
         });
@@ -114,7 +116,7 @@ public class ChatStateService {
         if (chatStateByIdMap.containsKey(chatId)) {
             var chatState = chatStateByIdMap.get(chatId);
             chatState.setChatState(IDLE);
-            chatState.setLastActiveTime(System.currentTimeMillis());
+            chatState.setLastActiveTime(new AtomicLong(System.currentTimeMillis()));
         }
     }
 }

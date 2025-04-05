@@ -210,7 +210,7 @@ public class MessageService {
         messageSender.sendInfoMessage(chatId, "Generating player and packing up inventory...");
     }
 
-    @ChatStateUpdate(from = ChatState.GENERATING_LEVEL, to = GAME)
+    @ChatStateUpdate(from = {GENERATING_LEVEL, GENERATING_PLAYER}, to = GAME)
     public void sendNewLevelMessage(Long chatId, Player player, Level level, int number) {
         if (nonNull(level)) {
             log.info("Player started level {}, current point: {}\n\nPlayer: {}", number, level.getStart(), player);
