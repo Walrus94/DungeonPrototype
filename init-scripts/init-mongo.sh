@@ -2,7 +2,7 @@
 echo "Initializing MongoDB with environment variables..."
 
 # Run MongoDB commands using the environment variables
-mongo admin <<EOF
+mongo --host mongo --authenticationDatabase admin <<EOF
 db = db.getSiblingDB("admin");
 db.createUser({
   user: "${MONGO_MONITORING_USER}",
