@@ -5,8 +5,8 @@ echo "Initializing MongoDB with environment variables..."
 mongo -- "$MONGO_INITDB_DATABASE" <<EOF
 db = db.getSiblingDB("admin");
 db.createUser({
-  user: "MONGO_MONITORING_USER",
-  pwd: "MONGO_MONITORING_PASSWORD",
+  user: "$MONGO_MONITORING_USER",
+  pwd: "$MONGO_MONITORING_PASSWORD",
   roles: [
           { role: "clusterMonitor", db: "admin" },
           { role: "read", db: "local" }
