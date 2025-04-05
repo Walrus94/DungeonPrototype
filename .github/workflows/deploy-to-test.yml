@@ -55,6 +55,8 @@ jobs:
           echo "MONGO_DB_PORT=${{vars.MONGO_DB_PORT}}" >> .env
           echo "MONGO_DB_USER=${{ secrets.MONGO_DB_USER }}" >> .env
           echo "MONGO_DB_PASSWORD=${{ secrets.MONGO_DB_PASSWORD }}" >> .env
+          echo "MONGO_MONITORING_USER=${{ secrets.MONGO_MONITORING_USER }}" >> .env
+          echo "MONGO_MONITORING_PASSWORD=${{ secrets.MONGO_MONITORING_PASSWORD }}" >> .env
           echo "POSTGRES_DATABASE_NAME=${{vars.POSTGRES_DATABASE_NAME}}" >> .env
           echo "POSTGRES_DATABASE_PASSWORD=${{secrets.POSTGRES_DATABASE_PASSWORD}}" >> .env
           echo "POSTGRES_DATABASE_USER=${{secrets.POSTGRES_DATABASE_USER}}" >> .env
