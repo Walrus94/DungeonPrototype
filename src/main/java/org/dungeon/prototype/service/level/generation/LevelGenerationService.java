@@ -136,36 +136,16 @@ public class LevelGenerationService {
 
         clusters.values().forEach(cluster -> {
             log.info("Processing cluster: {}", cluster);
-            cluster.setGeneratedGrid((Future<GridSection[][]>) asyncJobHandler.submitMapGenerationTask(() -> {
-                GridSection[][] clusterGrid = generateEmptyMapGrid(cluster.getStartConnectionPoint(), cluster.getEndConnectionPoint());
-                while (!cluster.getWalkers().isEmpty()) {
-                    for (WalkerBuilder walker : cluster.getWalkers()) {
-                        clusterGrid = walker.nextStep(clusterGrid);
-                        log.debug("Current cluster grid state\n{}", printMapGridToLogs(clusterGrid));
-                    }
-                    cluster.getWalkers().removeIf(WalkerBuilder::isStopped);
-                }
-                if (cluster.hasNegativeRooms()) {
-                    log.info("Processing negative rooms of cluster {}", clusterGrid);
-                    GridSection endSection = clusterGrid[clusterGrid.length - 1][clusterGrid[0].length - 1];
-                    processNegativeSections(clusterGrid, cluster, endSection);
-                }
-                if (cluster.hasDeadEnds()) {
-                    log.info("Processing dead ends...");
-                    processDeadEnds(clusterGrid, cluster);
-                }
-                return clusterGrid;
-            }, TaskType.LEVEL_GENERATION, chatId, cluster.getId()));
+            cluster.setGeneratedGrid((Future<GridSection[][]>) asyncJobHandler.submitMapGenerationTask(() -> generateGridSection(cluster),
+                    TaskType.LEVEL_GENERATION, chatId, cluster.getId()));
         });
 
-        while (clusters.values().stream().anyMatch(cluster -> nonNull(cluster.getGeneratedGrid()))) {
+        while (clusters.values().stream().anyMatch(cluster -> !cluster.getGeneratedGrid().isDone())) {
             clusters.values().stream()
-                    .filter(cluster -> nonNull(cluster.getGeneratedGrid()))
                     .filter(cluster -> cluster.getGeneratedGrid().isDone())
                     .findFirst().ifPresent(completedCluster -> {
                         try {
                             copyGridSection(grid, completedCluster.getStartConnectionPoint(), completedCluster.getEndConnectionPoint(), completedCluster.getGeneratedGrid().get());
-                            completedCluster.setGeneratedGrid(null);
                         } catch (InterruptedException | ExecutionException e) {
                             throw new DungeonPrototypeException(e.getMessage());
                         }
@@ -176,6 +156,28 @@ public class LevelGenerationService {
         level.setClusters(clusters);
 
         return level;
+    }
+
+    private GridSection[][] generateGridSection(LevelGridCluster cluster) {
+        GridSection[][] clusterGrid = generateEmptyMapGrid(cluster.getStartConnectionPoint(), cluster.getEndConnectionPoint());
+        while (!cluster.getWalkers().isEmpty()) {
+            for (WalkerBuilder walker : cluster.getWalkers()) {
+                clusterGrid = walker.nextStep(clusterGrid);
+                log.debug("Current cluster walkers: {}", cluster.getWalkers());
+                log.debug("Current cluster grid state\n{}", printMapGridToLogs(clusterGrid));
+            }
+            cluster.getWalkers().removeIf(WalkerBuilder::isStopped);
+        }
+        if (cluster.hasNegativeRooms()) {
+            log.info("Processing negative rooms of cluster {}", clusterGrid);
+            GridSection endSection = clusterGrid[clusterGrid.length - 1][clusterGrid[0].length - 1];
+            processNegativeSections(clusterGrid, cluster, endSection);
+        }
+        if (cluster.hasDeadEnds()) {
+            log.info("Processing dead ends...");
+            processDeadEnds(clusterGrid, cluster);
+        }
+        return clusterGrid;
     }
 
     private void copyGridSection(GridSection[][] grid, Point startConnectionPoint, Point endConnectionPoint, GridSection[][] gridSection) {
