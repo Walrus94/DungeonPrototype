@@ -241,7 +241,7 @@ services:
         labels: environment,service
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./init-scripts:/docker-entrypoint-initdb.d
+      - ./init-scripts/postgres:/docker-entrypoint-initdb.d
 
 
 volumes:
