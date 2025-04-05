@@ -80,7 +80,7 @@ public class LevelGenerationService {
     public Level generateAndPopulateLevel(Long chatId, Integer levelNumber) {
         var levelMap = generateLevelMap(chatId, levelNumber);
         log.debug("Generated level map\n{}", printMapGridToLogs(levelMap.getGrid()));
-        val futureLevel = (Future<Level>) asyncJobHandler.submitMapPopulationTask(() -> populateLevel(chatId, levelNumber, levelMap) , TaskType.LEVEL_GENERATION, chatId);
+        val futureLevel = (Future<Level>) asyncJobHandler.submitMapPopulationTask(() -> populateLevel(chatId, levelNumber, levelMap), TaskType.LEVEL_GENERATION, chatId);
         while (!futureLevel.isDone()) {
             try {
                 return futureLevel.get(1, TimeUnit.SECONDS);
@@ -136,19 +136,15 @@ public class LevelGenerationService {
 
         clusters.values().forEach(cluster -> {
             log.info("Processing cluster: {}", cluster);
-            cluster.setGeneratedGrid((Future<GridSection[][]>) asyncJobHandler.submitMapGenerationTask(() -> generateGridSection(cluster),
-                    TaskType.LEVEL_GENERATION, chatId, cluster.getId()));
+            cluster.setGeneratedGrid(generateGridSection(cluster));
         });
 
-        while (clusters.values().stream().anyMatch(cluster -> !cluster.getGeneratedGrid().isDone())) {
+        while (clusters.values().stream().anyMatch(cluster -> nonNull(cluster.getGeneratedGrid()))) {
             clusters.values().stream()
-                    .filter(cluster -> cluster.getGeneratedGrid().isDone())
+                    .filter(cluster -> nonNull(cluster.getGeneratedGrid()))
                     .findFirst().ifPresent(completedCluster -> {
-                        try {
-                            copyGridSection(grid, completedCluster.getStartConnectionPoint(), completedCluster.getEndConnectionPoint(), completedCluster.getGeneratedGrid().get());
-                        } catch (InterruptedException | ExecutionException e) {
-                            throw new DungeonPrototypeException(e.getMessage());
-                        }
+                        copyGridSection(grid, completedCluster.getStartConnectionPoint(), completedCluster.getEndConnectionPoint(), completedCluster.getGeneratedGrid());
+                        completedCluster.setGeneratedGrid(null);
                     });
         }
 

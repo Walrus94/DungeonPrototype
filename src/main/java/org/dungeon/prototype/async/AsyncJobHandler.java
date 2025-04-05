@@ -91,6 +91,7 @@ public class AsyncJobHandler {
 
     @Async
     public Future<?> submitMapGenerationTask(Callable<?> job, TaskType taskType, long chatId, long clusterId) {
+        //TODO: temporary unused
         log.debug("Submitting map generation task for chatId: {}, clusterId: {}", chatId, clusterId);
         return asyncTaskExecutor.submit(() -> {
             executeTask(job, taskType, chatId, clusterId);
