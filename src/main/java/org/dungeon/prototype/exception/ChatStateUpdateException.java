@@ -7,10 +7,10 @@ import java.util.Arrays;
 
 public class ChatStateUpdateException extends PlayerException {
     public ChatStateUpdateException(Long chatId, ChatState to, ChatState actual, ChatState... from) {
-        super(String.format("Unable to change state from %s to %s. Current state: %s", Arrays.toString(from), to, actual), chatId, CallbackType.CONTINUE_GAME);
+        super(String.format("Unable to change state from %s to %s. Current state: %s", Arrays.toString(from), to.toString(), actual.toString()), chatId, CallbackType.CONTINUE_GAME);
     }
 
     public ChatStateUpdateException(Long chatId, ChatState to, ChatState... from) {
-        super(String.format("Unable to change state from %s to %s", Arrays.toString(from), to), chatId, CallbackType.CONTINUE_GAME);
+        super(String.format("Unable to change state from %s to %s", Arrays.toString(from), to.toString()), chatId, CallbackType.CONTINUE_GAME);
     }
 }

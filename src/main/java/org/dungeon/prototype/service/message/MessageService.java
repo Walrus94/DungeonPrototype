@@ -205,7 +205,7 @@ public class MessageService {
         messageSender.sendInfoMessage(chatId, String.format("Generating level %d...", levelNumber));
     }
 
-    @ChatStateUpdate(from = GENERATING_ITEMS, to = GENERATING_PLAYER)
+    @ChatStateUpdate(from = {GENERATING_ITEMS, GENERATING_LEVEL}, to = GENERATING_PLAYER)
     public void sendPlayerGeneratingInfoMessage(Long chatId) {
         messageSender.sendInfoMessage(chatId, "Generating player and packing up inventory...");
     }
