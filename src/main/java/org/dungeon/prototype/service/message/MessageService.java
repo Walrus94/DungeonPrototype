@@ -195,7 +195,7 @@ public class MessageService {
                         Collections.singletonList(MERCHANT_BUY_MENU)));
     }
 
-    @ChatStateUpdate(from = ChatState.PRE_GAME_MENU, to = ChatState.GENERATING_ITEMS)
+    @ChatStateUpdate(from = {ChatState.PRE_GAME_MENU, GENERATING_LEVEL}, to = ChatState.GENERATING_ITEMS)
     public void sendItemsGeneratingInfoMessage(Long chatId) {
         messageSender.sendInfoMessage(chatId, "Generating items...");
     }
