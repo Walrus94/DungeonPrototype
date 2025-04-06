@@ -136,15 +136,19 @@ public class LevelGenerationService {
 
         clusters.values().forEach(cluster -> {
             log.info("Processing cluster: {}", cluster);
-            cluster.setGeneratedGrid(generateGridSection(cluster));
+            cluster.setGeneratedGrid((Future<GridSection[][]>) asyncJobHandler.submitMapGenerationTask(() -> generateGridSection(cluster),
+                    TaskType.LEVEL_GENERATION, chatId, cluster.getId()));
         });
 
-        while (clusters.values().stream().anyMatch(cluster -> nonNull(cluster.getGeneratedGrid()))) {
+        while (clusters.values().stream().anyMatch(cluster -> cluster.getGeneratedGrid().isDone())) {
             clusters.values().stream()
-                    .filter(cluster -> nonNull(cluster.getGeneratedGrid()))
+                    .filter(cluster -> cluster.getGeneratedGrid().isDone())
                     .findFirst().ifPresent(completedCluster -> {
-                        copyGridSection(grid, completedCluster.getStartConnectionPoint(), completedCluster.getEndConnectionPoint(), completedCluster.getGeneratedGrid());
-                        completedCluster.setGeneratedGrid(null);
+                        try {
+                            copyGridSection(grid, completedCluster.getStartConnectionPoint(), completedCluster.getEndConnectionPoint(), completedCluster.getGeneratedGrid().get());
+                        } catch (InterruptedException | ExecutionException e) {
+                            throw new DungeonPrototypeException(e.getMessage());
+                        }
                     });
         }
 

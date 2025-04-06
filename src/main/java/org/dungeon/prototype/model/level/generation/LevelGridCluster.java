@@ -24,7 +24,7 @@ public class LevelGridCluster {
     List<GridSection> deadEnds = new ArrayList<>();
     Weight clusterExpectedWeight;
     List<WalkerBuilder> walkers = new ArrayList<>();
-    GridSection[][] generatedGrid;
+    Future<GridSection[][]> generatedGrid;
 
     public LevelGridCluster(Point startConnectionPoint, Point endConnectionPoint) {
         this.id = UniqueIdFactory.getInstance().getNextId();
