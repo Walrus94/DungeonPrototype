@@ -61,7 +61,7 @@ public class ChatStateService {
             chatStateByIdMap.get(chatId).setChatState(to);
             log.info("Updated chat state: {}", chatStateByIdMap.get(chatId).getChatState());
         } else {
-            throw new ChatStateUpdateException(chatId, to, from);
+            throw new ChatStateUpdateException(chatId, to, chatStateByIdMap.get(chatId).getChatState(), from);
         }
     }
 
