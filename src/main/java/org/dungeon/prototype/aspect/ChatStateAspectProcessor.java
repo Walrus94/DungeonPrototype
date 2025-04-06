@@ -66,7 +66,11 @@ public class ChatStateAspectProcessor {
                 // Proceed with the original method call
                 return joinPoint.proceed();
             } catch (Throwable e) {
-                throw new ChatStateUpdateException(chatId, to, from);
+                if (e instanceof ChatStateUpdateException) {
+                    throw (ChatStateUpdateException) e;
+                } else {
+                    throw new ChatStateUpdateException(chatId, to, from);
+                }
             }
         }
         return null;
