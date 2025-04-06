@@ -207,17 +207,11 @@ services:
       driver: "json-file"
       options:
         labels: environment,service
-    volumes:
-      - .init-scripts/init-mongo.sh:/docker-entrypoint-initdb.d/init-mongo.sh:ro
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_DB_USER}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_DB_PASSWORD}
       MONGO_MONITORING_USERNAME: ${MONGO_MONITORING_USER}
       MONGO_MONITORING_PASSWORD: ${MONGO_MONITORING_PASSWORD}
-    healthcheck:
-      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
-      interval: 10s
-      retries: 5
 
   postgres:
     image: postgres:latest
