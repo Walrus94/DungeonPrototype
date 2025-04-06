@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.annotations.aspect.ChatStateUpdate;
 import org.dungeon.prototype.annotations.aspect.ClearChatContext;
-import org.dungeon.prototype.bot.state.ChatState;
 import org.dungeon.prototype.exception.ChatException;
 import org.dungeon.prototype.exception.EntityNotFoundException;
 import org.dungeon.prototype.exception.PlayerException;
@@ -195,7 +194,7 @@ public class MessageService {
                         Collections.singletonList(MERCHANT_BUY_MENU)));
     }
 
-    @ChatStateUpdate(from = {ChatState.PRE_GAME_MENU, GENERATING_LEVEL}, to = ChatState.GENERATING_ITEMS)
+    @ChatStateUpdate(from = {PRE_GAME_MENU, GENERATING_LEVEL, GENERATING_PLAYER}, to = GENERATING_ITEMS)
     public void sendItemsGeneratingInfoMessage(Long chatId) {
         messageSender.sendInfoMessage(chatId, "Generating items...");
     }
