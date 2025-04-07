@@ -54,6 +54,13 @@ jobs:
             else
               echo "shared_net network exists."
             fi
+
+      - name: Download JMX Exporter JAR
+        run: |
+          cd jmx-exporter
+          wget -q https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/1.0.1/jmx_prometheus_javaagent-1.0.1.jar \
+            -O ./jmx_prometheus_javaagent.jar
+
       - name: Run Shared services
         run: docker-compose -p shared -f docker-compose.shared.yml --env-file .env up --build -d
       - name: Create network
