@@ -84,6 +84,18 @@ jobs:
           curl -sSL -o ./jmx-exporter/jmx_prometheus_javaagent.jar \
           https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/1.0.1/jmx_prometheus_javaagent-1.0.1.jar
 
+      - name: Verify JMX agent .jar integrity
+        run: |
+          if [ ! -s ./jmx-exporter/jmx_prometheus_javaagent.jar ]; then
+            echo "ERROR: .jar file is missing or empty"
+            exit 1
+          fi
+
+          if ! file ./jmx-exporter/jmx_prometheus_javaagent.jar | grep -q 'Zip archive data'; then
+            echo "ERROR: Not a valid .jar file"
+            exit 1
+          fi
+
       - name: Run Shared services
         run: docker-compose -p shared -f docker-compose.shared.yml --env-file .env up --build -d
       - name: Create network
