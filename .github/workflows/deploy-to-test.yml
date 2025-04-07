@@ -75,6 +75,7 @@ jobs:
         id: jmx-cache
         uses: actions/cache@v4
         with:
+          clean: false
           path: jmx-exporter/jmx_prometheus_javaagent.jar
           key: jmx-agent-1.0.1
 
