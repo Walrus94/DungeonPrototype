@@ -164,6 +164,13 @@ services:
       KAFKA_JMX_PORT: 9999
       KAFKA_JMX_OPTS: >-
         -javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7071:/opt/jmx/config.yml
+        -Dcom.sun.management.jmxremote
+        -Dcom.sun.management.jmxremote.port=7071
+        -Dcom.sun.management.jmxremote.rmi.port=7071
+        -Dcom.sun.management.jmxremote.local.only=false
+        -Dcom.sun.management.jmxremote.authenticate=false
+        -Dcom.sun.management.jmxremote.ssl=false
+        -Djava.rmi.server.hostname=kafka
       volumes:
         ./jmx-exporter:/opt/jmx:ro
 
