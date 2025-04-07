@@ -164,8 +164,7 @@ services:
       KAFKA_JMX_HOSTNAME: kafka
       KAFKA_JMX_PORT: 9998
       KAFKA_JMX_OPTS: -javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7071:/opt/jmx/config.yml
-      volumes:
-        - ./jmx-exporter:/opt/jmx:ro
+      volumes: ./jmx-exporter:/opt/jmx:ro
 
   mongo:
     image: mongo:latest
