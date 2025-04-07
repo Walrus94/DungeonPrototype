@@ -166,7 +166,6 @@ services:
       KAFKA_JMX_OPTS: -javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7071:/opt/jmx/config.yml
       volumes:
         - ./jmx-exporter:/opt/jmx:ro
-        - ./jmx-exporter/jmx_prometheus_javaagent.jar:/opt/jmx/jmx_prometheus_javaagent.jar:ro
 
   mongo:
     image: mongo:latest
