@@ -141,7 +141,7 @@ services:
       - zookeeper
     ports:
       - ${KAFKA_PORT}:${KAFKA_PORT}
-      - "9999:9999"
+      - "7071:7071"
     labels:
       environment: shared
       service: kafka
@@ -161,7 +161,7 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_LOG4J_LOGGERS: "kafka.consumer.logger=INFO"
       KAFKA_JMX_HOSTNAME: kafka
-      KAFKA_JMX_PORT: 9999
+      KAFKA_JMX_PORT: 7071
       KAFKA_JMX_OPTS: >-
         -javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7071:/opt/jmx/config.yml
         -Dcom.sun.management.jmxremote
