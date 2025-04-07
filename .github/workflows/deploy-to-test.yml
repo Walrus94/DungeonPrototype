@@ -91,7 +91,7 @@ jobs:
             exit 1
           fi
 
-          if ! file ./jmx-exporter/jmx_prometheus_javaagent.jar | grep -q 'Zip archive data'; then
+          if [! file ./jmx-exporter/jmx_prometheus_javaagent.jar | grep -q 'Zip archive data' ]; then
             echo "ERROR: Not a valid .jar file"
             exit 1
           fi
