@@ -163,10 +163,10 @@ services:
       KAFKA_LOG4J_LOGGERS: "kafka.consumer.logger=INFO"
       KAFKA_JMX_HOSTNAME: kafka
       KAFKA_JMX_PORT: 9998
-      KAFKA_JMX_OPTS: >-
-        -javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7071:/opt/jmx/config.yml
+      KAFKA_JMX_OPTS: -javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7071:/opt/jmx/config.yml
       volumes:
-        ./jmx-exporter:/opt/jmx:ro
+        - ./jmx-exporter:/opt/jmx:ro
+        - ./jmx-exporter/jmx_prometheus_javaagent.jar:/opt/jmx/jmx_prometheus_javaagent.jar:ro
 
   mongo:
     image: mongo:latest
