@@ -87,30 +87,6 @@ services:
     depends_on:
       - mongo
 
-  jmx-exporter:
-    image: bitnami/jmx-exporter:latest
-    container_name: jmx-kafka-exporter
-    restart: unless-stopped
-    networks:
-      - shared_net
-    depends_on:
-      - kafka
-    ports:
-      - "7071:7071"
-    labels:
-      environment: logging
-      service: jmx-kafka-exporter
-    logging:
-      driver: "json-file"
-      options:
-        labels: environment,service
-    environment:
-      - JMX_EXPORTER_PORT=7071
-      - JMX_EXPORTER_CONFIG=/opt/bitnami/jmx_exporter/config.yml
-    volumes:
-      - ./jmx_exporter/config.yml:/opt/bitnami/jmx_exporter/config.yml
-    command: ["java", "-jar", "/opt/bitnami/jmx-exporter/bin/jmx_prometheus_standalone-1.2.0.jar", "/opt/bitnami/jmx-exporter/config.yml"]
-
   grafana:
     environment:
       - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
@@ -186,11 +162,11 @@ services:
       KAFKA_LOG4J_LOGGERS: "kafka.consumer.logger=INFO"
       KAFKA_JMX_HOSTNAME: kafka
       KAFKA_JMX_PORT: 9999
-      KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote=true
-                              -Dcom.sun.management.jmxremote.local.only=false
-                              -Dcom.sun.management.jmxremote.authenticate=false
-                              -Dcom.sun.management.jmxremote.ssl=false
-                              -Djava.rmi.server.hostname=kafka"
+      KAFKA_JMX_OPTS: >-
+        -javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7071:/opt/jmx/config.yml
+      volumes:
+        - ./jmx-exporter/jmx_prometheus_javaagent.jar:/opt/jmx/jmx_prometheus_javaagent.jar:ro
+        - ./jmx-exporter/config.yml:/opt/jmx/config.yml:ro
 
   mongo:
     image: mongo:latest
