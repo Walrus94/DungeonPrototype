@@ -164,8 +164,11 @@ services:
       KAFKA_JMX_PORT: 9998
       KAFKA_JMX_OPTS: >
         -javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7071:/opt/jmx/config.yml
+        -Dcom.sun.management.jmxremote
+        -Dcom.sun.management.jmxremote.authenticate=false
+        -Dcom.sun.management.jmxremote.ssl=false
         -Dcom.sun.management.jmxremote.rmi.port=9998
-      volumes: ./jmx-exporter:/opt/jmx:ro
+      volumes: ./jmx-exporter:/opt/jmx
 
   mongo:
     image: mongo:latest
