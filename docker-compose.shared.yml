@@ -161,14 +161,15 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_LOG4J_LOGGERS: "kafka.consumer.logger=INFO"
-      KAFKA_JMX_PORT: 9998
-      KAFKA_JMX_OPTS: >
-        -javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7071:/opt/jmx/config.yml
-        -Dcom.sun.management.jmxremote
-        -Dcom.sun.management.jmxremote.authenticate=false
-        -Dcom.sun.management.jmxremote.ssl=false
-        -Dcom.sun.management.jmxremote.rmi.port=9998
-      volumes: ./jmx-exporter:/opt/jmx
+#      TODO: Uncomment the following lines to enable JMX monitoring
+#      KAFKA_JMX_PORT: 9998
+#      KAFKA_JMX_OPTS: >
+#        -javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7071:/opt/jmx/config.yml
+#        -Dcom.sun.management.jmxremote
+#        -Dcom.sun.management.jmxremote.authenticate=false
+#        -Dcom.sun.management.jmxremote.ssl=false
+#        -Dcom.sun.management.jmxremote.rmi.port=9998
+#      volumes: ./jmx-exporter:/opt/jmx:ro
 
   mongo:
     image: mongo:latest
