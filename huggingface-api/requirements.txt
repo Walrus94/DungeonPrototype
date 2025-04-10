@@ -4,7 +4,8 @@ python-dotenv
 pymongo
 asyncpg
 stable-baselines3
-transformers
+transformers,
+diffusers
 gym
 numpy
 ujson

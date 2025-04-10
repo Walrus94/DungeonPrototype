@@ -1,15 +1,17 @@
 import logging
 import json
 import os
-from config.settings import HF_MODEL_FILE, HF_API_KEY, IMAGE_PATH;
-from huggingface_hub import InferenceClient
+from config.settings import HF_MODEL_FILE, IMAGE_PATH;
 from db.mongo import update_mongo_item
+from diffusers import DiffusionPipeline
 from llama_cpp import Llama
 
-client = InferenceClient(
-    provider="replicate",
-    api_key=HF_API_KEY,
-)
+
+diffusionPipiline = DiffusionPipeline.from_pretrained(
+    "stabilityai/stable-diffusion-3.5-medium",
+    cache_dir=HF_MODEL_FILE,
+    torch_dtype=torch.bfloat16
+).to("cuda")
 
 llm = Llama.from_pretrained(
     repo_id="bartowski/llama-3-fantasy-writer-8b-GGUF",
@@ -57,10 +59,7 @@ def process_kafka_item_message(message):
         logging.error(f"Error processing LLM response: {str(e)}")
     try:
         os.makedirs(IMAGE_PATH, exist_ok=True)
-        image = client.text_to_image(
-            generated_name + ": " + prompt,
-            model="stabilityai/stable-diffusion-3.5-large"
-        )
+        image = diffusionPipiline(generated_name + ": " + prompt).images[0]
 
         image.save(f"{IMAGE_PATH}/{chat_id}_{item_id}.png")
     except Exception as e:
