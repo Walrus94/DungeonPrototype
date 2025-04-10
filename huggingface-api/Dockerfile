@@ -10,12 +10,8 @@ COPY . /app
 RUN pip install --no-cache-dir -r requirements.txt
 
 RUN pip install llama-cpp-python \
-    --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --verbose
+    --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
 
-ARG HF_TOKEN
-ENV HF_TOKEN=$HUGGINGFACE_API_KEY
-
-RUN echo "$HF_TOKEN" | huggingface-cli login --token
 
 # Run the application
 ENTRYPOINT python app.py tail -f /dev/null
