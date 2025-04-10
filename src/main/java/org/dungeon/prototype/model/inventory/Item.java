@@ -18,7 +18,6 @@ import static org.dungeon.prototype.util.GenerationUtil.getSellingPriceRatio;
 public abstract class Item {
     protected String id;
     protected String name;
-    protected boolean hfRequestSent = false;
     protected Long chatId;
     protected List<Effect> effects;
     protected MagicType magicType;
@@ -34,8 +33,8 @@ public abstract class Item {
         return (int) (getWeight().toVector().getNorm() * getSellingPriceRatio());
     }
     public Item(Item item) {
+        this.id = item.getId();
         this.name = item.getName();
-        this.hfRequestSent = item.isHfRequestSent();
         this.chatId = item.getChatId();
         this.effects = item.getEffects();
         this.magicType = item.getMagicType();

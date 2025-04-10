@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -77,21 +78,7 @@ public class ItemService {
             throw new EntityNotFoundException(chatId, wearableType.toString(), CallbackType.MENU_BACK);
         }
 
-        //TODO: refactor
-        var document = documents.getFirst();
-        if (nonNull(document) && isNull(document.getName())) {
-            if (!document.isHfRequestSent()) {
-                var item = itemMapper.mapToWearable(document);
-                item = (Wearable) itemNamingService.requestNameGeneration(item);
-                document = itemMapper.mapToDocument(item);
-                itemRepository.save(document);
-            }
-            log.info("Waiting for name generation of item {} for chat {}...", document.getId(), chatId);
-            while (isNull(document.getName())) {
-                document = itemRepository.findByChatIdAndId(document.getChatId(), document.getId()).orElse(null);
-            }
-            log.info("Name for item id:{} acquired: {}", document.getId(), document.getName());
-        }
+        ItemDocument document = requestItemName(chatId, documents);
         return itemMapper.mapToWearable(document);
     }
 
@@ -109,22 +96,7 @@ public class ItemService {
             throw new EntityNotFoundException(chatId, "weapon", CallbackType.MENU_BACK);
         }
 
-        //TODO: refactor
-        var document = documents.getFirst();
-        if (nonNull(document) && isNull(document.getName())) {
-            if (!document.isHfRequestSent()) {
-                var item = itemMapper.mapToWeapon(document);
-                item = (Weapon) itemNamingService.requestNameGeneration(item);
-                document = itemMapper.mapToDocument(item);
-                itemRepository.save(document);
-
-            }
-            log.info("Waiting for name generation of item {} for chat {}...", document.getId(), chatId);
-            while (isNull(document.getName())) {
-                document = itemRepository.findByChatIdAndId(document.getChatId(), document.getId()).orElse(null);
-            }
-            log.info("Name for item id:{} acquired: {}", document.getId(), document.getName());
-        }
+        ItemDocument document = requestItemName(chatId, documents);
         return itemMapper.mapToWeapon(document);
     }
 
@@ -150,15 +122,6 @@ public class ItemService {
                 .findFirst().map(ItemWeightProjection::getId)
                 .orElseThrow(() -> new EntityNotFoundException(chatId, "item", CallbackType.MENU_BACK));
         return findItem(chatId, itemId);
-    }
-
-    private double getLimitWeightForSpecialItem(int playerLuck, List<Double> weights) {
-        double max = weights.stream().mapToDouble(weight -> weight).max().getAsDouble();
-        double min = weights.stream().mapToDouble(weight -> weight).min().getAsDouble();
-
-        return (max - min) * playerLuck / 10.0;
-
-
     }
 
     /**
@@ -266,21 +229,43 @@ public class ItemService {
         }).collect(Collectors.toSet());
     }
 
+    private ItemDocument requestItemName(Long chatId, List<ItemDocument> documents) {
+        //TODO: refactor
+        var document = documents.getFirst();
+        if (nonNull(document) && isNull(document.getName())) {
+            itemNamingService.requestNameGeneration(document);
+            log.info("Waiting for name generation of item {} for chat {}...", document.getId(), chatId);
+            while (isNull(Objects.requireNonNull(document).getName())) {
+                document = itemRepository.findByChatIdAndId(document.getChatId(), document.getId()).orElse(null);
+            }
+            log.info("Name for item id:{} acquired: {}", document.getId(), document.getName());
+        }
+        return document;
+    }
+
+    private double getLimitWeightForSpecialItem(int playerLuck, List<Double> weights) {
+        double max = weights.stream().mapToDouble(weight -> weight).max().getAsDouble();
+        double min = weights.stream().mapToDouble(weight -> weight).min().getAsDouble();
+
+        return (max - min) * playerLuck / 10.0;
+
+
+    }
+
     private Set<Item> findItems(Long chatId, List<String> itemIds) {
         val itemDocuments = itemRepository.findAllByChatIdAndIdIn(chatId, itemIds);
         var items = itemDocuments.stream()
+                .peek(item -> {
+                    if (isNull(item.getName())) {
+                        itemNamingService.requestNameGeneration(item);
+                    }
+                })
                 .map(itemDocument ->
                         switch (itemDocument.getItemType()) {
                             case WEAPON -> ItemMapper.INSTANCE.mapToWeapon(itemDocument);
                             case WEARABLE -> ItemMapper.INSTANCE.mapToWearable(itemDocument);
                             case USABLE -> ItemMapper.INSTANCE.mapToUsable(itemDocument);
                         })
-                .peek(item -> {
-                    if (isNull(item.getName()) && !item.isHfRequestSent()) {
-                        item = itemNamingService.requestNameGeneration(item);
-                        saveItem(item);
-                    }
-                })
                 .collect(Collectors.toCollection(HashSet::new));
         while (items.stream().anyMatch(item -> isNull(item.getName()))) {
             items = items.stream().map(item -> {
@@ -290,6 +275,9 @@ public class ItemService {
                         return item;
                     }
                     val updatedItemDocument = updatedItemDocumentOptional.get();
+                    if (isNull(updatedItemDocument.getName())) {
+                        return item;
+                    }
                     return switch (updatedItemDocument.getItemType()) {
                         case WEAPON -> ItemMapper.INSTANCE.mapToWeapon(updatedItemDocument);
                         case WEARABLE -> ItemMapper.INSTANCE.mapToWearable(updatedItemDocument);

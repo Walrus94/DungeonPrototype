@@ -2,8 +2,8 @@ package org.dungeon.prototype.service.item.generation;
 
 import lombok.extern.slf4j.Slf4j;
 import org.dungeon.prototype.kafka.KafkaProducer;
-import org.dungeon.prototype.model.effect.Effect;
-import org.dungeon.prototype.model.inventory.Item;
+import org.dungeon.prototype.model.document.item.EffectDocument;
+import org.dungeon.prototype.model.document.item.ItemDocument;
 import org.dungeon.prototype.model.kafka.request.naming.ItemNameRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -23,18 +23,16 @@ public class ItemNamingService {
      *
      * @param item to be named
      */
-    public Item requestNameGeneration(Item item) {
+    public void requestNameGeneration(ItemDocument item) {
         log.info("Preparing item {} for naming request...", item.getId());
         kafkaProducer.sendItemNamingRequest(
                 new ItemNameRequest(item.getChatId(), item.getId(), generatePrompt(item)));
-        item.setHfRequestSent(true);
-        return item;
     }
 
-    private String generatePrompt(Item item) {
+    private String generatePrompt(ItemDocument item) {
         return item.getAttributes().toString() +
                 (nonNull(item.getEffects()) && !item.getEffects().isEmpty() ?
-                        " that " + item.getEffects().stream().map(Effect::toString).collect(Collectors.joining(", ")) :
+                        " that " + item.getEffects().stream().map(EffectDocument::toString).collect(Collectors.joining(", ")) :
                         "");
     }
 }
