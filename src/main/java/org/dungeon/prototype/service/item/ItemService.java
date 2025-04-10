@@ -219,6 +219,17 @@ public class ItemService {
         return null;
     }
 
+    public List<Item> findAllItemsByChatId(long chatId) {
+        val itemDocuments = itemRepository.findAllByChatId(chatId);
+        return itemDocuments.stream()
+                .map(itemDocument -> switch (itemDocument.getItemType()) {
+                    case WEAPON -> ItemMapper.INSTANCE.mapToWeapon(itemDocument);
+                    case WEARABLE -> ItemMapper.INSTANCE.mapToWearable(itemDocument);
+                    case USABLE -> ItemMapper.INSTANCE.mapToUsable(itemDocument);
+                })
+                .collect(Collectors.toList());
+    }
+
     /**
      * Removes all currents chat items from repository
      *

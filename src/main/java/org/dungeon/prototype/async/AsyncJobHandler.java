@@ -5,7 +5,6 @@ import org.dungeon.prototype.async.metrics.TaskContext;
 import org.dungeon.prototype.async.metrics.TaskContextData;
 import org.dungeon.prototype.async.metrics.TaskMetrics;
 import org.dungeon.prototype.exception.DungeonPrototypeException;
-import org.dungeon.prototype.model.inventory.Item;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration;
 import org.springframework.core.task.AsyncTaskExecutor;
@@ -13,9 +12,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -40,19 +37,45 @@ public class AsyncJobHandler {
     }
 
     @Async
-    public CompletableFuture<Set<Item>> submitItemGenerationTask(Callable<Set<Item>> job, TaskType taskType, long chatId) {
+    public void submitItemGenerationTask(Runnable job, TaskType taskType, long chatId) {
         log.debug("Submitting item generation {} task for chatId: {}", taskType, chatId);
-        return CompletableFuture.supplyAsync(() -> {
-            chatLatches.computeIfAbsent(chatId, k -> new CountDownLatch(2));//TODO: increment when Usable items generation is implemented
+        asyncTaskExecutor.submit(() -> {
+            chatLatches.computeIfAbsent(chatId, k -> new CountDownLatch(3));//TODO: increment when Usable items generation is implemented
             try {
-                return job.call();
+                job.run();
             } catch (Exception e) {
                 throw new DungeonPrototypeException(e.getMessage());
             } finally {
                 log.info("Counting down ({}) latch for chatId: {}", chatLatches.get(chatId).getCount(), chatId);
                 chatLatches.get(chatId).countDown();
             }
-        }, asyncTaskExecutor);
+        });
+    }
+
+    @Async
+    public void submitEffectGenerationTask(Runnable job, TaskType taskType, long chatId) {
+        log.debug("Submitting effect generation {} task for chatId: {}", taskType, chatId);
+        asyncTaskExecutor.submit(() -> {
+            try {
+                while (!chatLatches.containsKey(chatId)) {
+                    log.info("Waiting for latch to be created for chatId: {}", chatId);
+                    Thread.sleep(1000);
+                }
+                while (chatLatches.get(chatId).getCount() > 1) {
+                    log.info("Waiting for latch to be released for chatId: {}", chatId);
+                    try {
+                        chatLatches.get(chatId).await();
+                    } catch (InterruptedException e) {
+                        throw new DungeonPrototypeException(e.getMessage());
+                    }
+                }
+                job.run();
+            } catch (Exception e) {
+                throw new DungeonPrototypeException(e.getMessage());
+            } finally {
+                chatLatches.get(chatId).countDown();
+            }
+        });
     }
 
     @Async
@@ -60,7 +83,11 @@ public class AsyncJobHandler {
         log.debug("Submitting task of type {} for chatId: {}", taskType, chatId);
         return asyncTaskExecutor.submit(() -> {
             try {
-                if (chatLatches.containsKey(chatId) && chatLatches.get(chatId).getCount() > 0) {
+                while (!chatLatches.containsKey(chatId)) {
+                    log.info("Waiting for latch to be created for chatId: {}", chatId);
+                    Thread.sleep(1000);
+                }
+                while (chatLatches.get(chatId).getCount() > 0) {
                     chatLatches.get(chatId).await();
                 }
                 return job.call();
@@ -77,7 +104,11 @@ public class AsyncJobHandler {
         log.debug("Submitting task of type {} for chatId: {}", taskType, chatId);
         asyncTaskExecutor.submit(() -> {
             try {
-                if (chatLatches.containsKey(chatId) && chatLatches.get(chatId).getCount() > 0) {
+                while (!chatLatches.containsKey(chatId)) {
+                    log.info("Waiting for latch to be created for chatId: {}", chatId);
+                    Thread.sleep(1000);
+                }
+                while (chatLatches.get(chatId).getCount() > 0) {
                     chatLatches.get(chatId).await();
                 }
                 job.run();
@@ -91,7 +122,6 @@ public class AsyncJobHandler {
 
     @Async
     public Future<?> submitMapGenerationTask(Callable<?> job, TaskType taskType, long chatId, long clusterId) {
-        //TODO: temporary unused
         log.debug("Submitting map generation task for chatId: {}, clusterId: {}", chatId, clusterId);
         return asyncTaskExecutor.submit(() -> {
             executeTask(job, taskType, chatId, clusterId);

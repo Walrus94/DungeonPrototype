@@ -30,6 +30,8 @@ public interface ItemRepository extends MongoRepository<ItemDocument, String> {
 
     Optional<ItemDocument> findByChatIdAndId(long chatId, String id);
 
+    List<ItemDocument> findAllByChatId(long chatId);
+
     List<ItemDocument> findAllByChatIdAndIdIn(long chatId, List<String> ids);
 
     void deleteAllByChatId(Long chatId);
