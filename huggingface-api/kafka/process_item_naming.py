@@ -2,7 +2,7 @@ import torch
 import logging
 import json
 import os
-from config.settings import HF_MODEL_FILE, IMAGE_PATH;
+from config.settings import HF_MODEL_FILE, HF_API_KEY, IMAGE_PATH;
 from db.mongo import update_mongo_item
 from diffusers import DiffusionPipeline
 from llama_cpp import Llama
@@ -11,6 +11,7 @@ from llama_cpp import Llama
 diffusionPipiline = DiffusionPipeline.from_pretrained(
     "stabilityai/stable-diffusion-3.5-medium",
     cache_dir=HF_MODEL_FILE,
+    use_auth_token=HF_API_KEY,
     torch_dtype=torch.bfloat16
 ).to("cuda")
 
