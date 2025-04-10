@@ -174,4 +174,13 @@ public class PlayerService {
         val playerDocument = PlayerMapper.INSTANCE.mapToDocument(player);
         playerRepository.save(playerDocument);
     }
+
+    public void removePlayer(long chatId) {
+        if (playerRepository.existsByChatId(chatId)) {
+            playerRepository.deleteByChatId(chatId);
+            log.info("Player removed: {}", chatId);
+        } else {
+            log.warn("Player not found: {}", chatId);
+        }
+    }
 }

@@ -5,6 +5,11 @@ import lombok.val;
 import org.dungeon.prototype.bot.state.ChatContext;
 import org.dungeon.prototype.bot.state.ChatState;
 import org.dungeon.prototype.exception.ChatStateUpdateException;
+import org.dungeon.prototype.service.PlayerService;
+import org.dungeon.prototype.service.item.ItemService;
+import org.dungeon.prototype.service.level.LevelService;
+import org.dungeon.prototype.service.message.MessageService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -29,6 +34,15 @@ import static org.dungeon.prototype.bot.state.ChatState.PRE_GAME_MENU;
 public class ChatStateService {
     private static final long TIMEOUT_DURATION = Duration.ofMinutes(30).toMillis();
     private final Map<Long, ChatContext> chatStateByIdMap = new ConcurrentHashMap<>();
+
+    @Autowired
+    PlayerService playerService;
+    @Autowired
+    LevelService levelService;
+    @Autowired
+    ItemService itemService;
+    @Autowired
+    MessageService messageService;
 
     /**
      * Initializes chat context: sets chat context state
@@ -115,8 +129,17 @@ public class ChatStateService {
     public void clearChatContext(long chatId) {
         if (chatStateByIdMap.containsKey(chatId)) {
             var chatState = chatStateByIdMap.get(chatId);
+            switch (chatState.getChatState()) {
+                case AWAITING_NICKNAME -> playerService.removePlayer(chatId);
+                case GENERATING_ITEMS, GENERATING_PLAYER -> itemService.dropCollection(chatId);
+                case GENERATING_LEVEL -> {
+                    itemService.dropCollection(chatId);
+                    levelService.remove(chatId);
+                }
+            }
             chatState.setChatState(IDLE);
             chatState.setLastActiveTime(new AtomicLong(System.currentTimeMillis()));
+            messageService.sendStopMessage(chatId);
         }
     }
 }

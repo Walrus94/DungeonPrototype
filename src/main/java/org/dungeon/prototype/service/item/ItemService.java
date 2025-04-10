@@ -204,10 +204,10 @@ public class ItemService {
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(Path.of(imgPath), filenamePattern)) {
             for (Path filePath : stream) {
                 Files.deleteIfExists(filePath);
-                System.out.println("Deleted: " + filePath);
+                log.info("Deleted: {}", filePath);
             }
         } catch (Exception e) {
-            System.err.println("Error deleting images for chatId " + chatId + ": " + e.getMessage());
+            log.error("Error deleting images for chatId {}: {}", chatId,  e.getMessage());
         }
         itemRepository.deleteAllByChatId(chatId);
     }

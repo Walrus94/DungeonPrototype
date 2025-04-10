@@ -19,4 +19,6 @@ public interface PlayerRepository extends MongoRepository<PlayerDocument, Long> 
 
     @Query(value = "{ 'chatId' : ?0 }", fields = "{ 'nickname' : 1, '_id' : 0 }")
     Optional<NicknameProjection> getNicknameByChatId(@Param("_id") Long chatId);
+
+    void deleteByChatId(Long chatId);
 }
