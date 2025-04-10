@@ -83,7 +83,7 @@ public class LevelGenerationService {
         val futureLevel = (Future<Level>) asyncJobHandler.submitMapPopulationTask(() -> populateLevel(chatId, levelNumber, levelMap), TaskType.LEVEL_GENERATION, chatId);
         while (!futureLevel.isDone()) {
             try {
-                return futureLevel.get(1, TimeUnit.SECONDS);
+                return futureLevel.get(1, TimeUnit.MINUTES);
             } catch (InterruptedException | ExecutionException e) {
                 throw new DungeonPrototypeException(e.getMessage());
             } catch (TimeoutException e) {

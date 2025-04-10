@@ -5,6 +5,7 @@ import org.dungeon.prototype.async.metrics.TaskContext;
 import org.dungeon.prototype.async.metrics.TaskContextData;
 import org.dungeon.prototype.async.metrics.TaskMetrics;
 import org.dungeon.prototype.exception.DungeonPrototypeException;
+import org.dungeon.prototype.model.document.item.ItemType;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration;
 import org.springframework.core.task.AsyncTaskExecutor;
@@ -40,7 +41,7 @@ public class AsyncJobHandler {
     public void submitItemGenerationTask(Runnable job, TaskType taskType, long chatId) {
         log.debug("Submitting item generation {} task for chatId: {}", taskType, chatId);
         asyncTaskExecutor.submit(() -> {
-            chatLatches.computeIfAbsent(chatId, k -> new CountDownLatch(3));//TODO: increment when Usable items generation is implemented
+            chatLatches.computeIfAbsent(chatId, k -> new CountDownLatch(ItemType.values().length));//TODO: increment when Usable items generation is implemented
             try {
                 job.run();
             } catch (Exception e) {
