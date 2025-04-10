@@ -4,8 +4,12 @@ python-dotenv
 pymongo
 asyncpg
 stable-baselines3
+torch
 transformers
 diffusers
+accelerate
+ftfy
+torchvision
 gym
 numpy
 ujson
