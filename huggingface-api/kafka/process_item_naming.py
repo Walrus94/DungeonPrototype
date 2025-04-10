@@ -7,7 +7,7 @@ from db.mongo import update_mongo_item
 from llama_cpp import Llama
 
 client = InferenceClient(
-    provider="hf-inference",
+    provider="replicate",
     api_key=HF_API_KEY,
 )
 
@@ -49,20 +49,17 @@ def process_kafka_item_message(message):
     try:
         logging.debug(f"Raw response from LLM: {response}")
         generated_name = json.loads(json.dumps(response))['choices'][0]['message']['content']
-
-        logging.debug(f"Response content: {response}")
-        # response = pipe(prompt, max_new_tokens=10)[0]['generated_text']
-        os.makedirs(IMAGE_PATH, exist_ok=True)
-        
+                
         logging.debug(f"Generated name: {generated_name}")
         # Update MongoDB with the generated name where chatId and id match
         update_mongo_item(chat_id, item_id, generated_name)
     except Exception as e:
         logging.error(f"Error processing LLM response: {str(e)}")
     try:
+        os.makedirs(IMAGE_PATH, exist_ok=True)
         image = client.text_to_image(
             generated_name + ": " + prompt,
-            model="proximasanfinetuning/fantassified_icons_v2"
+            model="stabilityai/stable-diffusion-3.5-large"
         )
 
         image.save(f"{IMAGE_PATH}/{chat_id}_{item_id}.png")
