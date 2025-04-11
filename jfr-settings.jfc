@@ -1,0 +1,5 @@
+<configuration version="2.0">
+    <event name="jdk.VirtualThreadStart" enabled="true"/>
+    <event name="jdk.VirtualThreadEnd" enabled="true"/>
+    <event name="jdk.StructuredTaskScopeFork" enabled="true"/>
+</configuration>

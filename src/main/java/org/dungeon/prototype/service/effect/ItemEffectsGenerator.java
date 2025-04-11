@@ -2,6 +2,7 @@ package org.dungeon.prototype.service.effect;
 
 import lombok.val;
 import org.apache.commons.math3.util.Pair;
+import org.dungeon.prototype.async.AsyncJobHandler;
 import org.dungeon.prototype.model.effect.Effect;
 import org.dungeon.prototype.model.effect.attributes.Action;
 import org.dungeon.prototype.model.effect.attributes.EffectAttribute;
@@ -33,8 +34,9 @@ public class ItemEffectsGenerator {
 
     /**
      * Generates configured amount of effects to change item's weight norm by given delta
-     * @param chatId current chat's id
-     * @param itemId id of item to apply effect to
+     *
+     * @param chatId               current chat's id
+     * @param itemId               id of item to apply effect to
      * @param expectedWeightChange expected weight norm delta
      * @return added effect's weight norm
      */
@@ -52,7 +54,7 @@ public class ItemEffectsGenerator {
                 val amount = minEffectsAmount - item.getEffects().size();
                 double sum = 0.0;
                 for (int i = 0; i < amount; i++) {
-                     sum += generateAndAddItemEffect(expectedWeightChange / amount, item).orElse(0.0);
+                    sum += generateAndAddItemEffect(expectedWeightChange / amount, item).orElse(0.0);
                 }
                 return Optional.of(sum);
             } else if (item.getEffects().size() < maxEffectsAmount) {
@@ -65,8 +67,9 @@ public class ItemEffectsGenerator {
     /**
      * Generates configured amount of effects to change item's weight norm by given delta
      * and adds to copy of initial item
-     * @param chatId current chat's id
-     * @param itemId id of item to copy and apply effect to
+     *
+     * @param chatId               current chat's id
+     * @param itemId               id of item to copy and apply effect to
      * @param expectedWeightChange expected weight norm delta
      * @return id and weight norm of newly created item
      */
@@ -114,7 +117,7 @@ public class ItemEffectsGenerator {
             action = MULTIPLY;
         } else if (item instanceof Weapon) {
             applicableAttributes = List.of(CHANCE_TO_DODGE, XP_BONUS, GOLD_BONUS, MAX_ARMOR,
-                            HEALTH_MAX, HEALTH_MAX_ONLY, MANA_MAX, MANA_MAX_ONLY);
+                    HEALTH_MAX, HEALTH_MAX_ONLY, MANA_MAX, MANA_MAX_ONLY);
             attribute = applicableAttributes.get(getRandomInt(0, applicableAttributes.size() - 1));
             if (attribute.equals(CHANCE_TO_DODGE)) {
                 action = MULTIPLY;

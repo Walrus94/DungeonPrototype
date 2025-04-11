@@ -9,9 +9,9 @@ import org.dungeon.prototype.model.player.Player;
 import org.dungeon.prototype.model.player.PlayerAttribute;
 import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.properties.PlayerProperties;
-import org.dungeon.prototype.repository.PlayerRepository;
-import org.dungeon.prototype.repository.converters.mapstruct.PlayerMapper;
-import org.dungeon.prototype.repository.projections.NicknameProjection;
+import org.dungeon.prototype.repository.mongo.PlayerRepository;
+import org.dungeon.prototype.repository.mongo.converters.mapstruct.PlayerMapper;
+import org.dungeon.prototype.repository.mongo.projections.NicknameProjection;
 import org.dungeon.prototype.service.message.MessageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -173,5 +173,14 @@ public class PlayerService {
         log.info("Player default inventory initialized: {}", player);
         val playerDocument = PlayerMapper.INSTANCE.mapToDocument(player);
         playerRepository.save(playerDocument);
+    }
+
+    public void removePlayer(long chatId) {
+        if (playerRepository.existsByChatId(chatId)) {
+            playerRepository.deleteByChatId(chatId);
+            log.info("Player removed: {}", chatId);
+        } else {
+            log.warn("Player not found: {}", chatId);
+        }
     }
 }

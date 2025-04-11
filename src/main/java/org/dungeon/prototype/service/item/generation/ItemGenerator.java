@@ -1,10 +1,11 @@
 package org.dungeon.prototype.service.item.generation;
 
-import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.math3.util.Pair;
-import org.dungeon.prototype.model.inventory.Item;
+import org.dungeon.prototype.async.AsyncJobHandler;
+import org.dungeon.prototype.async.TaskType;
+import org.dungeon.prototype.exception.EntityNotFoundException;
 import org.dungeon.prototype.model.inventory.attributes.MagicType;
 import org.dungeon.prototype.model.inventory.attributes.Quality;
 import org.dungeon.prototype.model.inventory.attributes.weapon.Handling;
@@ -19,6 +20,7 @@ import org.dungeon.prototype.model.inventory.attributes.wearable.WearableMateria
 import org.dungeon.prototype.model.inventory.attributes.wearable.WearableType;
 import org.dungeon.prototype.model.inventory.items.Weapon;
 import org.dungeon.prototype.model.inventory.items.Wearable;
+import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.properties.GenerationProperties;
 import org.dungeon.prototype.service.effect.ItemEffectsGenerator;
 import org.dungeon.prototype.service.item.ItemService;
@@ -27,7 +29,6 @@ import org.dungeon.prototype.util.RandomUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,11 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CyclicBarrier;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -76,6 +73,7 @@ import static org.dungeon.prototype.util.GenerationUtil.applyAdjustment;
 import static org.dungeon.prototype.util.GenerationUtil.multiplyAllParametersBy;
 import static org.dungeon.prototype.util.RandomUtil.getRandomEnumValue;
 import static org.dungeon.prototype.util.RandomUtil.getRandomMagicType;
+import static org.dungeon.prototype.util.RandomUtil.getRandomWeightedEnumValue;
 
 @Slf4j
 @Service
@@ -93,12 +91,13 @@ public class ItemGenerator {
     @Autowired
     private ItemService itemService;
     @Autowired
+    private AsyncJobHandler asyncJobHandler;
+    @Autowired
     private MessageService messageService;
     @Autowired
     private ItemEffectsGenerator itemEffectsGenerator;
     @Autowired
     private GenerationProperties generationProperties;
-    private final Map<Long, CyclicBarrier> barriersByChat = new ConcurrentHashMap<>();
 
     /**
      * Generates items for game: runs two async generators
@@ -108,19 +107,17 @@ public class ItemGenerator {
      *
      * @param chatId id of chat where game runs
      */
-    @Transactional
-    public CompletableFuture<Void> generateItems(Long chatId) {
+    public void generateItems(Long chatId) {
         messageService.sendItemsGeneratingInfoMessage(chatId);
-        barriersByChat.put(chatId, new CyclicBarrier(2));
-        itemService.dropCollection(chatId);
 
-        CompletableFuture<Void> weaponsFuture = CompletableFuture.runAsync(() -> generateWeapons(chatId));
-        CompletableFuture<Void> wearablesFuture = CompletableFuture.runAsync(() -> generateWearables(chatId));
+        asyncJobHandler.submitItemGenerationTask(() -> generateWeapons(chatId), TaskType.WEAPON_GENERATION, chatId);
+        asyncJobHandler.submitItemGenerationTask(() -> generateWearables(chatId), TaskType.WEARABLE_GENERATION, chatId);
 
-        return CompletableFuture.allOf(weaponsFuture, wearablesFuture);
+        asyncJobHandler.submitEffectGenerationTask(() -> addEffects(chatId, weaponPerGame, wearablesPerGame), TaskType.EFFECTS_GENERATION, chatId);
     }
 
     private void generateWeapons(Long chatId) {
+        log.info("Generation weapons for chatId:{}...", chatId);
         Set<WeaponAttributes> generatedAttributesCombinations = new HashSet<>();
         while (generatedAttributesCombinations.size() < weaponAttributesPoolSize) {
             val type = getRandomEnumValue(List.of(WeaponType.values()));
@@ -155,7 +152,7 @@ public class ItemGenerator {
             if (DRAGON_BONE.equals(weaponMaterial) && WeaponHandlerMaterial.DRAGON_BONE.equals(weaponHandlerMaterial)) {
                 quality = Quality.MYTHIC;
             } else {
-                quality = getRandomEnumValue(List.of(Quality.values()));
+                quality = getRandomWeightedEnumValue(List.of(Quality.values()));
             }
             Size size;
             if (TWO_HANDED.equals(handling)) {
@@ -193,20 +190,15 @@ public class ItemGenerator {
         }
 
         val vanillaWeapons = generatedAttributesCombinations.stream()
-                .flatMap(attributes -> Stream.of(generateVanillaWeapon(attributes, chatId)))
-                .limit(weaponPerGame)
+                .map(attributes -> generateVanillaWeapon(attributes, chatId))
                 .collect(Collectors.toList());
         val savedItems = itemService.saveItems(vanillaWeapons);
-
         log.info("{} weapons without effects generated.", savedItems.size());
-        awaitBarrier(chatId);
-
-        log.info("Adding effects to weapons...");
-        addEffects(chatId, savedItems, weaponPerGame);
     }
 
 
     private void generateWearables(Long chatId) {
+        log.info("Generation wearables for chatId:{}...", chatId);
         Set<WearableAttributes> attributesCombinations = new HashSet<>();
         Map<WearableType, Integer> typesCount = new HashMap<>();
         while (attributesCombinations.size() < wearableAttributesPoolSize) {
@@ -259,26 +251,25 @@ public class ItemGenerator {
             attributesCombinations.add(wearableAttributes);
         }
         val vanillaWearables = attributesCombinations.stream()
-                .flatMap(attributes -> Stream.of(generateVanillaWearable(attributes, chatId)))
+                .map(attributes -> generateVanillaWearable(attributes, chatId))
                 .collect(Collectors.toList());
         val savedItems = itemService.saveItems(vanillaWearables);
         log.info("{} wearables without effects generated.", savedItems.size());
-        awaitBarrier(chatId);
-
-        log.info("Adding effects to wearables...");
-        addEffects(chatId, savedItems, wearablesPerGame);
     }
 
-    private void addEffects(Long chatId, Set<Item> savedItems, Integer limit) {
-        val weightScale = savedItems.stream()
+    private void addEffects(Long chatId, int weaponLimit, int wearableLimit) {
+        val items = itemService.findAllItemsByChatId(chatId);
+        val weightScale = items.stream()
                 .map(item -> Pair.create(item.getId(), item.getWeight().toVector().getNorm()))
                 .sorted(Comparator.comparing(Pair::getValue))
                 .collect(Collectors.toCollection(ArrayList::new));
-        log.info("Adding effects to generated items, amount: {}", savedItems.size());
+        log.info("Adding effects to generated items, amount: {}", items.size());
         double largestSegment = 0.0;
         int startSegmentIndex = 0;
+        int weaponCount = 0;
+        int wearableCount = 0;
         val vanillaItemsIds = weightScale.stream().map(Pair::getKey).toList();
-        while (weightScale.size() < limit) {
+        while (weightScale.size() < wearableLimit + weaponLimit && weaponCount < weaponLimit && wearableCount < wearableLimit) {
             for (int i = 1; i < weightScale.size(); i++) {
                 //TODO: add loop and proceed further in selected direction by scale to next itemId
                 double segment = weightScale.get(i).getValue() - weightScale.get(i - 1).getValue();
@@ -303,9 +294,12 @@ public class ItemGenerator {
                     val oldValue = weightScale.get(point);
                     weightScale.remove(point);
                     insertNewItem(Pair.create(oldValue.getKey(), updatedWeight.get()), weightScale);
-                } else {
-
                 }
+            }
+
+            switch (items.stream().filter(item -> item.getId().equals(itemId)).findFirst().orElseThrow(() -> new EntityNotFoundException(chatId, "item", CallbackType.MENU_BACK)).getItemType()) {
+                case WEAPON: weaponCount++;
+                case WEARABLE: wearableCount++;
             }
         }
     }
@@ -332,8 +326,10 @@ public class ItemGenerator {
     private Weapon calculateParameters(Weapon weapon) {
         log.info("Calculating weapon params...");
         val properties = generationProperties.getItems().getWeapon();
+        log.debug("Loaded properties: {}", properties);
         val defaultAttributesMap = properties.getDefaultAttributes();
         val defaultAttributes = defaultAttributesMap.get(weapon.getAttributes().getWeaponType());
+        log.debug("Default attributes: {}", defaultAttributes);
         weapon.setAttack(defaultAttributes.getAttack());
         weapon.setCriticalHitChance(defaultAttributes.getCriticalHitChance());
         weapon.setCriticalHitMultiplier(defaultAttributes.getCriticalHitMultiplier());
@@ -344,11 +340,13 @@ public class ItemGenerator {
         }
 
         val handlingAdjustmentAttributes = properties.getHandlingAdjustmentAttributes().get(weapon.getAttributes().getHandling());
+        log.debug("Handling adjustment attributes: {}", handlingAdjustmentAttributes);
         applyAdjustment(weapon, handlingAdjustmentAttributes);
 
         val weaponMaterialAdjustmentAttributes = properties.getWeaponMaterialAdjustmentAttributes().get(weapon.getAttributes().getWeaponMaterial());
+        log.debug("Weapon material adjustment attributes: {}", weaponMaterialAdjustmentAttributes);
         applyAdjustment(weapon, weaponMaterialAdjustmentAttributes);
-        if (ENCHANTED_WOOD.equals(weapon.getAttributes().getWeaponMaterial())) {
+        if (ENCHANTED_WOOD.equals(weapon.getAttributes().getWeaponMaterial()) && isNull(weapon.getMagicType())) {
             weapon.setMagicType(getRandomMagicType());
         }
         if (DRAGON_BONE.equals(weapon.getAttributes().getWeaponMaterial()) && WeaponHandlerMaterial.DRAGON_BONE.equals(weapon.getAttributes().getWeaponHandlerMaterial())) {
@@ -364,22 +362,24 @@ public class ItemGenerator {
         if (handlerMaterial.isPresent() && completeMaterialAdjustmentAttributes.containsKey(handlerMaterial.get())) {
             log.info("Weapon and handler materials matched, {}", handlerMaterial.get());
             val completeMaterialAdjustment = completeMaterialAdjustmentAttributes.get(handlerMaterial.get());
+            log.debug("Complete material adjustment attributes: {}", completeMaterialAdjustment);
             applyAdjustment(weapon, completeMaterialAdjustment);
         } else {
             log.info("Weapon and handler materials differs!");
             val weaponHandlerAdjustment = properties.getWeaponHandlerMaterialAdjustmentAttributes().get(weapon.getAttributes().getWeaponHandlerMaterial());
+            log.debug("Weapon handler adjustment attributes: {}", weaponHandlerAdjustment);
             applyAdjustment(weapon, weaponHandlerAdjustment);
         }
         val sizeAdjustment = properties.getSizeAdjustmentAttributes().get(weapon.getAttributes().getSize());
+        log.debug("Size adjustment attributes: {}", sizeAdjustment);
         weapon.setAttack((int) (weapon.getAttack() * sizeAdjustment.getAttackRatio()));
         weapon.setChanceToMiss(weapon.getChanceToMiss() * sizeAdjustment.getChanceToMissRatio());
 
         val attackTypeAdjustment = properties.getAttackTypeAdjustmentAttributes().get(weapon.getAttributes().getWeaponAttackType());
+        log.debug("Attack type adjustment attributes: {}", attackTypeAdjustment);
         applyAdjustment(weapon, attackTypeAdjustment);
-        if (STRIKE.equals(weapon.getAttributes().getWeaponAttackType())) {
-            weapon.setMagicType(getRandomMagicType());
-        }
         val qualityAdjustmentRatio = properties.getQualityAdjustmentRatio().get(weapon.getAttributes().getQuality());
+        log.debug("Quality adjustment ratio: {}", qualityAdjustmentRatio);
         multiplyAllParametersBy(weapon, qualityAdjustmentRatio);
         if (isNull(weapon.getMagicType())) {
             weapon.setMagicType(MagicType.of(0.0, 0.0));
@@ -387,20 +387,17 @@ public class ItemGenerator {
         return weapon;
     }
 
-    @NotNull
     private static Optional<WeaponHandlerMaterial> getEqualWeaponHandlerMaterial(Weapon weapon) {
         try {
             val weaponHandlerMaterial = WeaponHandlerMaterial.valueOf(weapon.getAttributes().getWeaponMaterial().toString());
             return Optional.of(weaponHandlerMaterial);
-
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             log.debug("Handler material doesn't match! Exception thrown: {}", e.getMessage());
             return Optional.empty();
         }
     }
 
     private Wearable generateVanillaWearable(WearableAttributes wearableAttributes, Long chatId) {
-        log.info("Generating wearable...");
         val wearable = new Wearable();
         wearable.setAttributes(wearableAttributes);
         wearable.setChatId(chatId);
@@ -409,7 +406,6 @@ public class ItemGenerator {
     }
 
     private Wearable calculateParameters(Wearable wearable) {
-        log.info("Calculating wearable params...");
         if (wearable.getAttributes().getWearableMaterial().equals(WearableMaterial.ENCHANTED_LEATHER)) {
             wearable.setMagicType(getRandomMagicType());
         } else {
@@ -428,14 +424,5 @@ public class ItemGenerator {
         wearable.setArmor(armor);
         wearable.setChanceToDodge(chanceToDodge);
         return wearable;
-    }
-
-    private void awaitBarrier(Long chatId) {
-        try {
-            barriersByChat.get(chatId).await();  // Wait for both threads to complete generating vanilla items
-        } catch (Exception e) {
-            Thread.currentThread().interrupt();
-            log.error("Error while waiting at barrier: {}", e.getMessage());
-        }
     }
 }
