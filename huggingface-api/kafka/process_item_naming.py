@@ -14,7 +14,7 @@ diffusionPipiline = DiffusionPipeline.from_pretrained(
     "stabilityai/stable-diffusion-3.5-medium",
     cache_dir=HF_MODEL_FILE,
     torch_dtype=torch.bfloat16
-).to("cuda" if torch.cuda.is_available() else "cpu")
+).to("cpu")
 
 llm = Llama.from_pretrained(
     repo_id="bartowski/llama-3-fantasy-writer-8b-GGUF",

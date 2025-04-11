@@ -10,6 +10,7 @@ diffusers
 accelerate
 ftfy
 torchvision
+protobuf
 gym
 numpy
 ujson
