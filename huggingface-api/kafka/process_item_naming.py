@@ -10,8 +10,11 @@ from huggingface_hub import login
 
 login(token=HF_API_KEY)
 
-diffusionPipiline = DiffusionPipeline.from_pretrained("black-forest-labs/FLUX.1-dev")
-diffusionPipiline.load_lora_weights("nerijs/dark-fantasy-illustration-flux")
+diffusionPipiline = DiffusionPipeline.from_pretrained(
+    "CompVis/stable-diffusion-v1-4",
+    cache_dir=HF_MODEL_FILE,
+    torch_dtype=torch.float16
+).to("cpu")
 
 llm = Llama.from_pretrained(
     repo_id="bartowski/llama-3-fantasy-writer-8b-GGUF",
