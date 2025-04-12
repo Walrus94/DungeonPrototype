@@ -147,6 +147,7 @@ public class ChatStateService {
             }
             chatState.setChatState(IDLE);
             chatState.setLastActiveTime(new AtomicLong(System.currentTimeMillis()));
+            chatStateByIdMap.put(chatId, chatState);
         }
     }
 }
