@@ -140,7 +140,7 @@ public class LevelGenerationService {
                     TaskType.LEVEL_GENERATION, chatId, cluster.getId()));
         });
 
-        while (clusters.values().stream().anyMatch(cluster -> cluster.getGeneratedGrid().isDone())) {
+        while (clusters.values().stream().anyMatch(cluster -> !cluster.getGeneratedGrid().isDone())) {
             clusters.values().stream()
                     .filter(cluster -> cluster.getGeneratedGrid().isDone())
                     .findFirst().ifPresent(completedCluster -> {

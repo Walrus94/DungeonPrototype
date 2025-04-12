@@ -1,5 +1,5 @@
 # Use the official Python image from the Docker Hub
-FROM python:3.10
+FROM python:3.10-slim
 # Set the working directory in the container
 WORKDIR /app
 
@@ -14,4 +14,4 @@ RUN pip install llama-cpp-python \
 
 
 # Run the application
-ENTRYPOINT python app.py tail -f /dev/null
+ENTRYPOINT ["python", "app.py", "tail", "-f", "/dev/null"]

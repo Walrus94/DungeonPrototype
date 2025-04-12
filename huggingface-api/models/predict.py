@@ -27,7 +27,7 @@ async def generate_balance_matrix(chat_id, database, columns, rows):
     generated_matrix = np.zeros((rows, columns))
     for i in range(rows):
         for j in range(columns):
-            if template_matrix is not None and i < len(template_matrix) and j < len(template_matrix[i]) and template_matrix[i][j] is not 0.0:
+            if template_matrix != None and i < len(template_matrix) and j < len(template_matrix[i]) and template_matrix[i][j] != 0.0:
                 # Use value from the template matrix if present
                 generated_matrix[i][j] = template_matrix[i][j]
             else:
