@@ -130,7 +130,6 @@ public class ChatStateService {
         if (chatStateByIdMap.containsKey(chatId)) {
             var chatState = chatStateByIdMap.get(chatId);
             switch (chatState.getChatState()) {
-                case PRE_GAME_MENU, GAME_MENU, GAME, BATTLE-> messageService.sendStopMessage(chatId);
                 case AWAITING_NICKNAME -> playerService.removePlayer(chatId);
                 case GENERATING_ITEMS, GENERATING_PLAYER -> itemService.dropCollection(chatId);
                 case GENERATING_LEVEL -> {
