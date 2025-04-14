@@ -20,6 +20,7 @@ public class BotCommandHandler {
     PlayerService playerService;
     @Autowired
     LevelService levelService;
+    @Autowired
     ChatStateService chatStateService;
     @Autowired
     ItemService itemService;
@@ -63,6 +64,6 @@ public class BotCommandHandler {
     }
 
     public void processStopAction(long chatId) {
-        chatStateService.clearChatContext(chatId);
+        messageService.sendStopMessage(chatId);
     }
 }

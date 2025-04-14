@@ -121,7 +121,7 @@ public class ChatStateService {
         chatStateByIdMap.forEach((chatId, chatContext) -> {
             if (!IDLE.equals(chatContext.getChatState()) &&
                     currentTime - chatContext.getLastActiveTime().get() > TIMEOUT_DURATION) {
-                clearChatContext(chatId);
+                messageService.sendStopMessage(chatId);
             }
         });
     }
@@ -131,18 +131,11 @@ public class ChatStateService {
             var chatState = chatStateByIdMap.get(chatId);
             switch (chatState.getChatState()) {
                 case PRE_GAME_MENU, GAME_MENU, GAME, BATTLE-> messageService.sendStopMessage(chatId);
-                case AWAITING_NICKNAME -> {
-                    playerService.removePlayer(chatId);
-                    messageService.sendStopMessage(chatId);
-                }
-                case GENERATING_ITEMS, GENERATING_PLAYER -> {
-                    itemService.dropCollection(chatId);
-                    messageService.sendStopMessage(chatId);
-                }
+                case AWAITING_NICKNAME -> playerService.removePlayer(chatId);
+                case GENERATING_ITEMS, GENERATING_PLAYER -> itemService.dropCollection(chatId);
                 case GENERATING_LEVEL -> {
                     itemService.dropCollection(chatId);
                     levelService.remove(chatId);
-                    messageService.sendStopMessage(chatId);
                 }
             }
             chatState.setChatState(IDLE);
