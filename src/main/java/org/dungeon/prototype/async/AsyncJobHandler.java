@@ -63,7 +63,7 @@ public class AsyncJobHandler {
                     Thread.sleep(1000);
                 }
                 while (chatLatches.get(chatId).getCount() > 1) {
-                    log.info("Waiting for latch to be released for chatId: {}", chatId);
+                    log.info("Waiting for vanilla items to generate for chatId: {}", chatId);
                     try {
                         chatLatches.get(chatId).await();
                     } catch (InterruptedException e) {

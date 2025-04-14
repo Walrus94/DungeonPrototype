@@ -26,7 +26,9 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -182,15 +184,10 @@ public class ItemService {
         return null;
     }
 
-    public List<Item> findAllItemsByChatId(long chatId) {
-        val itemDocuments = itemRepository.findAllByChatId(chatId);
-        return itemDocuments.stream()
-                .map(itemDocument -> switch (itemDocument.getItemType()) {
-                    case WEAPON -> ItemMapper.INSTANCE.mapToWeapon(itemDocument);
-                    case WEARABLE -> ItemMapper.INSTANCE.mapToWearable(itemDocument);
-                    case USABLE -> ItemMapper.INSTANCE.mapToUsable(itemDocument);
-                })
-                .collect(Collectors.toList());
+    public Map<String, Double> findAllItemsWeightsByChatId(long chatId) {
+        val itemWeights = itemRepository.findAllWeightsByChatId(chatId);
+        return itemWeights.stream()
+                .collect(Collectors.toMap(ItemWeightProjection::getId, ItemWeightProjection::getWeightAbs, (a, b) -> a, LinkedHashMap::new));
     }
 
     /**

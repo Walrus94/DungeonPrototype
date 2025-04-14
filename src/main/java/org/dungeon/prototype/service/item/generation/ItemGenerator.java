@@ -6,6 +6,9 @@ import org.apache.commons.math3.util.Pair;
 import org.dungeon.prototype.async.AsyncJobHandler;
 import org.dungeon.prototype.async.TaskType;
 import org.dungeon.prototype.exception.EntityNotFoundException;
+import org.dungeon.prototype.model.effect.AdditionEffect;
+import org.dungeon.prototype.model.effect.Effect;
+import org.dungeon.prototype.model.effect.MultiplicationEffect;
 import org.dungeon.prototype.model.inventory.attributes.MagicType;
 import org.dungeon.prototype.model.inventory.attributes.Quality;
 import org.dungeon.prototype.model.inventory.attributes.weapon.Handling;
@@ -30,15 +33,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;
@@ -258,60 +262,112 @@ public class ItemGenerator {
     }
 
     private void addEffects(Long chatId, int weaponLimit, int wearableLimit) {
-        val items = itemService.findAllItemsByChatId(chatId);
-        val weightScale = items.stream()
-                .map(item -> Pair.create(item.getId(), item.getWeight().toVector().getNorm()))
-                .sorted(Comparator.comparing(Pair::getValue))
-                .collect(Collectors.toCollection(ArrayList::new));
-        log.info("Adding effects to generated items, amount: {}", items.size());
-        double largestSegment = 0.0;
-        int startSegmentIndex = 0;
+        val weightScale = itemService.findAllItemsWeightsByChatId(chatId).entrySet().stream()
+                .collect(Collectors.groupingBy(
+                        Map.Entry::getValue,
+                        TreeMap::new,
+                        Collectors.mapping(Map.Entry::getKey, Collectors.toCollection(LinkedList::new))
+                ));
+        log.info("Adding effects to generated items, amount: {}", weightScale.size());
+        double startSegmentWeight = 0.0;
         int weaponCount = 0;
         int wearableCount = 0;
-        val vanillaItemsIds = weightScale.stream().map(Pair::getKey).toList();
-        while (weightScale.size() < wearableLimit + weaponLimit && weaponCount < weaponLimit && wearableCount < wearableLimit) {
-            for (int i = 1; i < weightScale.size(); i++) {
-                //TODO: add loop and proceed further in selected direction by scale to next itemId
-                double segment = weightScale.get(i).getValue() - weightScale.get(i - 1).getValue();
-                if (segment > largestSegment) {
-                    largestSegment = segment;
-                    startSegmentIndex = i;
+        val vanillaItemsIds = weightScale.values().stream().flatMap(Collection::stream).toList();
+        while (weaponCount < weaponLimit || wearableCount < wearableLimit) {
+            val multipleItemsWeight = weightScale.entrySet().stream().filter(e -> e.getValue().size() > 0).toList();
+            double largestSegment = 0.0;
+            for (Map.Entry<Double, LinkedList<String>> entry : multipleItemsWeight.size() > 0 ? multipleItemsWeight : weightScale.entrySet()) {
+                if (entry.getKey() - weightScale.lowerKey(entry.getKey()) > weightScale.higherKey(entry.getKey()) - entry.getKey()) {
+                    double segment = entry.getKey() - weightScale.lowerKey(entry.getKey());
+                    if (segment > largestSegment) {
+                        largestSegment = segment;
+                        startSegmentWeight = weightScale.lowerKey(entry.getKey());
+                    }
+                } else {
+                    double segment = weightScale.higherKey(entry.getKey()) - entry.getKey();
+                    if (segment > largestSegment) {
+                        largestSegment = segment;
+                        startSegmentWeight = entry.getKey();
+                    }
                 }
             }
-            val expectedWeightChange = startSegmentIndex > weightScale.size() / 2 ?
-                    largestSegment / 4 :
-                    -largestSegment / 4;
-            val point = expectedWeightChange > 0 ? startSegmentIndex : startSegmentIndex + 1;
-            val itemId = weightScale.get(point).getKey();
+            double initialWeight;
+            double expectedWeightChange;
+            if (weightScale.get(startSegmentWeight).size() >= weightScale.higherEntry(startSegmentWeight).getValue().size() ||
+                    getNegativeEffectCandidate(chatId, weightScale.get(weightScale.higherKey(startSegmentWeight))).isEmpty()
+            ) {
+                initialWeight = startSegmentWeight;
+                expectedWeightChange = (initialWeight * weightScale.get(startSegmentWeight).size()) / (largestSegment * largestSegment);
+            } else {
+                initialWeight = weightScale.higherKey(startSegmentWeight);
+                expectedWeightChange =  - (initialWeight * weightScale.get(initialWeight).size()) / (largestSegment * largestSegment);
+            }
+            String itemId;
+            if (expectedWeightChange < 0.0) {
+                itemId = getNegativeEffectCandidate(chatId, weightScale.get(initialWeight)).orElseThrow(() -> new EntityNotFoundException(chatId, "item", CallbackType.MENU_BACK));
+            } else {
+                itemId = weightScale.get(initialWeight).get(0);
+            }
             if (vanillaItemsIds.contains(itemId)) {
-                val newItemData = itemEffectsGenerator.copyItemAndAddEffect(chatId, weightScale.get(point).getKey(), expectedWeightChange);
+                val newItemData = itemEffectsGenerator.copyItemAndAddEffect(chatId, itemId, expectedWeightChange);
                 if (nonNull(newItemData)) {
                     insertNewItem(newItemData, weightScale);
                 }
             } else {
-                val updatedWeight = itemEffectsGenerator.addItemEffect(chatId, weightScale.get(point).getKey(), expectedWeightChange);
+                val updatedWeight = itemEffectsGenerator.addItemEffect(chatId, itemId, expectedWeightChange);
                 if (updatedWeight.isPresent()) {
-                    val oldValue = weightScale.get(point);
-                    weightScale.remove(point);
-                    insertNewItem(Pair.create(oldValue.getKey(), updatedWeight.get()), weightScale);
+                    val oldValueList = weightScale.get(initialWeight);
+                    if (oldValueList.size() == 1) {
+                        weightScale.remove(initialWeight);
+                    } else {
+                        oldValueList.remove(itemId);
+                    }
+                    insertNewItem(Pair.create(itemId, updatedWeight.get()), weightScale);
                 }
             }
 
-            switch (items.stream().filter(item -> item.getId().equals(itemId)).findFirst().orElseThrow(() -> new EntityNotFoundException(chatId, "item", CallbackType.MENU_BACK)).getItemType()) {
-                case WEAPON: weaponCount++;
-                case WEARABLE: wearableCount++;
+            switch (itemService.findItem(chatId, itemId).getItemType()) {
+                case WEAPON:
+                    weaponCount++;
+                case WEARABLE:
+                    wearableCount++;
             }
         }
     }
 
-    private void insertNewItem(Pair<String, Double> newItemData, List<Pair<String, Double>> weightScale) {
-        int insertPosition = Collections.binarySearch(weightScale, newItemData, Comparator.comparing(Pair::getValue));
-        if (insertPosition < 0) {
-            insertPosition = -insertPosition - 1;
+    private Optional<String> getNegativeEffectCandidate(long chatId, List<String> itemIds) {
+        return itemIds.stream()
+                .filter(itemId -> {
+                    val item = itemService.findItem(chatId, itemId);
+                    if (nonNull(item)) {
+                        return item.getEffects().stream()
+                                .map(effect -> isNegative(effect) ? -effect.getWeight().toVector().getNorm() : effect.getWeight().toVector().getNorm())
+                                .reduce(0.0, Double::sum) > 0.0;
+                    }
+                    return false;
+                })
+                .findFirst();
+    }
+
+    private boolean isNegative(Effect effect) {
+        if (effect instanceof AdditionEffect additionEffect) {
+            return additionEffect.getAmount() < 0;
+        } else if (effect instanceof MultiplicationEffect multiplicationEffect) {
+            return multiplicationEffect.getMultiplier() < 1.0;
         }
 
-        // Insert the element at the correct position to maintain sorted order
-        weightScale.add(insertPosition, newItemData);
+        return false;
+    }
+
+
+    private void insertNewItem(Pair<String, Double> newItemData, Map<Double, LinkedList<String>> weightScale) {
+        val newItemId = newItemData.getFirst();
+        val newItemWeight = newItemData.getSecond();
+        weightScale.computeIfPresent(newItemWeight, (k, v) -> {
+            v.add(newItemId);
+            return v;
+        });
+        weightScale.putIfAbsent(newItemWeight, new LinkedList<>(List.of(newItemId)));
     }
 
     private Weapon generateVanillaWeapon(WeaponAttributes weaponAttributes, Long chatId) {
