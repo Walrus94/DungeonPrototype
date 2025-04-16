@@ -1,5 +1,6 @@
 package org.dungeon.prototype.service.effect;
 
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.math3.analysis.MultivariateFunction;
 import org.apache.commons.math3.analysis.UnivariateFunction;
@@ -23,6 +24,7 @@ import org.dungeon.prototype.model.effect.attributes.EffectAttribute;
 import org.dungeon.prototype.model.inventory.Item;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 public class EffectFactory {
 
@@ -70,6 +72,7 @@ public class EffectFactory {
      * @return generated effect
      */
     public Effect generateItemEffect(Item item, EffectAttribute attribute, Action action, double expectedWeightChange) {
+        log.info("Generating item effect for item {} with expected weight change {}", item.getId(), expectedWeightChange);
         UnivariateFunction objective = point -> objectiveEffectWeightChangeFunction(
                 point,
                 item,
@@ -100,6 +103,7 @@ public class EffectFactory {
     }
 
     private static double objectiveEffectWeightChangeFunction(double point, Item item, EffectAttribute attribute, Action action, double expectedWeightChange) {
+        log.info("Calculating objective function for item {} with expected weight change {}", item.getId(), expectedWeightChange);
         val oldWeight = item.getWeight().toVector();
         switch (action) {
             case ADD -> item.getEffects().add(

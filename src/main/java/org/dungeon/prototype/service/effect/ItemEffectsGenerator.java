@@ -1,8 +1,8 @@
 package org.dungeon.prototype.service.effect;
 
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.math3.util.Pair;
-import org.dungeon.prototype.async.AsyncJobHandler;
 import org.dungeon.prototype.model.effect.Effect;
 import org.dungeon.prototype.model.effect.attributes.Action;
 import org.dungeon.prototype.model.effect.attributes.EffectAttribute;
@@ -23,6 +23,7 @@ import static org.dungeon.prototype.model.effect.attributes.Action.MULTIPLY;
 import static org.dungeon.prototype.model.effect.attributes.EffectAttribute.*;
 import static org.dungeon.prototype.util.RandomUtil.getRandomInt;
 
+@Slf4j
 @Component
 public class ItemEffectsGenerator {
     @Autowired
@@ -41,6 +42,7 @@ public class ItemEffectsGenerator {
      * @return added effect's weight norm
      */
     public Optional<Double> addItemEffect(Long chatId, String itemId, double expectedWeightChange) {
+        log.info("Adding item effect to item {} with expected weight change {}", itemId, expectedWeightChange);
         val item = itemService.findItem(chatId, itemId);
         if (nonNull(item)) {
             if (item instanceof Usable) {
@@ -50,6 +52,7 @@ public class ItemEffectsGenerator {
             val minEffectsAmount = itemsGenerationProperties.getEffects().getMinimumAmountPerItemMap().get(item.getAttributes().getQuality());
             val maxEffectsAmount = itemsGenerationProperties.getEffects().getMaximumAmountPerItemMap().get(item.getAttributes().getQuality());
 
+            log.debug("Item {} has {} effects, min: {}, max: {}", item.getId(), item.getEffects().size(), minEffectsAmount, maxEffectsAmount);
             if (item.getEffects().size() < minEffectsAmount) {
                 val amount = minEffectsAmount - item.getEffects().size();
                 double sum = 0.0;
@@ -74,6 +77,7 @@ public class ItemEffectsGenerator {
      * @return id and weight norm of newly created item
      */
     public Pair<String, Double> copyItemAndAddEffect(Long chatId, String itemId, double expectedWeightChange) {
+        log.info("Copying item {} and adding effect with expected weight change {}", itemId, expectedWeightChange);
         val vanillaItem = itemService.findItem(chatId, itemId);
         if (nonNull(vanillaItem)) {
             switch (vanillaItem.getItemType()) {
@@ -105,6 +109,7 @@ public class ItemEffectsGenerator {
         Action action;
         EffectAttribute attribute;
         List<EffectAttribute> applicableAttributes;
+        log.info("Generating item effect for item {} with expected weight change {}", item.getId(), expectedWeightChange);
         if (item instanceof Wearable wearable) {
             applicableAttributes = switch (wearable.getAttributes().getWearableType()) {
                 case HELMET -> List.of(CHANCE_TO_DODGE, XP_BONUS, GOLD_BONUS);
@@ -115,6 +120,7 @@ public class ItemEffectsGenerator {
             };
             attribute = applicableAttributes.get(getRandomInt(0, applicableAttributes.size() - 1));
             action = MULTIPLY;
+            log.debug("Item {} is wearable, attribute: {}, action: {}", item.getId(), attribute, action);
         } else if (item instanceof Weapon) {
             applicableAttributes = List.of(CHANCE_TO_DODGE, XP_BONUS, GOLD_BONUS, MAX_ARMOR,
                     HEALTH_MAX, HEALTH_MAX_ONLY, MANA_MAX, MANA_MAX_ONLY);
@@ -124,11 +130,13 @@ public class ItemEffectsGenerator {
             } else {
                 action = Action.values()[getRandomInt(0, Action.values().length)];
             }
+            log.debug("Item {} is weapon, attribute: {}, action: {}", item.getId(), attribute, action);
         } else {
             //TODO: add case for usable
             return Optional.empty();
         }
         effect = effectFactory.generateItemEffect(item, attribute, action, expectedWeightChange);
+        log.debug("Generated effect: {}", effect);
         item.getEffects().add(effect);
         item = itemService.saveItem(item);
         return Optional.of(item.getWeight().toVector().getNorm());

@@ -97,7 +97,7 @@ public class PlayerService {
      * @return default max health points
      */
     public int getDefaultMaxHp(Player player) {
-        return 100 + player.getAttributes().get(PlayerAttribute.STAMINA);
+        return playerProperties.getBaseHp() + player.getAttributes().get(PlayerAttribute.STAMINA);
     }
 
     /**
