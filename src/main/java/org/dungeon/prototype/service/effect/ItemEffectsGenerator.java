@@ -15,8 +15,8 @@ import org.dungeon.prototype.service.item.ItemService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.util.Objects.nonNull;
 import static org.dungeon.prototype.model.effect.attributes.Action.MULTIPLY;
@@ -107,25 +107,26 @@ public class ItemEffectsGenerator {
     private Optional<Double> generateAndAddItemEffect(double expectedWeightChange, Item item) {
         Effect effect;
         Action action;
-        EffectAttribute attribute;
-        List<EffectAttribute> applicableAttributes;
+        Optional<EffectAttribute> attribute;
+        Stream<EffectAttribute> applicableAttributes;
+        val excludedAttributes = item.getEffects().stream().map(Effect::getAttribute).toList();
         log.info("Generating item effect for item {} with expected weight change {}", item.getId(), expectedWeightChange);
         if (item instanceof Wearable wearable) {
             applicableAttributes = switch (wearable.getAttributes().getWearableType()) {
-                case HELMET -> List.of(CHANCE_TO_DODGE, XP_BONUS, GOLD_BONUS);
-                case VEST -> List.of(CRITICAL_HIT_MULTIPLIER, CHANCE_TO_DODGE, MISS_CHANCE, XP_BONUS, GOLD_BONUS);
+                case HELMET -> Stream.of(CHANCE_TO_DODGE, XP_BONUS, GOLD_BONUS);
+                case VEST -> Stream.of(CRITICAL_HIT_MULTIPLIER, CHANCE_TO_DODGE, MISS_CHANCE, XP_BONUS, GOLD_BONUS);
                 case GLOVES ->
-                        List.of(CRITICAL_HIT_CHANCE, MISS_CHANCE, KNOCK_OUT_CHANCE, CRITICAL_HIT_MULTIPLIER, XP_BONUS, GOLD_BONUS);
-                case BOOTS -> List.of(CRITICAL_HIT_CHANCE, KNOCK_OUT_CHANCE, MISS_CHANCE, XP_BONUS, GOLD_BONUS);
+                        Stream.of(CRITICAL_HIT_CHANCE, MISS_CHANCE, KNOCK_OUT_CHANCE, CRITICAL_HIT_MULTIPLIER, XP_BONUS, GOLD_BONUS);
+                case BOOTS -> Stream.of(CRITICAL_HIT_CHANCE, KNOCK_OUT_CHANCE, MISS_CHANCE, XP_BONUS, GOLD_BONUS);
             };
-            attribute = applicableAttributes.get(getRandomInt(0, applicableAttributes.size() - 1));
+            attribute = applicableAttributes.filter(effectAttribute -> !excludedAttributes.contains(effectAttribute)).findAny();
             action = MULTIPLY;
             log.debug("Item {} is wearable, attribute: {}, action: {}", item.getId(), attribute, action);
         } else if (item instanceof Weapon) {
-            applicableAttributes = List.of(CHANCE_TO_DODGE, XP_BONUS, GOLD_BONUS, MAX_ARMOR,
+            applicableAttributes = Stream.of(CHANCE_TO_DODGE, XP_BONUS, GOLD_BONUS, MAX_ARMOR,
                     HEALTH_MAX, HEALTH_MAX_ONLY, MANA_MAX, MANA_MAX_ONLY);
-            attribute = applicableAttributes.get(getRandomInt(0, applicableAttributes.size() - 1));
-            if (attribute.equals(CHANCE_TO_DODGE)) {
+            attribute = applicableAttributes.filter(effectAttribute -> !excludedAttributes.contains(effectAttribute)).findAny();
+            if (attribute.isPresent() && CHANCE_TO_DODGE.equals(attribute.get())) {
                 action = MULTIPLY;
             } else {
                 action = Action.values()[getRandomInt(0, Action.values().length)];
@@ -135,7 +136,11 @@ public class ItemEffectsGenerator {
             //TODO: add case for usable
             return Optional.empty();
         }
-        effect = effectFactory.generateItemEffect(item, attribute, action, expectedWeightChange);
+        if (attribute.isEmpty()) {
+            log.warn("No applicable attribute found for item {} with expected weight change {}", item.getId(), expectedWeightChange);
+            return Optional.empty();
+        }
+        effect = effectFactory.generateItemEffect(item, attribute.get(), action, expectedWeightChange);
         log.debug("Generated effect: {}", effect);
         item.getEffects().add(effect);
         item = itemService.saveItem(item);
