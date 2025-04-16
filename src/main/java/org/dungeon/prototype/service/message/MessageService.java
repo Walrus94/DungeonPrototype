@@ -87,6 +87,7 @@ public class MessageService {
     @Autowired
     private KeyboardService keyboardService;
 
+    @ChatStateUpdate(from = AWAITING_NICKNAME, to = PRE_GAME_MENU)
     public void sendStartMessage(Long chatId, String nickname, Boolean hasSavedGame) {
         messageSender.sendPhotoMessage(
                 chatId,

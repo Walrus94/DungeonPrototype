@@ -61,7 +61,7 @@ public class DungeonBot extends SpringWebhookBot {
             //handles message text if present
             long chatId = update.getMessage().getChatId();
             if (!authUsers.isEmpty() && !authUsers.contains(chatId)) {
-                log.info("User {} failed to authenticate", chatId);
+                log.warn("User {} failed to authenticate", chatId);
                 throw new ChatException(AUTH_EXCEPTION_MESSAGE, chatId);
             }
             log.info("User {} successfully authenticated!", chatId);
@@ -157,6 +157,7 @@ public class DungeonBot extends SpringWebhookBot {
     }
 
     private void processTextMessage(Long chatId, String messageText) {
+        log.debug("Received message: {} from chatId: {}", messageText, chatId);
         if (messageText.equals("/start") && chatStateService.isStartAvailable(chatId)) {
             botCommandHandler.processStartAction(chatId);
             return;

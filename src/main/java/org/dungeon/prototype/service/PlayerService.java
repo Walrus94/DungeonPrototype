@@ -2,7 +2,6 @@ package org.dungeon.prototype.service;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.dungeon.prototype.annotations.aspect.ChatStateUpdate;
 import org.dungeon.prototype.exception.EntityNotFoundException;
 import org.dungeon.prototype.model.inventory.Inventory;
 import org.dungeon.prototype.model.player.Player;
@@ -21,8 +20,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.Objects.nonNull;
-import static org.dungeon.prototype.bot.state.ChatState.AWAITING_NICKNAME;
-import static org.dungeon.prototype.bot.state.ChatState.PRE_GAME_MENU;
 import static org.dungeon.prototype.util.PlayerUtil.getPrimaryAttack;
 import static org.dungeon.prototype.util.PlayerUtil.getSecondaryAttack;
 
@@ -73,7 +70,6 @@ public class PlayerService {
      * @param chatId current chat id
      * @param nickname new player's nickname
      */
-    @ChatStateUpdate(from = AWAITING_NICKNAME, to = PRE_GAME_MENU)
     public void registerPlayerAndSendStartMessage(Long chatId, String nickname) {
         val player = addNewPlayer(chatId, nickname);
         messageService.sendStartMessage(chatId, player.getNickname(), false);
