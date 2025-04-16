@@ -117,7 +117,7 @@ public class ItemGenerator {
         asyncJobHandler.submitItemGenerationTask(() -> generateWeapons(chatId), TaskType.WEAPON_GENERATION, chatId);
         asyncJobHandler.submitItemGenerationTask(() -> generateWearables(chatId), TaskType.WEARABLE_GENERATION, chatId);
 
-        asyncJobHandler.submitEffectGenerationTask(() -> addEffects(chatId, weaponPerGame, wearablesPerGame), TaskType.EFFECTS_GENERATION, chatId);
+        asyncJobHandler.submitEffectGenerationTask(() -> addEffects(chatId), TaskType.EFFECTS_GENERATION, chatId);
     }
 
     private void generateWeapons(Long chatId) {
@@ -261,7 +261,7 @@ public class ItemGenerator {
         log.info("{} wearables without effects generated.", savedItems.size());
     }
 
-    private void addEffects(Long chatId, int weaponLimit, int wearableLimit) {
+    private void addEffects(Long chatId) {
         val weightScale = itemService.findAllItemsWeightsByChatId(chatId).entrySet().stream()
                 .collect(Collectors.groupingBy(
                         Map.Entry::getValue,
@@ -273,8 +273,8 @@ public class ItemGenerator {
         int weaponCount = 0;
         int wearableCount = 0;
         val vanillaItemsIds = weightScale.values().stream().flatMap(Collection::stream).toList();
-        while (weaponCount < weaponLimit || wearableCount < wearableLimit) {
-            val multipleItemsWeight = weightScale.entrySet().stream().filter(e -> e.getValue().size() > 0).toList();
+        while (weaponCount < weaponPerGame || wearableCount < wearablesPerGame) {
+            val multipleItemsWeight = weightScale.entrySet().stream().filter(e -> e.getValue().size() > 1).toList();
             double largestSegment = 0.0;
             for (Map.Entry<Double, LinkedList<String>> entry : multipleItemsWeight.size() > 0 ? multipleItemsWeight : weightScale.entrySet()) {
                 if (entry.getKey() - weightScale.lowerKey(entry.getKey()) > weightScale.higherKey(entry.getKey()) - entry.getKey()) {

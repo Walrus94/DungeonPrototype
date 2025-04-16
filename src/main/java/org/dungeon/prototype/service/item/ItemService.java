@@ -245,8 +245,6 @@ public class ItemService {
         double min = weights.stream().mapToDouble(weight -> weight).min().getAsDouble();
 
         return (max - min) * playerLuck / 10.0;
-
-
     }
 
     private Set<Item> findItems(Long chatId, List<String> itemIds) {
