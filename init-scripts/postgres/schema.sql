@@ -23,7 +23,7 @@ VALUES ('player_attack',
         '{0.7, 0.8, 0.0, 1.1, 1.3},' || --Slash
         '{1.1, 0.9, 0.7, 0.0, 1.2},' || --Blunt
         '{1.0, 1.0, 1.0, 1.0, 1.0}' ||  --Strike
-        '}');
+        '}'::double precision[][]);
 
 INSERT INTO template_matrices (name, data)
 VALUES ('monster_attack',
@@ -34,6 +34,6 @@ VALUES ('monster_attack',
         '{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0},' || --Bite
         '{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.7, 0.7, 0.0, 0.0},' || --Vampire Bite
         '{0.0, 0.0, 0.8, 0.0, 0.0, 0.0, 0.7, 0.8, 0.0, 0.0},' || --Poison Spit
-        '{1.3, 1.2, 1.1, 0.0, 0.0, 0.0, 0.8, 0.7, 0.9, 1.3},' || --Fire Spit
-        '}');
+        '{1.3, 1.2, 1.1, 0.0, 0.0, 0.0, 0.8, 0.7, 0.9, 1.3}' || --Fire Spit
+        '}'::double precision[][]);
 
