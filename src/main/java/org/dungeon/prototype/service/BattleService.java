@@ -72,7 +72,6 @@ public class BattleService {
     }
 
     private void monsterAttacks(Player player, Monster monster) {
-        val defense = balanceMatrixService.getBalanceMatrixValue(player.getChatId(), "player_defense", monster.getMonsterClass().ordinal(), player.getInventory().getVest().getAttributes().getWearableMaterial().ordinal());
         if (nonNull(monster.getEffects()) && monster.getEffects().stream().anyMatch(monsterEffect -> MOVING.equals(monsterEffect.getAttribute()))) {
             return;
         }
@@ -84,8 +83,14 @@ public class BattleService {
         val monsterAttack = monster.getCurrentAttack();
         val inventory = player.getInventory();
         val attackFactor = switch (monsterAttack.getAttackType()) {
-            case SLASH, GROWL -> inventory.getHelmet() == null ? 1.0 : balanceMatrixService.getBalanceMatrixValue(player.getChatId(), "monster_attack", monsterAttack.getAttackType().ordinal(), player.getInventory().getHelmet().getAttributes().getWearableMaterial().ordinal());
-            default -> inventory.getVest() == null ? 1.0 : balanceMatrixService.getBalanceMatrixValue(player.getChatId(), "monster_attack", monsterAttack.getAttackType().ordinal(), player.getInventory().getVest().getAttributes().getWearableMaterial().ordinal());
+            case SLASH, GROWL -> inventory.getHelmet() == null ? 1.0 :
+                balanceMatrixService.getBalanceMatrixValue(player.getChatId(), "monster_attack",
+                        monsterAttack.getAttackType().ordinal(),
+                        player.getInventory().getHelmet().getAttributes().getWearableMaterial().ordinal());
+            default -> inventory.getVest() == null ? 1.0 :
+                balanceMatrixService.getBalanceMatrixValue(player.getChatId(), "monster_attack",
+                        monsterAttack.getAttackType().ordinal(),
+                        player.getInventory().getVest().getAttributes().getWearableMaterial().ordinal());
         };
         val chanceToDodge = player.getChanceToDodge();
         log.info("Chance to dodge: {}", chanceToDodge);
@@ -94,7 +99,7 @@ public class BattleService {
             return;
         }
         log.info("Monster attack: {}", monsterAttack.getAttackType());
-        val diff = (int) (monsterAttack.getAttack() * (attackFactor) / defense);
+        val diff = (int) (monsterAttack.getAttack() * (attackFactor));
         if (player.getDefense() > 0) {
             player.decreaseDefence(diff);
             log.info("Player's armor decreased by: {}", 1);
@@ -109,7 +114,6 @@ public class BattleService {
         val attack = ATTACK.equals(attackType) ? player.getPrimaryAttack() :
                 player.getSecondaryAttack();
         val attackFactor = balanceMatrixService.getBalanceMatrixValue(player.getChatId(), "player_attack", attack.getAttackType().ordinal(), monster.getMonsterClass().ordinal());
-        val defenseFactor = balanceMatrixService.getBalanceMatrixValue(player.getChatId(), "monster_defense", monster.getMonsterClass().ordinal(), attack.getAttackType().ordinal());
         val chanceToMiss = attack.getChanceToMiss();
         log.info("Chance to miss: {}", chanceToMiss);
         if (RandomUtil.flipAdjustedCoin(chanceToMiss)) {
@@ -134,7 +138,7 @@ public class BattleService {
             monster.addEffect(knockOut);
         }
         log.info("Player attacks with attack type: {}", attack.getAttackType());
-        val decreaseAmount = (int) (attackPower * defenseFactor);
+        val decreaseAmount = (int) attackPower;
         monster.decreaseHp(decreaseAmount);
         log.info("Monster health decreased by {}", decreaseAmount);
     }

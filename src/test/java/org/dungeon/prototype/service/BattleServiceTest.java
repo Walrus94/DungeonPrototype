@@ -56,8 +56,6 @@ class BattleServiceTest extends BaseServiceUnitTest {
             randomUtilMock.when(() -> RandomUtil.flipAdjustedCoin(1.0)).thenReturn(true);
             randomUtilMock.when(() -> RandomUtil.flipAdjustedCoin(0.0)).thenReturn(false);
 
-            when(balanceMatrixService.getBalanceMatrixValue(CHAT_ID, "monster_defense", 0, 0)).thenReturn(0.9);
-            when(balanceMatrixService.getBalanceMatrixValue(CHAT_ID, "player_defense", 0, 0)).thenReturn(1.1);
             when(balanceMatrixService.getBalanceMatrixValue(CHAT_ID, "player_attack", 0,0)).thenReturn(1.0);
 
             doNothing().when(messageService).sendMonsterRoomMessage(CHAT_ID, player, currentRoom);
@@ -65,8 +63,8 @@ class BattleServiceTest extends BaseServiceUnitTest {
             battleService.attack(CHAT_ID, player, currentRoom, CallbackType.ATTACK);
 
             verify(playerService).updatePlayer(player);
-            assertEquals(16, player.getHp());
-            assertEquals(6, monster.getHp());
+            assertEquals(15, player.getHp());
+            assertEquals(5, monster.getHp());
             verify(monsterService).updateMonster(monster);
             verify(messageService).sendMonsterRoomMessage(CHAT_ID, player, currentRoom);
         }
@@ -87,7 +85,6 @@ class BattleServiceTest extends BaseServiceUnitTest {
             randomUtilMock.when(() -> RandomUtil.flipAdjustedCoin(0.0)).thenReturn(false);
 
             when(balanceMatrixService.getBalanceMatrixValue(CHAT_ID, "player_attack", 0,0)).thenReturn(1.1);
-            when(balanceMatrixService.getBalanceMatrixValue(CHAT_ID, "monster_defense", 0,0)).thenReturn(0.9);
             doNothing().when(levelService).updateAfterMonsterKill(eq(currentRoom));
             doNothing().when(messageService).sendRoomMessage(CHAT_ID, player, currentRoom);
 
@@ -115,8 +112,6 @@ class BattleServiceTest extends BaseServiceUnitTest {
             randomUtilMock.when(() -> RandomUtil.flipAdjustedCoin(0.0)).thenReturn(false);
 
             when(balanceMatrixService.getBalanceMatrixValue(CHAT_ID, "player_attack", 0,0)).thenReturn(1.1);
-            when(balanceMatrixService.getBalanceMatrixValue(CHAT_ID, "monster_defense", 0,0 )).thenReturn(0.9);
-            when(balanceMatrixService.getBalanceMatrixValue(CHAT_ID, "player_defense", 0, 0)).thenReturn(1.0);
 
             doNothing().when(messageService).sendMonsterRoomMessage(CHAT_ID, player, currentRoom);
 

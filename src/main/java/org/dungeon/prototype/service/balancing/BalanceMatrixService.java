@@ -27,9 +27,7 @@ public class BalanceMatrixService {
     public void initializeBalanceMatrices(long chatId) {
         log.info("Initializing balance matrices for chatId: {}", chatId);
         initializeBalanceMatrix(chatId, "player_attack", WeaponAttackType.values().length, MonsterClass.values().length);
-        initializeBalanceMatrix(chatId, "player_defense", MonsterClass.values().length, WearableMaterial.values().length);
         initializeBalanceMatrix(chatId, "monster_attack", MonsterAttackType.values().length, WearableMaterial.values().length);
-        initializeBalanceMatrix(chatId, "monster_defense", MonsterClass.values().length, WeaponAttackType.values().length);
     }
 
     public double getBalanceMatrixValue(long chatId, String name, int row, int col) {
