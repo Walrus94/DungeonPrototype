@@ -321,17 +321,18 @@ public class ItemGenerator {
                         weightScale.remove(initialWeight);
                     } else {
                         oldValueList.remove(itemId);
+                        weightScale.put(initialWeight, oldValueList);
                     }
                     insertNewItem(Pair.create(itemId, updatedWeight.get()), weightScale);
+                    switch (itemService.findItem(chatId, itemId).getItemType()) {
+                        case WEAPON:
+                            weaponCount++;
+                        case WEARABLE:
+                            wearableCount++;
+                    }
                 }
             }
 
-            switch (itemService.findItem(chatId, itemId).getItemType()) {
-                case WEAPON:
-                    weaponCount++;
-                case WEARABLE:
-                    wearableCount++;
-            }
         }
     }
 

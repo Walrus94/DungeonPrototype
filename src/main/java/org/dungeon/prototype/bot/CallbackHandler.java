@@ -13,6 +13,7 @@ import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.properties.KeyboardButtonProperties;
 import org.dungeon.prototype.service.BattleService;
 import org.dungeon.prototype.service.PlayerService;
+import org.dungeon.prototype.service.balancing.BalanceMatrixService;
 import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.inventory.InventoryService;
 import org.dungeon.prototype.service.item.generation.ItemGenerator;
@@ -60,6 +61,8 @@ public class CallbackHandler {
     private EffectService effectService;
     @Autowired
     private BattleService battleService;
+    @Autowired
+    private BalanceMatrixService balanceMatrixService;
     @Autowired
     private TreasureService treasureService;
     @Autowired
@@ -208,6 +211,7 @@ public class CallbackHandler {
     }
 
     private void handleStartingNewGame(Long chatId) {
+        balanceMatrixService.initializeBalanceMatrices(chatId);
         itemGenerator.generateItems(chatId);
         asyncJobHandler.submitTask(() -> {
             val defaultInventory = inventoryService.getDefaultInventory(chatId);
