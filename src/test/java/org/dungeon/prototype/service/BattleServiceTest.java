@@ -67,6 +67,7 @@ class BattleServiceTest extends BaseServiceUnitTest {
             verify(playerService).updatePlayer(player);
             assertEquals(16, player.getHp());
             assertEquals(6, monster.getHp());
+            verify(monsterService).updateMonster(monster);
             verify(messageService).sendMonsterRoomMessage(CHAT_ID, player, currentRoom);
         }
     }
