@@ -29,4 +29,10 @@ public class BalanceMatrixRepository {
         String sql = "SELECT data[?][?] FROM ? WHERE chat_id = ? AND name = ?";
         return jdbcTemplate.queryForObject(sql, Double.class, row, col, "matrices_" + env, chatId, name);
     }
+
+    public void clearBalanceMatrix(long chatId, String name) {
+        String sql = "DELETE FROM matrices_" + env + " WHERE chat_id = ? AND name = ?";
+        jdbcTemplate.update(sql, chatId, name);
+
+    }
 }

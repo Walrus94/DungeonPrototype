@@ -48,4 +48,9 @@ public class BalanceMatrixService {
                 new BalanceMatrixGenerationRequest(chatId, name, cols, rows, dataBase)
         );
     }
+
+    public void clearMatrices(long chatId) {
+        balanceMatrixRepository.clearBalanceMatrix(chatId, "player_attack");
+        balanceMatrixRepository.clearBalanceMatrix(chatId, "monster_attack");
+    }
 }

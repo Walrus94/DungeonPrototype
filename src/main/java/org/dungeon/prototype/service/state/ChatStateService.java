@@ -6,6 +6,7 @@ import org.dungeon.prototype.bot.state.ChatContext;
 import org.dungeon.prototype.bot.state.ChatState;
 import org.dungeon.prototype.exception.ChatStateUpdateException;
 import org.dungeon.prototype.service.PlayerService;
+import org.dungeon.prototype.service.balancing.BalanceMatrixService;
 import org.dungeon.prototype.service.item.ItemService;
 import org.dungeon.prototype.service.level.LevelService;
 import org.dungeon.prototype.service.message.MessageService;
@@ -41,6 +42,8 @@ public class ChatStateService {
     LevelService levelService;
     @Autowired
     ItemService itemService;
+    @Autowired
+    BalanceMatrixService balanceMatrixService;
     @Autowired
     MessageService messageService;
 
@@ -131,7 +134,10 @@ public class ChatStateService {
             var chatState = chatStateByIdMap.get(chatId);
             switch (chatState.getChatState()) {
                 case AWAITING_NICKNAME -> playerService.removePlayer(chatId);
-                case GENERATING_ITEMS, GENERATING_PLAYER -> itemService.dropCollection(chatId);
+                case GENERATING_ITEMS, GENERATING_PLAYER -> {
+                    itemService.dropCollection(chatId);
+                    balanceMatrixService.clearMatrices(chatId);
+                }
                 case GENERATING_LEVEL -> {
                     itemService.dropCollection(chatId);
                     levelService.remove(chatId);
