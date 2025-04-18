@@ -14,6 +14,7 @@ import org.dungeon.prototype.service.balancing.BalanceMatrixService;
 import org.dungeon.prototype.service.level.LevelService;
 import org.dungeon.prototype.service.message.MessageService;
 import org.dungeon.prototype.service.room.MonsterService;
+import org.dungeon.prototype.service.stats.GameResultService;
 import org.dungeon.prototype.util.RandomUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,8 @@ public class BattleService {
     private MessageService messageService;
     @Autowired
     private BalanceMatrixService balanceMatrixService;
+    @Autowired
+    private GameResultService gameResultService;
 
     /**
      * Processes "attack" action, which performs attacking monster with selected weapon,
@@ -56,9 +59,11 @@ public class BattleService {
 
         if (monster.getHp() < 1) {
             log.info("Monster killed!");
+            gameResultService.saveDefeatedMonster(chatId);
             levelService.updateAfterMonsterKill(currentRoom);
             val newLevelAchieved = player.addXp(monster.getXpReward());
             if (newLevelAchieved) {
+                gameResultService.playerLevelReached(chatId);
                 messageService.sendLevelUpgradeMessage(chatId, player);
             } else {
                 playerService.updatePlayer(player);

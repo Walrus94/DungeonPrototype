@@ -26,6 +26,7 @@ import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.level.generation.LevelGenerationService;
 import org.dungeon.prototype.service.message.MessageService;
 import org.dungeon.prototype.service.room.RoomService;
+import org.dungeon.prototype.service.stats.GameResultService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -52,6 +53,8 @@ public class LevelService {
     private MessageService messageService;
     @Autowired
     private EffectService effectService;
+    @Autowired
+    private GameResultService gameResultService;
 
     /**
      * Generates items and first level of new game
@@ -72,6 +75,7 @@ public class LevelService {
     public void nextLevel(Long chatId, Player player) {
         val number = getLevelNumber(chatId) + 1;
         val level = startNewLevel(chatId, number);
+        gameResultService.dungeonLevelReached(chatId);
         player = effectService.updateArmorEffect(player);
         player.restoreArmor();
         playerService.updatePlayer(player);
@@ -115,7 +119,8 @@ public class LevelService {
             player.setCurrentRoomId(nextRoom.getId());
             player.setDirection(newDirection);
             playerService.updatePlayer(player);
-            if (nextRoom.getRoomContent() instanceof MonsterRoom) {
+            if (nextRoom.getRoomContent() instanceof MonsterRoom monsterRoom) {
+                gameResultService.addCurrentMonster(chatId, monsterRoom.getMonster().getMonsterClass(), monsterRoom.getMonster().getWeight());
                 messageService.sendMonsterRoomMessage(chatId, player, nextRoom);
             } else {
                 messageService.sendRoomMessage(chatId, player, nextRoom);

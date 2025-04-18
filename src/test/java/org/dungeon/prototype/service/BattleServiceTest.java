@@ -8,6 +8,7 @@ import org.dungeon.prototype.service.balancing.BalanceMatrixService;
 import org.dungeon.prototype.service.level.LevelService;
 import org.dungeon.prototype.service.message.MessageService;
 import org.dungeon.prototype.service.room.MonsterService;
+import org.dungeon.prototype.service.stats.GameResultService;
 import org.dungeon.prototype.util.RandomUtil;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,8 @@ class BattleServiceTest extends BaseServiceUnitTest {
     private MonsterService monsterService;
     @Mock
     private BalanceMatrixService balanceMatrixService;
+    @Mock
+    private GameResultService gameResultService;
     @Mock
     private MessageService messageService;
     @InjectMocks
@@ -86,6 +89,7 @@ class BattleServiceTest extends BaseServiceUnitTest {
 
             when(balanceMatrixService.getBalanceMatrixValue(CHAT_ID, "player_attack", 0,0)).thenReturn(1.1);
             doNothing().when(levelService).updateAfterMonsterKill(eq(currentRoom));
+            doNothing().when(gameResultService).saveDefeatedMonster(CHAT_ID);
             doNothing().when(messageService).sendRoomMessage(CHAT_ID, player, currentRoom);
 
             battleService.attack(CHAT_ID, player, currentRoom, CallbackType.ATTACK);

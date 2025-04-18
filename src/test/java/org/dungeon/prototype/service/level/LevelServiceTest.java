@@ -29,6 +29,7 @@ import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.level.generation.LevelGenerationService;
 import org.dungeon.prototype.service.message.MessageService;
 import org.dungeon.prototype.service.room.RoomService;
+import org.dungeon.prototype.service.stats.GameResultService;
 import org.dungeon.prototype.util.LevelUtil;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -76,6 +77,8 @@ class LevelServiceTest extends BaseServiceUnitTest {
     private PlayerService playerService;
     @Mock
     private EffectService effectService;
+    @Mock
+    private GameResultService gameResultService;
     @Mock
     private LevelRepository levelRepository;
     @Mock
@@ -145,6 +148,7 @@ class LevelServiceTest extends BaseServiceUnitTest {
         when(levelGenerationService.generateAndPopulateLevel(CHAT_ID, 2)).thenReturn(level);
         when(levelRepository.save(any(LevelDocument.class))).thenReturn(document);
         when(effectService.updateArmorEffect(player)).thenReturn(player);
+        doNothing().when(gameResultService).dungeonLevelReached(CHAT_ID);
         doNothing().when(messageService).sendLevelGeneratingInfoMessage(CHAT_ID, 2);
 
         levelService.nextLevel(CHAT_ID, player);

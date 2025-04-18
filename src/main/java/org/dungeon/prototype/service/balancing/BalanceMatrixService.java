@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -96,5 +97,9 @@ public class BalanceMatrixService {
         balanceMatrixRepository.clearBalanceMatrix(chatId, "weapon_size_adjustment");
         balanceMatrixRepository.clearBalanceMatrix(chatId, "weapon_attack_type_adjustment");
         balanceMatrixRepository.clearBalanceMatrix(chatId, "items_quality_adjustment");
+    }
+
+    public Map<String, Double[][]> getAllMatrices(long chatId) {
+        return balanceMatrixRepository.getAllMatrices(chatId);
     }
 }

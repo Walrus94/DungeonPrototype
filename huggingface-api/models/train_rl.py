@@ -1,4 +1,5 @@
 from stable_baselines3 import PPO
+from db.mongo import load_game_results
 from db.postgres import load_template_matrix
 from models.rl_env import BalanceAdjustmentEnv
 import asyncio
@@ -7,7 +8,9 @@ async def train_rl_model(chat_id, database, matrix_name):
     """Train RL model to balance matrices."""
     template_matrix = await load_template_matrix(chat_id, database, matrix_name)
 
-    env = BalanceAdjustmentEnv(template_matrix)
+    game_results = await load_game_results(chat_id)
+
+    env = BalanceAdjustmentEnv(template_matrix, game_results)
     model = PPO("MlpPolicy", env, verbose=1)
 
     model.learn(total_timesteps=5000)
