@@ -52,7 +52,7 @@ VALUES ('weapon_handling_type_adjustment',
         {0.0, 0.0, 1.05, 0.95},
         {0.0, 0.0, 1.1, 1.2},
         {0.0, 0.0, 0.9, 1.1},
-        {0.0, 0.0, 1.0, 1.0}'::double precision[][]);
+        {0.0, 0.0, 1.0, 1.0}}'::double precision[][]);
 
 INSERT INTO template_matrices (name, data)
 VALUES ('weapon_material_adjustment',
@@ -61,7 +61,7 @@ VALUES ('weapon_material_adjustment',
         {0.0, 1.05, 1.1, 1.05, 1.3, 1.3, 1.5, 1.4, 1.2, 1.2},
         {1.05, 0.0, 0.0, 0.0, 1.2, 1.3, 1.4, 1.5, 1.5, 1.3},
         {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
-        {0.9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}'::double precision[][]);
+        {0.9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}}'::double precision[][]);
 
 INSERT INTO template_matrices (name, data)
 VALUES ('weapon_handler_material_adjustment',
