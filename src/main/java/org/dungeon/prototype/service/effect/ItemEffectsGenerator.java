@@ -111,6 +111,7 @@ public class ItemEffectsGenerator {
         Stream<EffectAttribute> applicableAttributes;
         val excludedAttributes = item.getEffects().stream().map(Effect::getAttribute).toList();
         log.info("Generating item effect for item {} with expected weight change {}", item.getId(), expectedWeightChange);
+        log.debug("Excluded attributes: {}", excludedAttributes);
         if (item instanceof Wearable wearable) {
             applicableAttributes = switch (wearable.getAttributes().getWearableType()) {
                 case HELMET -> Stream.of(CHANCE_TO_DODGE, XP_BONUS, GOLD_BONUS);

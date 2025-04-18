@@ -4,6 +4,7 @@ from models.predict import generate_balance_matrix
 from db.postgres import save_balance_matrix
 
 async def process_kafka_balance_message(message):
+    logging.debug("Processing Kafka message for balance matrix generation.")
     """Handles balance matrix generation requests from Kafka."""
     try:
         data = json.loads(message)

@@ -23,6 +23,7 @@ llm = Llama.from_pretrained(
 )
 
 def process_kafka_item_message(message):
+    logging.debug("Processing Kafka message for item naming.")
     try:
         # Deserialize the Kafka message to a Python dictionary
         item_data = json.loads(message)
