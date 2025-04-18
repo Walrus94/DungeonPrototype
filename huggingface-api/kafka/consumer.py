@@ -41,7 +41,7 @@ def initialize_consumer():
 
 kafka_consumer = initialize_consumer()
 
-def consume_messages():
+async def consume_messages():
     """Listens for balance matrix requests."""
     while True:
         msg = kafka_consumer.poll(1.0)
@@ -54,9 +54,9 @@ def consume_messages():
         logging.debug(f"Received message: {msg.value().decode('utf-8')}")
         topic = msg.topic()
         if topic == KAFKA_TOPIC_ITEM_NAMING:
-            process_kafka_item_message(msg.value().decode('utf-8'))
+            await process_kafka_item_message(msg.value().decode('utf-8'))
         elif topic == KAFKA_BALANCE_MATRIX_TOPIC:
-            process_kafka_balance_message(msg.value().decode('utf-8'))
+            await process_kafka_balance_message(msg.value().decode('utf-8'))
 
 if __name__ == '__main__':
     consume_messages()

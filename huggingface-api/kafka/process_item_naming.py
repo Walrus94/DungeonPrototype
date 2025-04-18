@@ -22,7 +22,7 @@ llm = Llama.from_pretrained(
     local_dir=HF_MODEL_FILE
 )
 
-def process_kafka_item_message(message):
+async def process_kafka_item_message(message):
     logging.debug("Processing Kafka message for item naming.")
     try:
         # Deserialize the Kafka message to a Python dictionary
