@@ -6,7 +6,6 @@ import lombok.val;
 import org.dungeon.prototype.model.inventory.attributes.MagicType;
 import org.dungeon.prototype.model.inventory.items.Weapon;
 import org.dungeon.prototype.model.weight.Weight;
-import org.dungeon.prototype.properties.WeaponGenerationProperties;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.util.BitSet;
@@ -30,19 +29,12 @@ public class GenerationUtil {
         return buyingPriceRatio;
     }
 
-    public static void applyAdjustment(Weapon weapon, WeaponGenerationProperties.AdjustmentAttributes adjustmentAttributes) {
-        weapon.setAttack((int) (weapon.getAttack() * adjustmentAttributes.getAttackRatio()));
-        weapon.setChanceToMiss(weapon.getChanceToMiss() * adjustmentAttributes.getChanceToMissRatio());
-        weapon.setCriticalHitChance(weapon.getCriticalHitChance() * adjustmentAttributes.getCriticalChanceRatio());
-        weapon.setCriticalHitMultiplier(weapon.getCriticalHitMultiplier() * adjustmentAttributes.getCriticalMultiplierRatio());
-        weapon.setChanceToKnockOut(weapon.getChanceToKnockOut() * adjustmentAttributes.getKnockOutChanceRatio());
-    }
-    public static void multiplyAllParametersBy(Weapon weapon, double multiplier) {
-        weapon.setAttack((int) (weapon.getAttack() * multiplier));
-        weapon.setChanceToKnockOut(weapon.getChanceToKnockOut() * multiplier);
-        weapon.setCriticalHitChance(weapon.getCriticalHitChance() * multiplier);
-        weapon.setCriticalHitMultiplier(weapon.getCriticalHitMultiplier() * multiplier);
-        weapon.setChanceToMiss(weapon.getChanceToMiss() / multiplier);
+    public static void applyAdjustment(Weapon weapon, double[] adjustmentAttributes) {
+        weapon.setAttack((int) (weapon.getAttack() * adjustmentAttributes[0]));
+        weapon.setChanceToMiss(weapon.getChanceToMiss() * adjustmentAttributes[1]);
+        weapon.setCriticalHitChance(weapon.getCriticalHitChance() * adjustmentAttributes[2]);
+        weapon.setCriticalHitMultiplier(weapon.getCriticalHitMultiplier() * adjustmentAttributes[3]);
+        weapon.setChanceToKnockOut(weapon.getChanceToKnockOut() * adjustmentAttributes[4]);
     }
 
     public static BitSet getDefaultAttackPattern() {

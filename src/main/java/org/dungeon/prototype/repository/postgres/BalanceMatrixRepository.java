@@ -35,4 +35,9 @@ public class BalanceMatrixRepository {
         jdbcTemplate.update(sql, chatId, name);
 
     }
+
+    public double[][] getBalanceMatrix(long chatId, String name) {
+        String sql = "SELECT data FROM matrices_" + env + " WHERE chat_id = ? AND name = ?";
+        return jdbcTemplate.queryForObject(sql, double[][].class, chatId, name);
+    }
 }
