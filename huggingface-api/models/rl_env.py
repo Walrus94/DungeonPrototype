@@ -47,7 +47,7 @@ class BalanceAdjustmentEnv(gym.Env):
         for game_result in self.game_results:
             # Penalize for death caused by a monster, scaled by the killer's weight
             if game_result["killer"]:
-                killer_weight = np.sum(game_result["killer"]["weight"])  # Sum of killer's weight vector
+                killer_weight = np.linalg.norm(game_result["killer"]["weight"])  # Sum of killer's weight vector
                 reward -= 10  # Base penalty for death
                 reward -= killer_weight * 0.5  # Additional penalty scaled by killer's weight
 
@@ -63,7 +63,7 @@ class BalanceAdjustmentEnv(gym.Env):
 
             # Reward for defeating monsters, scaled by their weight
             for monster in game_result["defeated_monsters"]:
-                monster_weight = np.sum(monster["weight"])  # Sum of monster's weight vector
+                monster_weight = np.linalg.norm(monster["weight"])  # Sum of monster's weight vector
                 reward += monster_weight * 0.5  # Reward scaled by monster's weight
                 reward -= monster["battle_steps"] * 0.01  # Penalize for taking too many steps
 
