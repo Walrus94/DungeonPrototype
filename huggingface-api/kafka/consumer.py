@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from confluent_kafka import Consumer
 from confluent_kafka.admin import AdminClient, NewTopic
 from config.settings import KAFKA_BOOTSTRAP_SERVER, KAFKA_BALANCE_MATRIX_TOPIC, KAFKA_TOPIC_ITEM_NAMING
@@ -59,4 +60,4 @@ async def consume_messages():
             await process_kafka_balance_message(msg.value().decode('utf-8'))
 
 if __name__ == '__main__':
-    consume_messages()
+    asyncio.run(consume_messages())
