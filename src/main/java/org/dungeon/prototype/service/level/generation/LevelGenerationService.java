@@ -134,18 +134,16 @@ public class LevelGenerationService {
         initConnectionSections(grid, clusterConnectionPoints);
         level.setClusterConnectionPoints(clusterConnectionPoints);
 
-        clusters.values().forEach(cluster -> {
-            log.info("Processing cluster: {}", cluster);
-            cluster.setGeneratedGrid((Future<GridSection[][]>) asyncJobHandler.submitMapGenerationTask(() -> generateGridSection(cluster),
-                    TaskType.LEVEL_GENERATION, chatId, cluster.getId()));
-        });
+        val clusterGridMap  = clusters.values().stream().collect(Collectors.toMap(Function.identity(),
+                cluster ->(Future<GridSection[][]>) asyncJobHandler.submitMapGenerationTask(() -> generateGridSection(cluster),
+                    TaskType.LEVEL_GENERATION, chatId, cluster.getId())));
 
-        while (clusters.values().stream().anyMatch(cluster -> !cluster.getGeneratedGrid().isDone())) {
-            clusters.values().stream()
-                    .filter(cluster -> cluster.getGeneratedGrid().isDone())
-                    .findFirst().ifPresent(completedCluster -> {
+        while (clusterGridMap.values().stream().anyMatch(cluster -> !cluster.isDone())) {
+            clusterGridMap.entrySet().stream()
+                    .filter(entry -> entry.getValue().isDone())
+                    .findFirst().ifPresent(completedEntry -> {
                         try {
-                            copyGridSection(grid, completedCluster.getStartConnectionPoint(), completedCluster.getEndConnectionPoint(), completedCluster.getGeneratedGrid().get());
+                            copyGridSection(grid, completedEntry.getKey().getStartConnectionPoint(), completedEntry.getKey().getEndConnectionPoint(), completedEntry.getValue().get());
                         } catch (InterruptedException | ExecutionException e) {
                             throw new DungeonPrototypeException(e.getMessage());
                         }
@@ -159,6 +157,8 @@ public class LevelGenerationService {
     }
 
     private GridSection[][] generateGridSection(LevelGridCluster cluster) {
+        log.info("Generating cluster {} with start point {} and end point {}",
+                cluster.getId(), cluster.getStartConnectionPoint(), cluster.getEndConnectionPoint());
         GridSection[][] clusterGrid = generateEmptyMapGrid(cluster.getStartConnectionPoint(), cluster.getEndConnectionPoint());
         while (!cluster.getWalkers().isEmpty()) {
             for (WalkerBuilder walker : cluster.getWalkers()) {
@@ -169,24 +169,29 @@ public class LevelGenerationService {
             cluster.getWalkers().removeIf(WalkerBuilder::isStopped);
         }
         if (cluster.hasNegativeRooms()) {
-            log.info("Processing negative rooms of cluster {}", clusterGrid);
+            log.info("Processing negative rooms of cluster {}", cluster.getId());
             GridSection endSection = clusterGrid[clusterGrid.length - 1][clusterGrid[0].length - 1];
             processNegativeSections(clusterGrid, cluster, endSection);
         }
         if (cluster.hasDeadEnds()) {
-            log.info("Processing dead ends...");
+            log.info("Processing dead ends of cluster {}...", cluster.getId());
             processDeadEnds(clusterGrid, cluster);
         }
         return clusterGrid;
     }
 
     private void copyGridSection(GridSection[][] grid, Point startConnectionPoint, Point endConnectionPoint, GridSection[][] gridSection) {
+        log.info("Copying grid section from {} to {}",
+                startConnectionPoint, endConnectionPoint);
+        log.debug("Grid section\n{}", printMapGridToLogs(gridSection));
+        log.debug("Grid before copying\n{}", printMapGridToLogs(grid));
         IntStream.range(startConnectionPoint.getX(), endConnectionPoint.getX() + 1)
                 .forEach(x -> IntStream.range(startConnectionPoint.getY(), endConnectionPoint.getY() + 1)
                         .forEach(y -> {
                             if (!isStartOrEnd(x, y, startConnectionPoint, endConnectionPoint))
                                 grid[x][y] = gridSection[x - startConnectionPoint.getX()][y - startConnectionPoint.getY()];
                         }));
+        log.debug("Grid after copying\n{}", printMapGridToLogs(grid));
     }
 
     /**
@@ -433,6 +438,7 @@ public class LevelGenerationService {
     }
 
     private void initConnectionSections(GridSection[][] grid, LinkedList<Point> clusterConnectionPoints) {
+        log.info("Initializing connection sections...");
         for (Point point : clusterConnectionPoints) {
             val section = new GridSection(point.getX(), point.getY());
             section.setConnectionPoint(true);
