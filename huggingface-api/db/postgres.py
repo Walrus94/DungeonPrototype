@@ -7,7 +7,11 @@ async def load_template_matrix(chat_id, database, matrix_name):
         POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_PORT, POSTGRES_DB
     ))
 
-    row = await conn.fetchrow("SELECT data FROM {}.template_matrices WHERE chat_id = {} and name = {} LIMIT 1".format(database, chat_id, matrix_name))
+    query = """
+    SELECT data FROM {}.template_matrices WHERE chat_id = $1 and name = $2 LIMIT 1
+    """.format(database)
+
+    row = await conn.fetchrow(query, chat_id, matrix_name)
     await conn.close()
 
     return np.array(row["data"]) if row else None
