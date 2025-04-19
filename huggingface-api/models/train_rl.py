@@ -4,9 +4,9 @@ from db.postgres import load_template_matrix
 from models.rl_env import BalanceAdjustmentEnv
 import asyncio
 
-async def train_rl_model(chat_id, database, matrix_name):
+async def train_rl_model(chat_id, matrix_name):
     """Train RL model to balance matrices."""
-    template_matrix = await load_template_matrix(chat_id, database, matrix_name)
+    template_matrix = await load_template_matrix(chat_id, matrix_name)
 
     game_results = await load_game_results(chat_id)
 
@@ -16,4 +16,4 @@ async def train_rl_model(chat_id, database, matrix_name):
     model.learn(total_timesteps=5000)
     model.save("balance_rl_model")
 
-asyncio.run(train_rl_model(chat_id, database, matrix_name))
+asyncio.run(train_rl_model(chat_id, matrix_name))

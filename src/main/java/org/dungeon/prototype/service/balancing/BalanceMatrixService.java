@@ -22,8 +22,6 @@ import java.util.Map;
 public class BalanceMatrixService {
     @Value("${generation.items.weapon.weapon-attribute-vector-size}")
     private int weaponAttributeVectorSize;
-    @Value("${spring.datasource.name}")
-    private String dataBase;
 
     @Autowired
     KafkaProducer kafkaProducer;
@@ -80,7 +78,7 @@ public class BalanceMatrixService {
 
     private void initializeBalanceMatrix(long chatId, String name, int rows, int cols) {
         kafkaProducer.sendBalanceMatrixGenerationRequest(
-                new BalanceMatrixGenerationRequest(chatId, name, cols, rows, dataBase)
+                new BalanceMatrixGenerationRequest(chatId, name, cols, rows)
         );
     }
 

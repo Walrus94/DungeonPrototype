@@ -4,7 +4,7 @@ from db.postgres import load_template_matrix
 from db.mongo import load_game_results
 import numpy as np
 
-async def generate_balance_matrix(chat_id, database, matrix_name, columns, rows):
+async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
     """
     Generate a balanced matrix based on game results and template matrix.
     Args:
@@ -17,7 +17,7 @@ async def generate_balance_matrix(chat_id, database, matrix_name, columns, rows)
         Generated matrix of the specified size.
     """
     # Load the template matrix from the database
-    template_matrix = await load_template_matrix(chat_id, database, matrix_name)
+    template_matrix = await load_template_matrix(chat_id, matrix_name)
 
     # Load game results from MongoDB
     game_results = await load_game_results(chat_id)

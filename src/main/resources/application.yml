@@ -2,7 +2,7 @@ spring:
   application:
     name: dungeon-bot
   datasource:
-    url: jdbc:postgresql://localhost:${POSTGRES_DATABASE_PORT}/${POSTGRES_DATABASE_NAME}
+    url: jdbc:postgresql://postgres:${POSTGRES_DATABASE_PORT}/${POSTGRES_DATABASE_NAME}
     name: ${POSTGRES_DATABASE_NAME}
     username: ${POSTGRES_DATABASE_USER}
     password: ${POSTGRES_DATABASE_PASSWORD}

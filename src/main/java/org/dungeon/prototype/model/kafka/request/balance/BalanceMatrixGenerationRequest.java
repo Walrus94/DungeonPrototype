@@ -16,8 +16,6 @@ public class BalanceMatrixGenerationRequest implements KafkaMessage {
     private int cols;
     @JsonProperty("rows")
     private int rows;
-    @JsonProperty("database")
-    private String database;
 
 
     @Override
