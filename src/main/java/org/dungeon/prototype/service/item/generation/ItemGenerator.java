@@ -76,7 +76,7 @@ import static org.dungeon.prototype.util.RandomUtil.getRandomWeightedEnumValue;
 public class ItemGenerator {
     @Value("${generation.items.weapon.weapon-attributes-pool-size}")
     private Integer weaponAttributesPoolSize;
-    @Value("{generation.items.weapon.weapon-attribute-vector-size}")
+    @Value("${generation.items.weapon.weapon-attribute-vector-size}")
     private Integer weaponAttributeVectorSize;
     @Value("${generation.items.weapon.weapon-per-game}")
     private Integer weaponPerGame;

@@ -80,7 +80,14 @@ public class LevelGenerationService {
     public Level generateAndPopulateLevel(Long chatId, Integer levelNumber) {
         var levelMap = generateLevelMap(chatId, levelNumber);
         log.debug("Generated level map\n{}", printMapGridToLogs(levelMap.getGrid()));
-        val futureLevel = (Future<Level>) asyncJobHandler.submitMapPopulationTask(() -> populateLevel(chatId, levelNumber, levelMap), TaskType.LEVEL_GENERATION, chatId);
+        val futureLevel = (Future<Level>) asyncJobHandler.submitMapPopulationTask(() -> {
+            //TODO remove after debugging
+            try {
+                return populateLevel(chatId, levelNumber, levelMap);
+            } catch (Exception e) {
+                throw new DungeonPrototypeException(e.getMessage());
+            }
+        }, TaskType.LEVEL_GENERATION, chatId);
         while (!futureLevel.isDone()) {
             try {
                 return futureLevel.get(1, TimeUnit.MINUTES);
@@ -134,9 +141,16 @@ public class LevelGenerationService {
         initConnectionSections(grid, clusterConnectionPoints);
         level.setClusterConnectionPoints(clusterConnectionPoints);
 
-        val clusterGridMap  = clusters.values().stream().collect(Collectors.toMap(Function.identity(),
-                cluster ->(Future<GridSection[][]>) asyncJobHandler.submitMapGenerationTask(() -> generateGridSection(cluster),
-                    TaskType.LEVEL_GENERATION, chatId, cluster.getId())));
+        val clusterGridMap = clusters.values().stream().collect(Collectors.toMap(Function.identity(),
+                cluster -> (Future<GridSection[][]>) asyncJobHandler.submitMapGenerationTask(() -> {
+                            //todo remove after debugging
+                            try {
+                                return generateGridSection(cluster);
+                            } catch (Exception e) {
+                                throw new DungeonPrototypeException(e.getMessage());
+                            }
+                        },
+                        TaskType.LEVEL_GENERATION, chatId, cluster.getId())));
 
         while (clusterGridMap.values().stream().anyMatch(cluster -> !cluster.isDone())) {
             clusterGridMap.entrySet().stream()
