@@ -29,6 +29,14 @@ public class GameResultService {
         }
     }
 
+    public void addGeneratedVanillaItems(long chatId, Map<Double, Integer> itemsWeightScale) {
+        GameResult gameResult = gameResultMap.get(chatId);
+
+        gameResult.setVanillaItemsWeightScale(itemsWeightScale);
+
+        gameResultMap.put(chatId, gameResult);
+    }
+
     public void addCurrentMonster(long chatId, MonsterClass monsterClass, Weight weight) {
         currentMonster.put(chatId, new MonsterData(monsterClass, weight));
     }

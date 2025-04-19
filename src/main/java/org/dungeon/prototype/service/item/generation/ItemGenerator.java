@@ -28,6 +28,7 @@ import org.dungeon.prototype.service.balancing.BalanceMatrixService;
 import org.dungeon.prototype.service.effect.ItemEffectsGenerator;
 import org.dungeon.prototype.service.item.ItemService;
 import org.dungeon.prototype.service.message.MessageService;
+import org.dungeon.prototype.service.stats.GameResultService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -93,6 +94,8 @@ public class ItemGenerator {
     private MessageService messageService;
     @Autowired
     private BalanceMatrixService balanceMatrixService;
+    @Autowired
+    private GameResultService gameResultService;
     @Autowired
     private ItemEffectsGenerator itemEffectsGenerator;
 
@@ -301,6 +304,11 @@ public class ItemGenerator {
                         TreeMap::new,
                         Collectors.mapping(Map.Entry::getKey, Collectors.toCollection(LinkedList::new))
                 ));
+        gameResultService.addGeneratedVanillaItems(chatId, weightScale.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().size()
+                )));
         log.info("Adding effects to generated items, amount: {}", weightScale.size());
         double startSegmentWeight = 0.0;
         int weaponCount = 0;

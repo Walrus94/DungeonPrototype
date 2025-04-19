@@ -6,6 +6,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.List;
+import java.util.Map;
 
 @Data
 @NoArgsConstructor
@@ -21,4 +22,7 @@ public class GameResultDocument {
     private List<Integer> playerLevelProgression;
     private List<Integer> dungeonLevelProgression;
     private List<MonsterDataDocument> defeatedMonsters;
+
+    private Map<String, List<List<Double>>> balanceMatrices;
+    private Map<Double, Integer> vanillaItemsWeightScale;
 }

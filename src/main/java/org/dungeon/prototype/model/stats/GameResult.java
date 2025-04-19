@@ -18,6 +18,7 @@ public class GameResult {
     private List<MonsterData> defeatedMonsters;
 
     private Map<String, Double[][]> balanceMatrices;
+    private Map<Double, Integer> vanillaItemsWeightScale;
 
     public GameResult(long chatId) {
         this.chatId = chatId;

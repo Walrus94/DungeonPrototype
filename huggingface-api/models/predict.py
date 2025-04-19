@@ -42,7 +42,7 @@ async def generate_balance_matrix(chat_id, database, matrix_name, columns, rows)
     """Use trained RL model to generate a balanced matrix."""
     model = PPO.load("balance_rl_model")
 
-    env = BalanceAdjustmentEnv(generated_matrix, game_results)
+    env = BalanceAdjustmentEnv(generated_matrix, game_results, matrix_name)
     obs = env.reset()
 
     for _ in range(10):  # Adjust matrix over 10 steps

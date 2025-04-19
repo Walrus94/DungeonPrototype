@@ -10,7 +10,7 @@ async def train_rl_model(chat_id, database, matrix_name):
 
     game_results = await load_game_results(chat_id)
 
-    env = BalanceAdjustmentEnv(template_matrix, game_results)
+    env = BalanceAdjustmentEnv(template_matrix, game_results, matrix_name)
     model = PPO("MlpPolicy", env, verbose=1)
 
     model.learn(total_timesteps=5000)
