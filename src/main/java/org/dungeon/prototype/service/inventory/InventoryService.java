@@ -10,8 +10,8 @@ import org.dungeon.prototype.model.inventory.items.Wearable;
 import org.dungeon.prototype.model.player.Player;
 import org.dungeon.prototype.model.room.content.Merchant;
 import org.dungeon.prototype.properties.CallbackType;
-import org.dungeon.prototype.repository.InventoryRepository;
-import org.dungeon.prototype.repository.converters.mapstruct.InventoryMapper;
+import org.dungeon.prototype.repository.mongo.InventoryRepository;
+import org.dungeon.prototype.repository.mongo.converters.mapstruct.InventoryMapper;
 import org.dungeon.prototype.service.PlayerService;
 import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.item.ItemService;
@@ -48,13 +48,11 @@ public class InventoryService {
      * @return inventory, containing primary weapon and vest
      */
     public Inventory getDefaultInventory(Long chatId) {
-        log.info("Setting default inventory");
         messageService.sendPlayerGeneratingInfoMessage(chatId);
+        log.info("Setting default inventory");
         Inventory inventory = new Inventory();
-        inventory.setItems(new ArrayList<>());
         inventory.setVest(getDefaultVest(chatId));
         inventory.setPrimaryWeapon(getDefaultWeapon(chatId));
-        inventory = saveOrUpdateInventory(inventory);
         return inventory;
     }
 

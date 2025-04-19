@@ -1,0 +1,24 @@
+import logging
+import json
+from models.predict import generate_balance_matrix
+from db.postgres import save_balance_matrix
+
+async def process_kafka_balance_message(message):
+    logging.debug("Processing Kafka message for balance matrix generation.")
+    """Handles balance matrix generation requests from Kafka."""
+    try:
+        data = json.loads(message)
+        chat_id = data['chatId']
+        matrix_name = data['name']
+        columns = data['cols']
+        rows = data['rows']
+    except Exception as e:
+        logging.error(f"Error processing message: {str(e)}")
+        return
+
+    logging.debug(f"Generating balance matrix for chatId: {chat_id}, name: {matrix_name}")
+
+    new_matrix = await generate_balance_matrix(chat_id, matrix_name, columns, rows)
+    await save_balance_matrix(chat_id, matrix_name, new_matrix)
+
+    logging.debug(f"Balance matrix saved for chatId: {chat_id}")

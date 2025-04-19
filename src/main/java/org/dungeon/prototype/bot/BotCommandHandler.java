@@ -5,8 +5,10 @@ import lombok.val;
 import org.dungeon.prototype.annotations.aspect.InitializeChatContext;
 import org.dungeon.prototype.service.PlayerService;
 import org.dungeon.prototype.service.inventory.InventoryService;
+import org.dungeon.prototype.service.item.ItemService;
 import org.dungeon.prototype.service.level.LevelService;
 import org.dungeon.prototype.service.message.MessageService;
+import org.dungeon.prototype.service.state.ChatStateService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -18,6 +20,10 @@ public class BotCommandHandler {
     PlayerService playerService;
     @Autowired
     LevelService levelService;
+    @Autowired
+    ChatStateService chatStateService;
+    @Autowired
+    ItemService itemService;
     @Autowired
     InventoryService inventoryService;
     @Autowired

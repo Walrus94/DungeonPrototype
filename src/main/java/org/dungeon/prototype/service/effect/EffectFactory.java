@@ -1,5 +1,6 @@
 package org.dungeon.prototype.service.effect;
 
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.math3.analysis.MultivariateFunction;
 import org.apache.commons.math3.analysis.UnivariateFunction;
@@ -23,12 +24,16 @@ import org.dungeon.prototype.model.effect.attributes.EffectAttribute;
 import org.dungeon.prototype.model.inventory.Item;
 import org.springframework.stereotype.Service;
 
+import static org.dungeon.prototype.model.effect.attributes.Action.MULTIPLY;
+
+@Slf4j
 @Service
 public class EffectFactory {
 
     /**
      * Generates given attribute regeneration effect
-     * @param attribute to regenerate
+     *
+     * @param attribute         to regenerate
      * @param expectedWeightAbs resulting effect expected weight norm
      * @return expirable accumulated addition effect
      */
@@ -63,13 +68,15 @@ public class EffectFactory {
 
     /**
      * Generates item effect to change its weight by expected value
-     * @param item to add effect to
-     * @param attribute attribute to apply
-     * @param action {@link Action#ADD} or {@link Action#MULTIPLY}
+     *
+     * @param item                 to add effect to
+     * @param attribute            attribute to apply
+     * @param action               {@link Action#ADD} or {@link Action#MULTIPLY}
      * @param expectedWeightChange expected weight norm delta
      * @return generated effect
      */
     public Effect generateItemEffect(Item item, EffectAttribute attribute, Action action, double expectedWeightChange) {
+        log.info("Generating item effect for item {} with expected weight change {}", item.getId(), expectedWeightChange);
         UnivariateFunction objective = point -> objectiveEffectWeightChangeFunction(
                 point,
                 item,
@@ -91,15 +98,23 @@ public class EffectFactory {
         // Optimized attributes result
         double optimizedAttribute = result.getPoint();
 
-        return PermanentMultiplicationEffect
-                .builder()
-                .applicableTo(EffectApplicant.ITEM)
-                .attribute(attribute)
-                .multiplier(optimizedAttribute)
-                .build();
+        return MULTIPLY.equals(action) ?
+                PermanentMultiplicationEffect
+                        .builder()
+                        .applicableTo(EffectApplicant.ITEM)
+                        .attribute(attribute)
+                        .multiplier(optimizedAttribute)
+                        .build() :
+                PermanentAdditionEffect
+                        .builder()
+                        .applicableTo(EffectApplicant.ITEM)
+                        .attribute(attribute)
+                        .amount((int) optimizedAttribute)
+                        .build();
     }
 
     private static double objectiveEffectWeightChangeFunction(double point, Item item, EffectAttribute attribute, Action action, double expectedWeightChange) {
+        log.info("Calculating objective function for item {} with expected weight change {}", item.getId(), expectedWeightChange);
         val oldWeight = item.getWeight().toVector();
         switch (action) {
             case ADD -> item.getEffects().add(

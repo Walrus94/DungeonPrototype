@@ -7,6 +7,7 @@ import org.dungeon.prototype.exception.FileLoadingException;
 import org.dungeon.prototype.model.Direction;
 import org.dungeon.prototype.model.room.RoomType;
 import org.dungeon.prototype.properties.CallbackType;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 
@@ -50,6 +51,8 @@ public class FileUtil {
     private static final String RIGHT_DOOR_ASSET = "static/images/room/door/right.png";
     private static final String FORWARD_DOOR_ASSET = "static/images/room/door/forward.png";
 
+    @Value("${bot.files.images}")
+    private String GENERATED_IMAGE_PATH;
 
     public static InputFile getSplashScreenImage(long chatId) {
         ClassPathResource imgFile = new ClassPathResource(SPLASH_SCREEN_IMAGE);
@@ -68,6 +71,19 @@ public class FileUtil {
         ClassPathResource imgFile = new ClassPathResource(DEFAULT_BACKGROUND_ASSET);
         try (InputStream inputStream = imgFile.getInputStream()){
             return ImageIO.read(inputStream);
+        } catch (IOException e) {
+            throw new FileLoadingException(chatId, e.getMessage());
+        }
+    }
+
+    public static InputFile getItemImage(long chatId, String itemId) {
+        ClassPathResource imgFile = new ClassPathResource(GENERATED_IMAGE_PATH + chatId + "_" + itemId + ".png");
+        try (InputStream inputStream = imgFile.getInputStream()){
+            BufferedImage itemImage =  ImageIO.read(inputStream);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(itemImage, "png", baos);
+            InputStream stream = new ByteArrayInputStream(baos.toByteArray());
+            return new InputFile(stream, chatId + "_" + itemId + ".png");
         } catch (IOException e) {
             throw new FileLoadingException(chatId, e.getMessage());
         }

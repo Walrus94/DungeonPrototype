@@ -289,6 +289,29 @@ public class Inventory {
             return true;
         }
         switch (weapon.getAttributes().getHandling()) {
+            case MAIN -> {
+                if (isNull(secondaryWeapon) || isPermittedSizeSummary(weapon, secondaryWeapon)) {
+                    if (nonNull(primaryWeapon) && addItem(primaryWeapon)) {
+                        primaryWeapon = weapon;
+                        return true;
+                    } else {
+                        if (isNull(primaryWeapon)) {
+                            primaryWeapon = weapon;
+                            return true;
+                        }
+                        return false;
+                    }
+                }
+            }
+            case SECONDARY -> {
+                if (nonNull(primaryWeapon) && isPermittedSizeSummary(primaryWeapon, weapon)) {
+                    if (nonNull(secondaryWeapon) && addItem(secondaryWeapon)) {
+                        secondaryWeapon = weapon;
+                        return true;
+                    }
+                }
+                return false;
+            }
             case SINGLE_HANDED -> {
                 if (isPermittedSizeSummary(primaryWeapon, weapon)) {
                     if (primaryWeapon.getAttributes().getSize().compareTo(weapon.getAttributes().getSize()) >= 0) {

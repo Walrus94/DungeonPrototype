@@ -45,7 +45,7 @@ import static org.dungeon.prototype.model.Direction.E;
 import static org.dungeon.prototype.model.Direction.N;
 import static org.dungeon.prototype.model.Direction.S;
 import static org.dungeon.prototype.model.Direction.W;
-import static org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttackType.SLASH;
+import static org.dungeon.prototype.model.inventory.attributes.weapon.WeaponAttackType.STAB;
 import static org.dungeon.prototype.model.inventory.attributes.weapon.WeaponType.SWORD;
 import static org.dungeon.prototype.model.player.PlayerAttribute.LUCK;
 import static org.dungeon.prototype.model.player.PlayerAttribute.MAGIC;
@@ -85,7 +85,7 @@ public class TestData {
 
     public static Monster getMonster(Integer health, Integer maxHealth) {
         val monster = Monster.builder()
-                .monsterClass(MonsterClass.ZOMBIE)
+                .monsterClass(MonsterClass.WEREWOLF)
                 .primaryAttack(MonsterAttack.builder()
                         .attackType(MonsterAttackType.SLASH)
                         .effect(ExpirableAdditionEffect.builder()
@@ -149,7 +149,7 @@ public class TestData {
         player.setInventory(getInventory());
         PlayerAttack playerAttack = new PlayerAttack();
         playerAttack.setAttack(5);
-        playerAttack.setAttackType(SLASH);
+        playerAttack.setAttackType(STAB);
         playerAttack.setCriticalHitChance(0.0);
         playerAttack.setCriticalHitMultiplier(1.0);
         playerAttack.setChanceToMiss(0.0);
@@ -208,7 +208,7 @@ public class TestData {
         weapon.setId("weapon_id");
         val weaponAttributes = new WeaponAttributes();
         weaponAttributes.setWeaponType(SWORD);
-        weaponAttributes.setWeaponAttackType(SLASH);
+        weaponAttributes.setWeaponAttackType(STAB);
         weaponAttributes.setSize(Size.MEDIUM);
         weaponAttributes.setHandling(Handling.SINGLE_HANDED);
         weaponAttributes.setWeaponMaterial(WeaponMaterial.IRON);

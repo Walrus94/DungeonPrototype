@@ -138,9 +138,9 @@ public class LevelUtil {
         };
     }
 
-    public static boolean isPointOnGrid(Point point, int gridSize) {
-        return point.getY() < gridSize && point.getY() > -1 &&
-                point.getX() < gridSize && point.getX() > -1;
+    public static boolean isPointOnGrid(Point point, GridSection[][] grid) {
+        return point.getY() < grid.length && point.getY() > -1 &&
+                point.getX() < grid[0].length && point.getX() > -1;
     }
 
     public static Set<GridSection> getAdjacentSections(Point currentPoint, GridSection[][] grid) {
@@ -149,7 +149,7 @@ public class LevelUtil {
                         new Point(currentPoint.getX(), currentPoint.getY() + 1),
                         new Point(currentPoint.getX(), currentPoint.getY() - 1))
                 .unordered()
-                .filter(point -> isPointOnGrid(point, grid.length))
+                .filter(point -> isPointOnGrid(point, grid))
                 .map(point -> grid[point.getX()][point.getY()])
                 .collect(Collectors.toSet());
     }
@@ -187,7 +187,7 @@ public class LevelUtil {
         return result.toString();
     }
 
-    public static GridSection[][] generateEmptyMapGrid(Integer gridSize) {
+    public static GridSection[][] generateEmptyMapGrid(int gridSize) {
         GridSection[][] grid = new GridSection[gridSize][gridSize];
         for (int x = 0; x < gridSize; x++) {
             GridSection[] row = new GridSection[gridSize];
@@ -195,6 +195,20 @@ public class LevelUtil {
                 row[y] = new GridSection(x, y);
             }
             grid[x] = row;
+        }
+        return grid;
+    }
+
+    public static GridSection[][] generateEmptyMapGrid(Point start, Point end) {
+        int xSize = end.getX() - start.getX();
+        int ySize = end.getY() - start.getY();
+        GridSection[][] grid = new GridSection[xSize][ySize];
+        for (int x = start.getX(); x < end.getX(); x++) {
+            GridSection[] row = new GridSection[xSize];
+            for (int y = start.getY(); y < end.getY(); y++) {
+                row[y - start.getY()] = new GridSection(x, y);
+            }
+            grid[x - start.getX()] = row;
         }
         return grid;
     }
