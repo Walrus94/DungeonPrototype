@@ -23,7 +23,7 @@ async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
     game_results = await load_game_results(chat_id)
 
     # Train the RL model using game results
-    env = BalanceAdjustmentEnv(template_matrix, game_results)
+    env = BalanceAdjustmentEnv(template_matrix, game_results, matrix_name)
     model = PPO("MlpPolicy", env, verbose=1)
     model.learn(total_timesteps=10000)  # Adjust timesteps as needed
 
