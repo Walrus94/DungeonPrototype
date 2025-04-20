@@ -35,21 +35,21 @@ async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
             filename="ppo-MountainCarContinuous-v0.zip"
         )
 
-        # Initialize with pre-trained weights but smaller network
-        policy_kwargs = dict(
-            net_arch=dict(
-                pi=[32, 16],  # Tiny policy network
-                vf=[32, 16]   # Tiny value network
-            )
-        )
 
         model = PPO.load(
             checkpoint,
             env=env,
-            learning_rate=1e-4,
-            n_steps=256,      # Smaller batch size
-            batch_size=32,    # Smaller batch size
-            policy_kwargs=policy_kwargs,
+            learning_rate=5e-5,  # Reduced learning rate for finer adjustments
+            n_steps=2048,        # Increased steps per update
+            batch_size=64,
+            n_epochs=10,         # More epochs per update
+            gamma=0.99,          # High discount factor for long-term effects
+            ent_coef=0.01,      # Encourage exploration
+            custom_objects={
+                "learning_rate": 1e-4,
+                "lr_schedule": lambda _: 1e-4,
+                "clip_range": lambda _: 0.2
+            },
             device='cpu'      # Force CPU usage to save GPU memory
         )
 
@@ -91,7 +91,7 @@ async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
                 generated_matrix[i][j] = np.random.uniform(0.7, 1.3)
 
     # Adjust the matrix using the trained RL model
-    model = PPO.load("balance_rl_model")
+    model = PPO.load(os.path.join(trained_models_dir, "balance_rl_model"))
 
     env = BalanceAdjustmentEnv(generated_matrix, game_results, matrix_name)
     obs = env.reset()

@@ -18,26 +18,49 @@ class BalanceAdjustmentEnv(gym.Env):
 
         # Observation space: Matrix values
         self.observation_space = spaces.Box(
-            low=0, high=100, shape=self.template_matrix.shape, dtype=np.float32
+            low=0, high=2, shape=self.template_matrix.shape, dtype=np.float32
         )
 
     def step(self, action):
         """Adjust matrix values dynamically."""
         row, col = np.random.randint(0, self.template_matrix.shape[0]), np.random.randint(0, self.template_matrix.shape[1])
         
-        if action == 0:
-            self.current_matrix[row, col] += 1
-        elif action == 1:
-            self.current_matrix[row, col] -= 1
+        change_amount = 0.01
+        done = False
+
+        # Apply changes with bounds checking
+        if action == 0 and self.current_matrix[row, col] < 2.0:
+            self.current_matrix[row, col] = np.round(self.current_matrix[row, col] + change_amount, 4)
+            self.total_changes[row, col] += 1
+        elif action == 1 and self.current_matrix[row, col] > 0.1:
+            self.current_matrix[row, col] = np.round(self.current_matrix[row, col] - change_amount, 4)
+            self.total_changes[row, col] += 1
+
+        # Update episode tracking
+        self.current_changes += 1
+        if self.current_changes >= self.max_changes:
+            done = True
 
         # Calculate reward based on game results
         reward = self._calculate_reward()
 
-        return self.current_matrix, reward, False, {}
+        # Add stability penalty
+        stability_penalty = np.sum(self.total_changes) * 0.001  # Penalize too many changes
+        reward -= stability_penalty
+
+        info = {
+            'changes': self.total_changes,
+            'current_value': self.current_matrix[row, col],
+            'position': (row, col)
+        }
+
+        return self.current_matrix, reward, done, info
 
     def reset(self):
         """Reset matrix to base template."""
         self.current_matrix = np.copy(self.template_matrix)
+        self.total_changes = np.zeros_like(self.template_matrix)
+        self.current_changes = 0
         return self.current_matrix
     
     def _calculate_reward(self):
