@@ -19,9 +19,13 @@ class BalanceAdjustmentEnv(gym.Env):
         # Action space: Increase, Decrease, Keep
         self.action_space = spaces.Discrete(3)
 
-        # Observation space: Matrix values
+        # Flatten the matrix for observation space to make it more standard
+        self.flat_size = self.template_matrix.size
         self.observation_space = spaces.Box(
-            low=0, high=2, shape=self.template_matrix.shape, dtype=np.float32
+            low=0,
+            high=2,
+            shape=(self.flat_size,),  # Flattened shape
+            dtype=np.float32
         )
 
     def step(self, action):
