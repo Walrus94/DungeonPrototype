@@ -17,7 +17,7 @@ async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
         Generated matrix of the specified size.
     """
     # Load the template matrix from the database
-    template_matrix = await load_template_matrix(chat_id, matrix_name)
+    template_matrix = await load_template_matrix(matrix_name)
 
     # Load game results from MongoDB
     game_results = await load_game_results(chat_id)
