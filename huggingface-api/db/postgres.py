@@ -10,7 +10,7 @@ async def load_template_matrix(matrix_name):
     ))
 
     query = """
-    SELECT data FROM template_matrices WHERE name = $2 LIMIT 1
+    SELECT data FROM template_matrices WHERE name = $1 LIMIT 1
     """
 
     row = await conn.fetchrow(query, matrix_name)
