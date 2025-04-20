@@ -45,6 +45,13 @@ async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
             n_epochs=10,         # More epochs per update
             gamma=0.99,          # High discount factor for long-term effects
             ent_coef=0.01,      # Encourage exploration
+            policy_kwargs=dict(
+                net_arch=dict(
+                    pi=[64, 64],  # Larger network for better value estimation
+                    vf=[64, 64]
+                ),
+                log_std_init=-3.0  # Lower standard deviation for more precise actions
+            ),
             custom_objects={
                 "learning_rate": 1e-4,
                 "lr_schedule": lambda _: 1e-4,
