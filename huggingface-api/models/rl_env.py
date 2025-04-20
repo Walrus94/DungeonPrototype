@@ -17,7 +17,12 @@ class BalanceAdjustmentEnv(gym.Env):
         self.total_changes = np.zeros_like(template_matrix)  # Track changes
 
         # Action space: Increase, Decrease, Keep
-        self.action_space = spaces.Discrete(3)
+        self.action_space = spaces.Box(
+        low=-1.0,
+        high=1.0,
+        shape=(1,),
+        dtype=np.float32
+    )
 
         # Flatten the matrix for observation space to make it more standard
         self.flat_size = self.template_matrix.size
