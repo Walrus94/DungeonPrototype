@@ -19,9 +19,10 @@ async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
     Returns:
         Generated matrix of the specified size.
     """
+    # Directory to save trained models
+    trained_models_dir = os.path.join(HF_MODEL_FILE, "trained_models")
     # Load the template matrix from the database
     template_matrix = await load_template_matrix(matrix_name)
-
     # Load game results from MongoDB
     game_results = await load_game_results(chat_id)
 
@@ -69,7 +70,7 @@ async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
         )
 
         # Save the fine-tuned model
-        trained_models_dir = os.path.join(HF_MODEL_FILE, "trained_models")
+    
         os.makedirs(trained_models_dir, exist_ok=True)
         model.save(os.path.join(trained_models_dir, "balance_rl_model"))
 
