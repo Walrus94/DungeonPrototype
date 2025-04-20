@@ -6,7 +6,7 @@ import asyncio
 
 async def train_rl_model(chat_id, matrix_name):
     """Train RL model to balance matrices."""
-    template_matrix = await load_template_matrix(chat_id, matrix_name)
+    template_matrix = await load_template_matrix(matrix_name)
 
     game_results = await load_game_results(chat_id)
 
