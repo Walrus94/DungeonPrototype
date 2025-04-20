@@ -41,42 +41,68 @@ class BalanceAdjustmentEnv(gym.Env):
         return self.current_matrix
     
     def _calculate_reward(self):
-        """
-        Calculate reward based on game results.
-        """
+        """Calculate reward based on game results considering weight vectors."""
         reward = 0
         if self.matrix_name in ["player_attack", "monster_attack"]:
-            # Reward logic for balance matrices
             for game_result in self.game_results:
-                # Penalize for death caused by a monster, scaled by the killer's weight
-                if game_result["killer"]:
-                    killer_weight_norm = np.linalg.norm(game_result["killer"]["weight"])
-                    reward -= 10  # Base penalty for death
-                    reward -= killer_weight_norm * 0.5  # Additional penalty scaled by killer's weight norm
-
-                # Reward for maintaining stable player weight
-                weight_variation = np.std(game_result["player_weight_dynamic"], axis=0)
-                reward -= np.sum(weight_variation) * 0.1  # Penalize high weight variation
-
-                # Reward for player level progression
-                reward += len(game_result["player_level_progression"]) * 2  # Reward for reaching higher levels
-
-                # Reward for dungeon level progression
-                reward += len(game_result["dungeon_level_progression"]) * 1.5  # Reward for progressing through dungeon levels
-
-                # Reward for defeating monsters, scaled by their weight
-                for monster in game_result["defeated_monsters"]:
-                    monster_weight = np.linalg.norm(monster["weight"])  # Sum of monster's weight vector
-                    reward += monster_weight * 0.5  # Reward scaled by monster's weight
-                    reward -= monster["battle_steps"] * 0.01  # Penalize for taking too many steps
-        elif self.matrix_name.endswith("_attr") or self.matrix_name.endswith("_adjustment"):
-            # Reward logic for item-related matrices
-            for game_result in self.game_results:
-                if "weightScale" in game_result:
-                    weight_scale = game_result["weightScale"]
-                    reward += self._calculate_weight_scale_reward(weight_scale)
-                else:
-                    reward -= 10  # Penalize if weightScale is missing
+                # Base survival reward
+                if not game_result["death"]:
+                    reward += 20
+                
+                # Analyze weight vector progression
+                if game_result["playerWeightDynamic"]:
+                    weight_vectors = np.array([w for w in game_result["playerWeightDynamic"]])
+                    
+                    # Calculate weight vector stability per component
+                    if len(weight_vectors) > 1:
+                        # Analyze each weight component separately
+                        component_stability = []
+                        for component_idx in range(weight_vectors.shape[1]):
+                            component_trajectory = weight_vectors[:, component_idx]
+                            # Reward steady growth in each component
+                            component_growth = np.diff(component_trajectory)
+                            stability = 1 / (np.std(component_growth) + 1)
+                            component_stability.append(stability)
+                        
+                        # Average stability across all weight components
+                        reward += np.mean(component_stability) * 15
+                
+                # Combat effectiveness with vector weights
+                if game_result["defeatedMonsters"]:
+                    for monster in game_result["defeatedMonsters"]:
+                        player_weight = game_result["playerWeightDynamic"][monster["stepKilled"]]
+                        monster_weight = monster["weight"]
+                        
+                        # Calculate weight advantage/disadvantage
+                        weight_diff = np.array(player_weight) - np.array(monster_weight)
+                        relative_strength = np.linalg.norm(weight_diff)
+                        
+                        if relative_strength < 0:
+                            # Reward for defeating stronger monsters
+                            reward += abs(relative_strength) * 3
+                        else:
+                            # Small reward for defeating weaker monsters efficiently
+                            reward += 1 / (monster["battleSteps"] + 1)
+                
+                # Death analysis with vector comparison
+                if game_result["death"] and game_result["killer"]:
+                    killer_weight = np.array(game_result["killer"]["weight"])
+                    final_player_weight = np.array(game_result["playerWeightDynamic"][-1])
+                    
+                    # Compare weight vectors using cosine similarity
+                    cos_sim = np.dot(killer_weight, final_player_weight) / \
+                             (np.linalg.norm(killer_weight) * np.linalg.norm(final_player_weight))
+                    
+                    # Calculate vector magnitude difference
+                    magnitude_diff = np.linalg.norm(killer_weight) - np.linalg.norm(final_player_weight)
+                    
+                    if magnitude_diff > 0:
+                        # Less penalty if died to a significantly stronger monster
+                        relative_penalty = 1 - min(1, magnitude_diff / np.linalg.norm(final_player_weight))
+                        reward -= 10 * relative_penalty * (0.5 + 0.5 * cos_sim)
+                    else:
+                        # Severe penalty for dying to weaker monsters
+                        reward -= 25 * (1 + cos_sim)
 
         return reward
 

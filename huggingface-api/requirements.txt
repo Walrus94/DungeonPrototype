@@ -3,6 +3,7 @@ huggingface-hub
 python-dotenv
 pymongo
 asyncpg
+huggingface_sb3
 stable-baselines3
 torch
 transformers

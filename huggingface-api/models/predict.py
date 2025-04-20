@@ -1,8 +1,11 @@
+from huggingface_sb3 import load_from_hub
 from stable_baselines3 import PPO
 from models.rl_env import BalanceAdjustmentEnv
 from db.postgres import load_template_matrix
 from db.mongo import load_game_results
+from config.settings import HF_MODEL_FILE
 import numpy as np
+import os
 
 async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
     """
@@ -22,10 +25,59 @@ async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
     # Load game results from MongoDB
     game_results = await load_game_results(chat_id)
 
-    # Train the RL model using game results
+    # Create environment
     env = BalanceAdjustmentEnv(template_matrix, game_results, matrix_name)
-    model = PPO("MlpPolicy", env, verbose=1)
-    model.learn(total_timesteps=10000)  # Adjust timesteps as needed
+
+    try:
+        # Load lightweight pre-trained model
+        checkpoint = load_from_hub(
+            repo_id="sb3/ppo-MountainCarContinuous-v0",  # Small continuous control model
+            filename="ppo-MountainCarContinuous-v0.zip"
+        )
+
+        # Initialize with pre-trained weights but smaller network
+        policy_kwargs = dict(
+            net_arch=dict(
+                pi=[32, 16],  # Tiny policy network
+                vf=[32, 16]   # Tiny value network
+            )
+        )
+
+        model = PPO.load(
+            checkpoint,
+            env=env,
+            learning_rate=1e-4,
+            n_steps=256,      # Smaller batch size
+            batch_size=32,    # Smaller batch size
+            policy_kwargs=policy_kwargs,
+            device='cpu'      # Force CPU usage to save GPU memory
+        )
+
+        # Quick fine-tuning
+        model.learn(
+            total_timesteps=2000,
+            progress_bar=True
+        )
+
+        # Save the fine-tuned model
+        trained_models_dir = os.path.join(HF_MODEL_FILE, "trained_models")
+        os.makedirs(trained_models_dir, exist_ok=True)
+        model.save(os.path.join(trained_models_dir, "balance_rl_model"))
+
+    except Exception as e:
+        print(f"Error loading pre-trained model: {e}")
+        # Fallback to simple model if pre-trained loading fails
+        model = PPO(
+            "MlpPolicy",
+            env,
+            learning_rate=1e-4,
+            n_steps=256,
+            batch_size=32,
+            policy_kwargs=policy_kwargs,
+            device='cpu',
+            verbose=0
+        )
+        model.learn(total_timesteps=2000)
 
     # Generate a new matrix of the specified size
     generated_matrix = np.zeros((rows, columns))
@@ -39,7 +91,6 @@ async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
                 generated_matrix[i][j] = np.random.uniform(0.7, 1.3)
 
     # Adjust the matrix using the trained RL model
-    """Use trained RL model to generate a balanced matrix."""
     model = PPO.load("balance_rl_model")
 
     env = BalanceAdjustmentEnv(generated_matrix, game_results, matrix_name)
