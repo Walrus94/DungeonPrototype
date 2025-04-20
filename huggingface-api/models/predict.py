@@ -30,12 +30,9 @@ async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
     env = BalanceAdjustmentEnv(template_matrix, game_results, matrix_name)
 
     policy_kwargs = dict(
-                net_arch=dict(
-                    pi=[64, 64],  # Larger network for better value estimation
-                    vf=[64, 64]
-                ),
-                log_std_init=-3.0  # Lower standard deviation for more precise actions
-            )
+        log_std_init=-3.29,  # Match exact value from pre-trained model
+        ortho_init=False     # Add missing parameter
+    )
 
     try:
         # Load lightweight pre-trained model
