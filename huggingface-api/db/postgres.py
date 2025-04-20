@@ -1,5 +1,6 @@
 import asyncpg
 import logging
+import numpy as np
 from config.settings import POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, POSTGRES_PORT
 
 async def load_template_matrix(matrix_name):
