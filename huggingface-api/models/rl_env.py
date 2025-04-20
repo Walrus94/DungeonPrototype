@@ -43,6 +43,12 @@ class BalanceAdjustmentEnv(gym.Env):
         vel = np.clip(std_value, 0, 0.14) - 0.07    # Map [0,0.14] to [-0.07,0.07]
         
         return np.array([pos, vel], dtype=np.float32)
+    
+    def seed(self, seed=None):
+        """Set random seed for reproducibility."""
+        self.np_random, seed = gym.utils.seeding.np_random(seed)
+        np.random.seed(seed)
+        return [seed]
 
     def step(self, action):
         """Adjust matrix values dynamically."""
