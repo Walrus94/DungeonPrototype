@@ -12,6 +12,9 @@ class BalanceAdjustmentEnv(gym.Env):
         self.current_matrix = np.copy(template_matrix)  # Working matrix
         self.game_results = game_results  # Loaded game results
         self.matrix_name = matrix_name  # Name of the matrix being trained
+        self.current_changes = 0  # Initial changes counter
+        self.max_changes = 100  # Max changes per episode
+        self.total_changes = np.zeros_like(template_matrix)  # Track changes
 
         # Action space: Increase, Decrease, Keep
         self.action_space = spaces.Discrete(3)
