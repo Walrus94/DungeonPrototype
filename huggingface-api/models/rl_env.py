@@ -22,11 +22,22 @@ class BalanceAdjustmentEnv(gym.Env):
         # Flatten the matrix for observation space to make it more standard
         self.flat_size = self.template_matrix.size
         self.observation_space = spaces.Box(
-            low=0,
-            high=2,
-            shape=(self.flat_size,),  # Flattened shape
+           low=np.array([-1.2, -0.07]),
+            high=np.array([0.6, 0.07]),  
+            shape=(2,), 
             dtype=np.float32
         )
+    def _normalize_observation(self):
+        """Convert matrix state to normalized observation."""
+        # Convert matrix state to 2D observation
+        avg_value = np.mean(self.current_matrix)
+        std_value = np.std(self.current_matrix)
+        
+        # Map to MountainCar ranges
+        pos = np.clip(avg_value, 0, 2) * 0.9 - 1.2  # Map [0,2] to [-1.2,0.6]
+        vel = np.clip(std_value, 0, 0.14) - 0.07    # Map [0,0.14] to [-0.07,0.07]
+        
+        return np.array([pos, vel], dtype=np.float32)
 
     def step(self, action):
         """Adjust matrix values dynamically."""
@@ -61,14 +72,15 @@ class BalanceAdjustmentEnv(gym.Env):
             'position': (row, col)
         }
 
-        return self.current_matrix, reward, done, info
+        obs = self._normalize_observation()
+        return obs, reward, done, info
 
     def reset(self):
         """Reset matrix to base template."""
         self.current_matrix = np.copy(self.template_matrix)
         self.total_changes = np.zeros_like(self.template_matrix)
         self.current_changes = 0
-        return self.current_matrix
+        return self._normalize_observation()
     
     def _calculate_reward(self):
         """Calculate reward based on game results considering weight vectors."""
