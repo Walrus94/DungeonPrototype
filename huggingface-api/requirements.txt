@@ -4,7 +4,7 @@ python-dotenv
 pymongo
 asyncpg
 huggingface_sb3
-stable-baselines3
+stable-baselines3[extra]
 torch
 transformers
 diffusers
