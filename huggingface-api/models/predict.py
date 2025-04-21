@@ -31,7 +31,7 @@ async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
     env = BalanceAdjustmentEnv(template_matrix, game_results, matrix_name)
 
 
-    model = PPO.load(
+    model = PPO(
         "MlpPolicy",
         env,
         learning_rate=5e-5,  # Reduced learning rate for finer adjustments
