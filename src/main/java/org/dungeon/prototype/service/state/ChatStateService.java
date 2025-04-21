@@ -56,9 +56,12 @@ public class ChatStateService {
      * @param chatId id of chat to update
      */
     public void initializeChatContext(Long chatId) {
+        log.debug("Initializing chat context for chatId: {}", chatId);
         if (!chatStateByIdMap.containsKey(chatId)) {
+            log.debug("Chat state not found for chatId: {}. Creating new one.", chatId);
             chatStateByIdMap.put(chatId, new ChatContext());
         } else {
+            log.debug("Chat state found for chatId: {}. Updating existing one.", chatId);
             chatStateByIdMap.get(chatId).setChatState(PRE_GAME_MENU);
         }
     }
@@ -73,6 +76,8 @@ public class ChatStateService {
      * @param to     resulting state
      */
     public void updateChatState(Long chatId, ChatState to, ChatState... from) throws ChatStateUpdateException {
+        log.debug("Updating chat state for chatId: {}. From: {} to: {}",
+                chatId, Arrays.toString(from), to);
         if (chatStateByIdMap.containsKey(chatId) && Arrays.asList(from).contains(chatStateByIdMap.get(chatId).getChatState())) {
             log.info("Current chat state: {}", chatStateByIdMap.get(chatId).getChatState());
             chatStateByIdMap.get(chatId).setChatState(to);
@@ -83,12 +88,16 @@ public class ChatStateService {
     }
 
     public Optional<Integer> updateLastMessage(Long chatId, int messageId) {
+        log.debug("Updating last message id for chatId: {}. New messageId: {}",
+                chatId, messageId);
         if (chatStateByIdMap.containsKey(chatId)) {
+            log.debug("Current chat state: {}", chatStateByIdMap.get(chatId).getChatState());
             val lastMessageId = chatStateByIdMap.get(chatId).getLastMessageId();
             chatStateByIdMap.get(chatId).setLastMessageId(new AtomicInteger(messageId));
             chatStateByIdMap.get(chatId).setLastActiveTime(new AtomicLong(System.currentTimeMillis()));
             return Optional.of(lastMessageId.intValue());
         } else {
+            log.debug("Chat state not found for chatId: {}. Creating new one.", chatId);
             val chatState = new ChatContext();
             chatState.setLastMessageId(new AtomicInteger(messageId));
             chatStateByIdMap.put(chatId, new ChatContext());
@@ -130,6 +139,7 @@ public class ChatStateService {
     }
 
     public void clearChatContext(long chatId) {
+        log.debug("Clearing chat context for chatId: {}", chatId);
         if (chatStateByIdMap.containsKey(chatId)) {
             var chatState = chatStateByIdMap.get(chatId);
             switch (chatState.getChatState()) {
