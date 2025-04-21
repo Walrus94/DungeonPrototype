@@ -1,6 +1,7 @@
 package org.dungeon.prototype.model.stats;
 
 import lombok.Data;
+import org.dungeon.prototype.model.kafka.request.KafkaMessage;
 import org.dungeon.prototype.model.weight.Weight;
 
 import java.util.ArrayList;
@@ -8,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 @Data
-public class GameResult {
+public class GameResult implements KafkaMessage {
     private long chatId;
     private boolean death;
     private MonsterData killer;
@@ -42,5 +43,10 @@ public class GameResult {
 
     public boolean addPlayerLevelReached(int step) {
         return playerLevelProgression.add(step);
+    }
+
+    @Override
+    public String getData() {
+        return this.toString();
     }
 }

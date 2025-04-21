@@ -1,11 +1,10 @@
 package org.dungeon.prototype.service.stats;
 
+import org.dungeon.prototype.kafka.KafkaProducer;
 import org.dungeon.prototype.model.monster.MonsterClass;
 import org.dungeon.prototype.model.stats.GameResult;
 import org.dungeon.prototype.model.stats.MonsterData;
 import org.dungeon.prototype.model.weight.Weight;
-import org.dungeon.prototype.repository.mongo.GameResultRepository;
-import org.dungeon.prototype.repository.mongo.converters.mapstruct.GameResultMapper;
 import org.dungeon.prototype.service.balancing.BalanceMatrixService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -18,7 +17,7 @@ public class GameResultService {
     @Autowired
     BalanceMatrixService balanceMatrixService;
     @Autowired
-    private GameResultRepository gameResultRepository;
+    KafkaProducer kafkaProducer;
     private final Map<Long, GameResult> gameResultMap = new ConcurrentHashMap<>();
     private final Map<Long, MonsterData> currentMonster = new ConcurrentHashMap<>();
 
@@ -30,7 +29,7 @@ public class GameResultService {
     }
 
     public void addGeneratedVanillaItems(long chatId, Map<Double, Integer> itemsWeightScale) {
-        GameResult gameResult = gameResultMap.get(chatId);
+        GameResult gameResult = gameResultMap.computeIfAbsent(chatId, k -> new GameResult(chatId));
 
         gameResult.setVanillaItemsWeightScale(itemsWeightScale);
 
@@ -80,7 +79,7 @@ public class GameResultService {
         gameResult.setDeath(true);
         gameResult.setBalanceMatrices(collectBalanceMatrices(chatId));
 
-        gameResultRepository.save(GameResultMapper.INSTANCE.mapToDocument(gameResult));
+        kafkaProducer.sendGameResults(gameResult);
 
     }
 

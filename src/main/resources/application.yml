@@ -66,6 +66,7 @@ bot:
 kafka-topics:
   item-naming-topic: ${ITEM_NAMING_TOPIC}
   balance-matrix-topic: ${BALANCE_MATRIX_TOPIC}
+  game-results-topic: ${GAME_RESULTS_TOPIC}
 
 messaging:
   bar-blocks: 6

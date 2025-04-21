@@ -2,9 +2,9 @@ import logging
 import asyncio
 from confluent_kafka import Consumer
 from confluent_kafka.admin import AdminClient, NewTopic
-from config.settings import KAFKA_BOOTSTRAP_SERVER, KAFKA_BALANCE_MATRIX_TOPIC, KAFKA_TOPIC_ITEM_NAMING
+from config.settings import KAFKA_BOOTSTRAP_SERVER, KAFKA_BALANCE_MATRIX_TOPIC, KAFKA_TOPIC_ITEM_NAMING, KAFKA_GAME_RESULTS_TOPIC
 from kafka.process_balance import process_kafka_balance_message
-from kafka.process_item_naming import process_kafka_item_message
+from kafka.process_item_metadata import process_kafka_item_message
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -14,7 +14,8 @@ def ensure_topics_exist():
 
     topics = [
         NewTopic(KAFKA_BALANCE_MATRIX_TOPIC, num_partitions=3, replication_factor=1),
-        NewTopic(KAFKA_TOPIC_ITEM_NAMING, num_partitions=3, replication_factor=1)
+        NewTopic(KAFKA_TOPIC_ITEM_NAMING, num_partitions=3, replication_factor=1),
+        NewTopic(KAFKA_GAME_RESULTS_TOPIC, num_partitions=3, replication_factor=1),
     ]
 
     futures = admin_client.create_topics(topics)
@@ -37,7 +38,7 @@ def initialize_consumer():
         'group.id': 'dungeon-group',
         'auto.offset.reset': 'earliest'
     })
-    kafka_consumer.subscribe([KAFKA_BALANCE_MATRIX_TOPIC, KAFKA_TOPIC_ITEM_NAMING])
+    kafka_consumer.subscribe([KAFKA_BALANCE_MATRIX_TOPIC, KAFKA_TOPIC_ITEM_NAMING, KAFKA_GAME_RESULTS_TOPIC])
     return kafka_consumer
 
 kafka_consumer = initialize_consumer()
@@ -55,9 +56,13 @@ async def consume_messages():
         logging.debug(f"Received message: {msg.value().decode('utf-8')}")
         topic = msg.topic()
         if topic == KAFKA_TOPIC_ITEM_NAMING:
-            await process_kafka_item_message(msg.value().decode('utf-8'))
+            await process_kafka_item_message(message)
         elif topic == KAFKA_BALANCE_MATRIX_TOPIC:
-            await process_kafka_balance_message(msg.value().decode('utf-8'))
+            await process_kafka_balance_message(message)
+        elif topic == KAFKA_GAME_RESULTS_TOPIC:  # New topic for game results
+            await process_kafka_game_result(message)
+        else:  # Default case
+            logging.warning(f"Unhandled topic: {topic}")
 
 if __name__ == '__main__':
     asyncio.run(consume_messages())

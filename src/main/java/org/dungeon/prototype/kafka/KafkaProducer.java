@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.dungeon.prototype.exception.KafkaMessageException;
 import org.dungeon.prototype.model.kafka.request.balance.BalanceMatrixGenerationRequest;
 import org.dungeon.prototype.model.kafka.request.naming.ItemNameRequest;
+import org.dungeon.prototype.model.stats.GameResult;
 import org.dungeon.prototype.properties.CallbackType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,6 +20,8 @@ public class KafkaProducer {
     private String itemNamingTopic;
     @Value("${kafka-topics.balance-matrix-topic}")
     private String balanceMatrixTopic;
+    @Value("${kafka-topics.game-results-topic}")
+    private String gameResultsTopic;
     @Autowired
     private KafkaTemplate<String, String> kafkaTemplate;
     @Autowired
@@ -44,5 +47,16 @@ public class KafkaProducer {
         }
         log.info("Sending message to kafka stream, topic: {}, message: {}", balanceMatrixTopic, message);
         kafkaTemplate.send(balanceMatrixTopic, message);
+    }
+
+    public void sendGameResults(GameResult gameResult) {
+        String message;
+        try {
+            message = objectMapper.writeValueAsString(gameResult);
+        } catch (JsonProcessingException e) {
+            throw new KafkaMessageException(gameResult, CallbackType.MENU_BACK);
+        }
+        log.info("Sending message to kafka stream, topic: {}, message: {}", gameResultsTopic, message);
+        kafkaTemplate.send(gameResultsTopic, message);
     }
 }

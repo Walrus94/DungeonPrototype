@@ -2,6 +2,7 @@ import logging
 from config.settings import MONGO_DATABASE_NAME, MONGO_DATABASE_PASSWORD, MONGO_DATABASE_PORT, MONGO_DATABASE_USER
 from pymongo import MongoClient
 from bson.objectid import ObjectId
+from typing import Dict, Any
 
 mongo_client = MongoClient("mongodb://" + MONGO_DATABASE_USER + ":" + MONGO_DATABASE_PASSWORD +
                            "@" +
@@ -44,3 +45,7 @@ async def load_game_results(chat_id):
     except Exception as e:
         logging.error(f"Error loading game results from MongoDB: {str(e)}")
         return []
+
+async def save_game_result(game_result: Dict[str, Any]) -> None:
+    """Save game result to MongoDB"""
+    await game_results_collection.insert_one(game_result)
