@@ -5,7 +5,6 @@ import org.dungeon.prototype.model.Point;
 import org.dungeon.prototype.model.level.ui.GridSection;
 import org.dungeon.prototype.model.weight.Weight;
 import org.dungeon.prototype.service.UniqueIdFactory;
-import org.dungeon.prototype.service.level.generation.WalkerBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,7 +21,6 @@ public class LevelGridCluster {
     int negativeRoomsCount = 0;
     List<GridSection> deadEnds = new ArrayList<>();
     Weight clusterExpectedWeight;
-    List<WalkerBuilder> walkers = new ArrayList<>();
     public LevelGridCluster(Point startConnectionPoint, Point endConnectionPoint) {
         this.id = UniqueIdFactory.getInstance().getNextId();
         this.startConnectionPoint = startConnectionPoint;
@@ -32,11 +30,6 @@ public class LevelGridCluster {
     public void incrementSize() {
         size++;
     }
-
-    public void addWalkers(WalkerBuilder... builders) {
-        this.walkers.addAll(List.of(builders));
-    }
-
     public double getDensity() {
         return size /
                 ((double) abs(endConnectionPoint.getX() - startConnectionPoint.getX()) *
@@ -91,7 +84,6 @@ public class LevelGridCluster {
                 ", negativeRoomsCount=" + negativeRoomsCount +
                 ", deadEnds=" + deadEnds +
                 ", clusterExpectedWeight=" + clusterExpectedWeight +
-                ", walkers=" + walkers +
                 '}';
     }
 
@@ -106,12 +98,11 @@ public class LevelGridCluster {
                 Objects.equals(startConnectionPoint, that.startConnectionPoint) &&
                 Objects.equals(endConnectionPoint, that.endConnectionPoint) &&
                 Objects.equals(deadEnds, that.deadEnds) &&
-                Objects.equals(clusterExpectedWeight, that.clusterExpectedWeight) &&
-                Objects.equals(walkers, that.walkers);
+                Objects.equals(clusterExpectedWeight, that.clusterExpectedWeight);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, startConnectionPoint, endConnectionPoint, size, negativeRoomsCount, deadEnds, clusterExpectedWeight, walkers);
+        return Objects.hash(id, startConnectionPoint, endConnectionPoint, size, negativeRoomsCount, deadEnds, clusterExpectedWeight);
     }
 }
