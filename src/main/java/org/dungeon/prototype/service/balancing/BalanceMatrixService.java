@@ -45,7 +45,7 @@ public class BalanceMatrixService {
     }
 
     public double getBalanceMatrixValue(long chatId, String name, int row, int col) {
-        while (!balanceMatrixRepository.isTableExists(chatId, name)) {
+        while (!balanceMatrixRepository.isMatrixExists(chatId, name)) {
             log.info("Waiting for balance matrix {} table to be created for chatId: {}", name, chatId);
             try {
                 Thread.sleep(1000);
@@ -58,7 +58,7 @@ public class BalanceMatrixService {
     }
 
     public double[][] getBalanceMatrix(long chatId, String name) {
-        while (!balanceMatrixRepository.isTableExists(chatId, name)) {
+        while (!balanceMatrixRepository.isMatrixExists(chatId, name)) {
             log.info("Waiting for balance matrix {} table to be created for chatId: {}", name, chatId);
             try {
                 Thread.sleep(1000);

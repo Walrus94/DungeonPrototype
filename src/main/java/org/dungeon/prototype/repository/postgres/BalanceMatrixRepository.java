@@ -19,14 +19,14 @@ public class BalanceMatrixRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public boolean isTableExists(long chatId, String tableName) {
+    public boolean isMatrixExists(long chatId, String matrixName) {
         String sql = String.format("""
         SELECT EXISTS (
-            SELECT 1 FROM %s WHERE chat_id = ?
+            SELECT 1 FROM %s WHERE chat_id = ? AND name = ?
         )
-        """, tableName);
+        """, "matrices_" + env);
 
-        return Boolean.TRUE.equals(jdbcTemplate.queryForObject(sql, Boolean.class, chatId));
+        return Boolean.TRUE.equals(jdbcTemplate.queryForObject(sql, Boolean.class, chatId, matrixName));
     }
 
     public double getValue(Long chatId, String name, int row, int col) {
