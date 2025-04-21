@@ -6,6 +6,7 @@ from db.mongo import load_game_results
 from config.settings import HF_MODEL_FILE
 import numpy as np
 import os
+import logging
 
 async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
     """
@@ -29,62 +30,36 @@ async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
     # Create environment
     env = BalanceAdjustmentEnv(template_matrix, game_results, matrix_name)
 
-    policy_kwargs = dict(
-        log_std_init=-3.29,  # Match exact value from pre-trained model
-        ortho_init=False     # Add missing parameter
+
+    model = PPO.load(
+        "MlpPolicy",
+        env,
+        learning_rate=5e-5,  # Reduced learning rate for finer adjustments
+        n_steps=2048,        # Increased steps per update
+        batch_size=64,
+        n_epochs=10,         # More epochs per update
+        gamma=0.99,          # High discount factor for long-term effects
+        ent_coef=0.01,      # Encourage exploration
+        policy_kwargs=dict(
+            net_arch=dict(
+                pi=[128, 128],  # Policy network
+                vf=[128, 128]   # Value network
+            ),
+        ),
+        device='cpu'      # Force CPU usage to save GPU memory
+        )
+
+    # Quick fine-tuning
+    model.learn(
+        total_timesteps=2000,
+        progress_bar=True
     )
 
-    try:
-        # Load lightweight pre-trained model
-        checkpoint = load_from_hub(
-            repo_id="sb3/ppo-MountainCarContinuous-v0",  # Small continuous control model
-            filename="ppo-MountainCarContinuous-v0.zip"
-        )
-
-
-        model = PPO.load(
-            checkpoint,
-            env=env,
-            learning_rate=5e-5,  # Reduced learning rate for finer adjustments
-            n_steps=2048,        # Increased steps per update
-            batch_size=64,
-            n_epochs=10,         # More epochs per update
-            gamma=0.99,          # High discount factor for long-term effects
-            ent_coef=0.01,      # Encourage exploration
-            policy_kwargs=policy_kwargs,
-            custom_objects={
-                "learning_rate": 1e-4,
-                "lr_schedule": lambda _: 1e-4,
-                "clip_range": lambda _: 0.2
-            },
-            device='cpu'      # Force CPU usage to save GPU memory
-        )
-
-        # Quick fine-tuning
-        model.learn(
-            total_timesteps=2000,
-            progress_bar=True
-        )
-
-        # Save the fine-tuned model
+    # Save the fine-tuned model
     
-        os.makedirs(trained_models_dir, exist_ok=True)
-        model.save(os.path.join(trained_models_dir, "balance_rl_model"))
+    os.makedirs(trained_models_dir, exist_ok=True)
+    model.save(os.path.join(trained_models_dir, "balance_rl_model"))
 
-    except Exception as e:
-        print(f"Error loading pre-trained model: {e}")
-        # Fallback to simple model if pre-trained loading fails
-        model = PPO(
-            "MlpPolicy",
-            env,
-            learning_rate=1e-4,
-            n_steps=256,
-            batch_size=32,
-            policy_kwargs=policy_kwargs,
-            device='cpu',
-            verbose=0
-        )
-        model.learn(total_timesteps=2000)
 
     # Generate a new matrix of the specified size
     generated_matrix = np.zeros((rows, columns))
@@ -98,13 +73,20 @@ async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
                 generated_matrix[i][j] = np.random.uniform(0.7, 1.3)
 
     # Adjust the matrix using the trained RL model
-    model = PPO.load(os.path.join(trained_models_dir, "balance_rl_model"))
+     # Apply trained model adjustments
+    try:
+        env = BalanceAdjustmentEnv(generated_matrix, game_results, matrix_name)
+        obs = env.reset()
+        
+        # More adjustment steps for larger matrices
+        num_steps = max(10, int(np.sqrt(rows * columns)))
+        for _ in range(num_steps):
+            action, _ = model.predict(obs, deterministic=True)
+            obs, _, done, _ = env.step(action)
+            if done:
+                break
 
-    env = BalanceAdjustmentEnv(generated_matrix, game_results, matrix_name)
-    obs = env.reset()
-
-    for _ in range(10):  # Adjust matrix over 10 steps
-        action, _ = model.predict(obs)
-        obs, _, _, _ = env.step(action)
-
-    return obs
+        return obs
+    except Exception as e:
+        print(f"Error applying model adjustments: {e}")
+        return generated_matrix
