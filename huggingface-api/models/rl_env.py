@@ -26,8 +26,8 @@ class BalanceAdjustmentEnv(gym.Env):
 
         # Observation space: matrix of the same shape as template
         self.observation_space = spaces.Box(
-            low=0.1,  # Minimum allowed value
-            high=2.0,  # Maximum allowed value
+            low=0.7,  # Minimum allowed value
+            high=1.3,  # Maximum allowed value
             shape=template_matrix.shape,
             dtype=np.float32
         )
@@ -48,7 +48,7 @@ class BalanceAdjustmentEnv(gym.Env):
         
         # Update matrix with bounds checking
         new_matrix = self.current_matrix + changes
-        new_matrix = np.clip(new_matrix, 0.1, 2.0)  # Enforce bounds
+        new_matrix = np.clip(new_matrix, 0.7, 1.3)  # Enforce bounds
         
         # Track changes
         actual_changes = new_matrix - self.current_matrix
