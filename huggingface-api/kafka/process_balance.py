@@ -9,7 +9,7 @@ async def process_kafka_balance_message(message):
     try:
         data = json.loads(message)
         chat_id = data['chatId']
-        matrix_requests = data['data']  # List of matrix requests
+        matrix_requests = data['requests']  # List of matrix requests
         
         for request in matrix_requests:
             try:
