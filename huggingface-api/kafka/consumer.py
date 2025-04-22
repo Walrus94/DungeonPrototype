@@ -54,14 +54,16 @@ async def consume_messages():
             logging.error(f"Kafka error: {msg.error()}")
             continue
 
-        logging.debug(f"Received message: {msg.value().decode('utf-8')}")
+        message_value = msg.value().decode('utf-8')
+
+        logging.debug(f"Received message: {message_value}")
         topic = msg.topic()
         if topic == KAFKA_TOPIC_ITEM_NAMING:
-            await process_kafka_item_message(msg)
+            await process_kafka_item_message(message_value)
         elif topic == KAFKA_BALANCE_MATRIX_TOPIC:
-            await process_kafka_balance_message(msg)
+            await process_kafka_balance_message(message_value)
         elif topic == KAFKA_GAME_RESULTS_TOPIC:  # New topic for game results
-            await process_kafka_game_result(msg)
+            await process_kafka_game_result(message_value)
         else:  # Default case
             logging.warning(f"Unhandled topic: {topic}")
 

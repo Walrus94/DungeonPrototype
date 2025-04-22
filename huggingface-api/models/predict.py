@@ -5,7 +5,6 @@ from db.postgres import load_template_matrix
 from db.mongo import load_game_results
 from models.model_manager import ModelManager
 import numpy as np
-import os
 import logging
 
 async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
