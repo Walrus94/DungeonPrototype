@@ -6,6 +6,7 @@ import org.dungeon.prototype.kafka.KafkaProducer;
 import org.dungeon.prototype.model.inventory.attributes.Quality;
 import org.dungeon.prototype.model.inventory.attributes.weapon.*;
 import org.dungeon.prototype.model.inventory.attributes.wearable.WearableMaterial;
+import org.dungeon.prototype.model.kafka.request.balance.BalanceMatricesRequest;
 import org.dungeon.prototype.model.kafka.request.balance.BalanceMatrixGenerationRequest;
 import org.dungeon.prototype.model.monster.MonsterAttackType;
 import org.dungeon.prototype.model.monster.MonsterClass;
@@ -15,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -29,18 +31,20 @@ public class BalanceMatrixService {
 
     public void initializeBalanceMatrices(long chatId) {
         log.info("Initializing balance matrices for chatId: {}", chatId);
-        initializeBalanceMatrix(chatId, "weapon_type_attr", weaponAttributeVectorSize, WeaponType.values().length);
-        initializeBalanceMatrix(chatId, "weapon_handling_type_adjustment", weaponAttributeVectorSize, Handling.values().length);
-        initializeBalanceMatrix(chatId, "weapon_material_adjustment", weaponAttributeVectorSize, WeaponMaterial.values().length);
-        initializeBalanceMatrix(chatId, "weapon_handler_material_adjustment", weaponAttributeVectorSize, WeaponHandlerMaterial.values().length);
-        initializeBalanceMatrix(chatId, "weapon_complete_wood_adjustment", weaponAttributeVectorSize, 1);
-        initializeBalanceMatrix(chatId, "weapon_complete_steel_adjustment", weaponAttributeVectorSize, 1);
-        initializeBalanceMatrix(chatId, "weapon_complete_dragon_bone_adjustment", weaponAttributeVectorSize, 1);
-        initializeBalanceMatrix(chatId, "weapon_size_adjustment", weaponAttributeVectorSize, Size.values().length);
-        initializeBalanceMatrix(chatId, "weapon_attack_type_adjustment", weaponAttributeVectorSize, WeaponAttackType.values().length);
-        initializeBalanceMatrix(chatId, "items_quality_adjustment", Quality.values().length, 1);
-        initializeBalanceMatrix(chatId, "player_attack", WeaponAttackType.values().length, MonsterClass.values().length);
-        initializeBalanceMatrix(chatId, "monster_attack", MonsterAttackType.values().length, WearableMaterial.values().length);
+        initializeBalanceMatrix(chatId, List.of(
+                new BalanceMatrixGenerationRequest("weapon_type_attr", weaponAttributeVectorSize, WeaponType.values().length),
+                new BalanceMatrixGenerationRequest("weapon_handling_type_adjustment", weaponAttributeVectorSize, Handling.values().length),
+                new BalanceMatrixGenerationRequest("weapon_material_adjustment", weaponAttributeVectorSize, WeaponMaterial.values().length),
+                new BalanceMatrixGenerationRequest("weapon_handler_material_adjustment", weaponAttributeVectorSize, WeaponHandlerMaterial.values().length),
+                new BalanceMatrixGenerationRequest("weapon_complete_wood_adjustment", weaponAttributeVectorSize, 1),
+                new BalanceMatrixGenerationRequest("weapon_complete_steel_adjustment", weaponAttributeVectorSize, 1),
+                new BalanceMatrixGenerationRequest("weapon_complete_dragon_bone_adjustment", weaponAttributeVectorSize, 1),
+                new BalanceMatrixGenerationRequest("weapon_size_adjustment", weaponAttributeVectorSize, Size.values().length),
+                new BalanceMatrixGenerationRequest("weapon_attack_type_adjustment", weaponAttributeVectorSize, WeaponAttackType.values().length),
+                new BalanceMatrixGenerationRequest("items_quality_adjustment", Quality.values().length, 1),
+                new BalanceMatrixGenerationRequest("player_attack", WeaponAttackType.values().length, MonsterClass.values().length),
+                new BalanceMatrixGenerationRequest("monster_attack", MonsterAttackType.values().length, WearableMaterial.values().length)
+        ));
     }
 
     public double getBalanceMatrixValue(long chatId, String name, int row, int col) {
@@ -75,9 +79,9 @@ public class BalanceMatrixService {
                 .toArray();
     }
 
-    private void initializeBalanceMatrix(long chatId, String name, int rows, int cols) {
+    private void initializeBalanceMatrix(long chatId, List<BalanceMatrixGenerationRequest> requests) {
         kafkaProducer.sendBalanceMatrixGenerationRequest(
-                new BalanceMatrixGenerationRequest(chatId, name, cols, rows)
+                new BalanceMatricesRequest(chatId, requests)
         );
     }
 

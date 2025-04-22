@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.dungeon.prototype.exception.KafkaMessageException;
-import org.dungeon.prototype.model.kafka.request.balance.BalanceMatrixGenerationRequest;
+import org.dungeon.prototype.model.kafka.request.balance.BalanceMatricesRequest;
 import org.dungeon.prototype.model.kafka.request.naming.ItemNameRequest;
 import org.dungeon.prototype.model.stats.GameResult;
 import org.dungeon.prototype.properties.CallbackType;
@@ -38,7 +38,7 @@ public class KafkaProducer {
         kafkaTemplate.send(itemNamingTopic, message);
     }
 
-    public void sendBalanceMatrixGenerationRequest(BalanceMatrixGenerationRequest request) {
+    public void sendBalanceMatrixGenerationRequest(BalanceMatricesRequest request) {
         String message;
         try {
             message = objectMapper.writeValueAsString(request);

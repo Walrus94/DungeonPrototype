@@ -23,7 +23,7 @@ async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
     model = model_manager.get_or_create_model(env, matrix_name)
 
     # Fine-tune model
-    model_manager.fine_tune(timesteps=2000)
+    model_manager.fine_tune_and_save(timesteps=2000)
 
     # Generate a new matrix of the specified size
     generated_matrix = np.zeros((rows, columns))
@@ -37,7 +37,6 @@ async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
                 generated_matrix[i][j] = np.random.uniform(0.7, 1.3)
 
     # Adjust the matrix using the trained RL model
-     # Apply trained model adjustments
     try:
         env = BalanceAdjustmentEnv(generated_matrix, game_results, matrix_name)
         obs = env.reset()

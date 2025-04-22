@@ -27,7 +27,7 @@ class ModelManager:
     def get_or_create_model(self, env, matrix_name):
         """Thread-safe model loading or creation"""
         with self.model_lock:
-            model_path = os.path.join(HF_MODEL_FILE, "trained_models", f"balance_rl_model_{matrix_name}")
+            model_path = os.path.join(HF_MODEL_FILE, "trained_models", "balance_rl_model")
             if os.path.exists(f"{model_path}.zip"):
                 self.model = PPO.load(model_path, env=env)
             else:
@@ -92,6 +92,7 @@ class AutoModelManager(ModelManager):
                     )
                     
                     # Save updated model
+                    model_path = os.path.join(HF_MODEL_FILE, "trained_models", "balance_rl_model")
                     os.makedirs(os.path.dirname(model_path), exist_ok=True)
                     self.model.save(model_path)
                     
@@ -125,7 +126,7 @@ class AutoModelManager(ModelManager):
                         total_timesteps=timesteps,
                         progress_bar=True
                     )
-                    return True
+                    return self.save_model()
                 except Exception as e:
                     logging.error(f"Error fine-tuning model: {e}")
                     return False

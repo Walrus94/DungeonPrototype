@@ -10,7 +10,6 @@ import org.dungeon.prototype.model.player.Player;
 import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.content.MonsterRoom;
 import org.dungeon.prototype.service.PlayerService;
-import org.dungeon.prototype.service.balancing.BalanceMatrixService;
 import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.item.ItemService;
 import org.dungeon.prototype.service.level.LevelService;
@@ -40,8 +39,6 @@ public class GeneralAspectHandler {
     private PlayerService playerService;
     @Autowired
     private MessageService messageService;
-    @Autowired
-    private BalanceMatrixService balanceMatrixService;
     @Autowired
     private GameResultService gameResultService;
     @Autowired
@@ -99,7 +96,6 @@ public class GeneralAspectHandler {
                     levelService.remove(chatId);
                     player.getInventory().clear();
                     itemService.dropCollection(chatId);
-                    balanceMatrixService.clearMatrices(chatId);
                     player.getEffects().clear();
                     playerService.updatePlayer(player);
                     gameResultService.registerDeathAndSaveResult(chatId);
