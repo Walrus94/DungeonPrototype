@@ -51,6 +51,7 @@ jobs:
           echo "KAFKA_PORT=${{vars.KAFKA_PORT}}" >> .env
           echo "KAFKA_ITEM_NAMING_TOPIC=${{vars.KAFKA_ITEM_NAMING_TOPIC}}" >> .env
           echo "KAFKA_BALANCE_MATRIX_TOPIC=${{vars.KAFKA_BALANCE_MATRIX_TOPIC}}" >> .env
+          echo "KAFKA_GAME_RESULTS_TOPIC=${{vars.KAFKA_GAME_RESULTS_TOPIC}}" >> .env
           echo "MONGO_DB_DATABASE_NAME=${{vars.MONGO_DB_DATABASE_NAME}}" >> .env
           echo "MONGO_DB_PORT=${{vars.MONGO_DB_PORT}}" >> .env
           echo "MONGO_DB_USER=${{ secrets.MONGO_DB_USER }}" >> .env
