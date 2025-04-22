@@ -39,6 +39,27 @@ class ModelManager:
         with self.model_lock:
             return self.model.predict(observation, deterministic=deterministic)
 
+    def initialize_model(self, env):
+        """Initialize a new model with given environment"""
+        self.model = PPO(
+            "MlpPolicy",
+            env,
+            learning_rate=5e-5,  # Reduced learning rate for finer adjustments
+            n_steps=2048,        # Increased steps per update
+            batch_size=64,
+            n_epochs=10,         # More epochs per update
+            gamma=0.99,          # High discount factor for long-term effects
+            ent_coef=0.01,      # Encourage exploration
+            policy_kwargs=dict(
+                net_arch=dict(
+                    pi=[128, 128],  # Policy network
+                    vf=[128, 128]   # Value network
+                ),
+            ),
+            device='cpu'      # Force CPU usage to save GPU memory
+        )
+        return self.model
+
 class AutoModelManager(ModelManager):
     async def train_on_new_data(self, game_result):
         """Incrementally train model on new game result for all matrices associated with the chat."""
@@ -81,28 +102,6 @@ class AutoModelManager(ModelManager):
             except Exception as e:
                 logging.error(f"Error training on new data: {e}")
                 raise
-
-    def initialize_model(self, env):
-        """Initialize a new model with given environment"""
-        with self.model_lock:
-            self.model = PPO(
-                "MlpPolicy",
-                env,
-                learning_rate=5e-5,  # Reduced learning rate for finer adjustments
-                n_steps=2048,        # Increased steps per update
-                batch_size=64,
-                n_epochs=10,         # More epochs per update
-                gamma=0.99,          # High discount factor for long-term effects
-                ent_coef=0.01,      # Encourage exploration
-                policy_kwargs=dict(
-                    net_arch=dict(
-                        pi=[128, 128],  # Policy network
-                        vf=[128, 128]   # Value network
-                    ),
-                ),
-                device='cpu'      # Force CPU usage to save GPU memory
-            )
-            return self.model
 
     def save_model(self):
         """Thread-safe model saving"""

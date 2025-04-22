@@ -20,7 +20,7 @@ async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
 
     # Get model manager instance and get/create model
     model_manager = ModelManager.get_instance()
-    model = model_manager.initialize_model(env)
+    model = model_manager.get_or_create_model(env, matrix_name)
 
     # Fine-tune model
     model_manager.fine_tune(timesteps=2000)
