@@ -18,7 +18,6 @@ public class GameResult implements KafkaMessage {
     private List<Integer> dungeonLevelProgression;
     private List<MonsterData> defeatedMonsters;
 
-    private Map<String, Double[][]> balanceMatrices;
     private Map<Double, Integer> vanillaItemsWeightScale;
 
     public GameResult(long chatId) {

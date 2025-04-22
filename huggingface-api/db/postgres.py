@@ -34,3 +34,40 @@ async def save_balance_matrix(chat_id, name, matrix):
     await conn.close()
 
     await conn.close()
+
+async def load_balance_matrix(chat_id, name):
+    """Loads balance matrix from PostgreSQL."""
+    logging.debug(f"Loading balance matrix for chatId: {chat_id}, name: {name}")
+    conn = await asyncpg.connect("postgresql://{}:{}@postgres:{}/{}".format(
+        POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_PORT, POSTGRES_DB
+    ))
+
+    query = """
+    SELECT data FROM matrices WHERE chat_id = $1 AND name = $2 LIMIT 1
+    """
+
+    row = await conn.fetchrow(query, chat_id, name)
+    await conn.close()
+
+    return np.array(row["data"]) if row else None
+
+async def load_chat_matrices(chat_id: int) -> dict:
+    """Load all balance matrices associated with a chat."""
+    conn = await asyncpg.connect("postgresql://{}:{}@postgres:{}/{}".format(
+        POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_PORT, POSTGRES_DB
+    ))
+    try:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                """
+                SELECT name, data 
+                FROM balance_matrices 
+                WHERE chat_id = %s
+                """,
+                    (chat_id,)
+            )
+            results = await cur.fetchall()
+            return {row[0]: row[1] for row in results} if results else {}
+    except Exception as e:
+        logging.error(f"Error loading chat matrices: {e}")
+        return {}

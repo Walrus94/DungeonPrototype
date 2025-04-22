@@ -3,63 +3,28 @@ from stable_baselines3 import PPO
 from models.rl_env import BalanceAdjustmentEnv
 from db.postgres import load_template_matrix
 from db.mongo import load_game_results
-from config.settings import HF_MODEL_FILE
+from models.model_manager import ModelManager
 import numpy as np
 import os
 import logging
 
 async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
-    """
-    Generate a balanced matrix based on game results and template matrix.
-    Args:
-        chat_id: ID of the chat.
-        database: Database connection.
-        columns: Number of columns in the matrix.
-        rows: Number of rows in the matrix.
-        game_results: List of game results, including reached level, statistics, and player state dynamics.
-    Returns:
-        Generated matrix of the specified size.
-    """
-    # Directory to save trained models
-    trained_models_dir = os.path.join(HF_MODEL_FILE, "trained_models")
-    # Load the template matrix from the database
+    """Generate a balanced matrix based on game results and template matrix."""
+    # Load the template matrix and game results
+    logging.debug(f"Loading template matrix: {matrix_name}")
     template_matrix = await load_template_matrix(matrix_name)
-    # Load game results from MongoDB
+    logging.debug(f"Loading game results for chatId: {chat_id}")
     game_results = await load_game_results(chat_id)
 
     # Create environment
     env = BalanceAdjustmentEnv(template_matrix, game_results, matrix_name)
 
+    # Get model manager instance and get/create model
+    model_manager = ModelManager.get_instance()
+    model = model_manager.initialize_model(env)
 
-    model = PPO(
-        "MlpPolicy",
-        env,
-        learning_rate=5e-5,  # Reduced learning rate for finer adjustments
-        n_steps=2048,        # Increased steps per update
-        batch_size=64,
-        n_epochs=10,         # More epochs per update
-        gamma=0.99,          # High discount factor for long-term effects
-        ent_coef=0.01,      # Encourage exploration
-        policy_kwargs=dict(
-            net_arch=dict(
-                pi=[128, 128],  # Policy network
-                vf=[128, 128]   # Value network
-            ),
-        ),
-        device='cpu'      # Force CPU usage to save GPU memory
-        )
-
-    # Quick fine-tuning
-    model.learn(
-        total_timesteps=2000,
-        progress_bar=True
-    )
-
-    # Save the fine-tuned model
-    
-    os.makedirs(trained_models_dir, exist_ok=True)
-    model.save(os.path.join(trained_models_dir, "balance_rl_model"))
-
+    # Fine-tune model
+    model_manager.fine_tune(timesteps=2000)
 
     # Generate a new matrix of the specified size
     generated_matrix = np.zeros((rows, columns))

@@ -77,13 +77,8 @@ public class GameResultService {
         GameResult gameResult = gameResultMap.remove(chatId);
 
         gameResult.setDeath(true);
-        gameResult.setBalanceMatrices(collectBalanceMatrices(chatId));
 
         kafkaProducer.sendGameResults(gameResult);
 
-    }
-
-    private Map<String, Double[][]> collectBalanceMatrices(long chatId) {
-        return balanceMatrixService.getAllMatrices(chatId);
     }
 }
