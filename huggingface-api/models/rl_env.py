@@ -16,33 +16,21 @@ class BalanceAdjustmentEnv(gym.Env):
         self.max_changes = 100  # Max changes per episode
         self.total_changes = np.zeros_like(template_matrix)  # Track changes
 
-        # Action space: Increase, Decrease, Keep
+        # Action space: continuous values for each matrix element
         self.action_space = spaces.Box(
-        low=-1.0,
-        high=1.0,
-        shape=(1,),
-        dtype=np.float32
-    )
-
-        # Flatten the matrix for observation space to make it more standard
-        self.flat_size = self.template_matrix.size
-        self.observation_space = spaces.Box(
-           low=np.array([-1.2, -0.07]),
-            high=np.array([0.6, 0.07]),  
-            shape=(2,), 
+            low=-1.0,
+            high=1.0,
+            shape=template_matrix.shape,
             dtype=np.float32
         )
-    def _normalize_observation(self):
-        """Convert matrix state to normalized observation."""
-        # Convert matrix state to 2D observation
-        avg_value = np.mean(self.current_matrix)
-        std_value = np.std(self.current_matrix)
-        
-        # Map to MountainCar ranges
-        pos = np.clip(avg_value, 0, 2) * 0.9 - 1.2  # Map [0,2] to [-1.2,0.6]
-        vel = np.clip(std_value, 0, 0.14) - 0.07    # Map [0,0.14] to [-0.07,0.07]
-        
-        return np.array([pos, vel], dtype=np.float32)
+
+        # Observation space: matrix of the same shape as template
+        self.observation_space = spaces.Box(
+            low=0.1,  # Minimum allowed value
+            high=2.0,  # Maximum allowed value
+            shape=template_matrix.shape,
+            dtype=np.float32
+        )
     
     def seed(self, seed=None):
         """Set random seed for reproducibility."""
@@ -52,18 +40,20 @@ class BalanceAdjustmentEnv(gym.Env):
 
     def step(self, action):
         """Adjust matrix values dynamically."""
-        row, col = np.random.randint(0, self.template_matrix.shape[0]), np.random.randint(0, self.template_matrix.shape[1])
-        
-        change_amount = 0.01
         done = False
-
-        # Apply changes with bounds checking
-        if action == 0 and self.current_matrix[row, col] < 2.0:
-            self.current_matrix[row, col] = np.round(self.current_matrix[row, col] + change_amount, 4)
-            self.total_changes[row, col] += 1
-        elif action == 1 and self.current_matrix[row, col] > 0.1:
-            self.current_matrix[row, col] = np.round(self.current_matrix[row, col] - change_amount, 4)
-            self.total_changes[row, col] += 1
+        
+        # Apply changes across the entire matrix
+        change_amount = 0.01
+        changes = np.clip(action * change_amount, -change_amount, change_amount)
+        
+        # Update matrix with bounds checking
+        new_matrix = self.current_matrix + changes
+        new_matrix = np.clip(new_matrix, 0.1, 2.0)  # Enforce bounds
+        
+        # Track changes
+        actual_changes = new_matrix - self.current_matrix
+        self.total_changes += np.abs(actual_changes) > 0
+        self.current_matrix = new_matrix
 
         # Update episode tracking
         self.current_changes += 1
@@ -79,19 +69,17 @@ class BalanceAdjustmentEnv(gym.Env):
 
         info = {
             'changes': self.total_changes,
-            'current_value': self.current_matrix[row, col],
-            'position': (row, col)
+            'matrix': self.current_matrix,
         }
 
-        obs = self._normalize_observation()
-        return obs, reward, done, info
+        return self.current_matrix, reward, done, info
 
     def reset(self):
         """Reset matrix to base template."""
         self.current_matrix = np.copy(self.template_matrix)
         self.total_changes = np.zeros_like(self.template_matrix)
         self.current_changes = 0
-        return self._normalize_observation()
+        return self.current_matrix
     
     def _calculate_reward(self):
         """Calculate reward based on game results considering weight vectors."""
