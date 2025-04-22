@@ -5,6 +5,7 @@ from confluent_kafka.admin import AdminClient, NewTopic
 from config.settings import KAFKA_BOOTSTRAP_SERVER, KAFKA_BALANCE_MATRIX_TOPIC, KAFKA_TOPIC_ITEM_NAMING, KAFKA_GAME_RESULTS_TOPIC
 from kafka.process_balance import process_kafka_balance_message
 from kafka.process_item_metadata import process_kafka_item_message
+from kafka.process_game_results import process_kafka_game_result
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -56,11 +57,11 @@ async def consume_messages():
         logging.debug(f"Received message: {msg.value().decode('utf-8')}")
         topic = msg.topic()
         if topic == KAFKA_TOPIC_ITEM_NAMING:
-            await process_kafka_item_message(message)
+            await process_kafka_item_message(msg)
         elif topic == KAFKA_BALANCE_MATRIX_TOPIC:
-            await process_kafka_balance_message(message)
+            await process_kafka_balance_message(msg)
         elif topic == KAFKA_GAME_RESULTS_TOPIC:  # New topic for game results
-            await process_kafka_game_result(message)
+            await process_kafka_game_result(msg)
         else:  # Default case
             logging.warning(f"Unhandled topic: {topic}")
 
