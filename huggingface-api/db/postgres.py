@@ -31,8 +31,7 @@ async def save_balance_matrix(chat_id, name, matrix):
     VALUES ($1, $2, $3)
     ON CONFLICT (chat_id, name) 
     DO UPDATE SET 
-        data = $3,
-        updated_at = CURRENT_TIMESTAMP
+        data = $3
     """
 
     try:
