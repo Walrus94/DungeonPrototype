@@ -40,6 +40,7 @@ async def load_game_results(chat_id):
         List of game results as dictionaries.
     """
     try:
+        logging.debug(f"Loading game results for chatId: {chat_id}")
         results = game_results_collection.find({"chat_id": chat_id})
         return list(results)
     except Exception as e:

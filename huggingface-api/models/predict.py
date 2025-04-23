@@ -10,9 +10,7 @@ import logging
 async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
     """Generate a balanced matrix based on game results and template matrix."""
     # Load the template matrix and game results
-    logging.debug(f"Loading template matrix: {matrix_name}")
     template_matrix = await load_template_matrix(matrix_name)
-    logging.debug(f"Loading game results for chatId: {chat_id}")
     game_results = await load_game_results(chat_id)
 
     # Generate a new matrix of the specified size

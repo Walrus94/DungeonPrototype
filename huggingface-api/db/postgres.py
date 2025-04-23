@@ -27,13 +27,22 @@ async def save_balance_matrix(chat_id, name, matrix):
     ))
 
     query = """
-    INSERT INTO matrices (chat_id, name, data) VALUES ($1, $2, $3)
+    INSERT INTO matrices (chat_id, name, data) 
+    VALUES ($1, $2, $3)
+    ON CONFLICT (chat_id, name) 
+    DO UPDATE SET 
+        data = $3,
+        updated_at = CURRENT_TIMESTAMP
     """
 
-    await conn.execute(query, chat_id, name, matrix.tolist())
-    await conn.close()
-
-    await conn.close()
+    try:
+        await conn.execute(query, chat_id, name, matrix.tolist())
+        logging.debug(f"Successfully saved/updated matrix {name} for chat {chat_id}")
+    except Exception as e:
+        logging.error(f"Error saving matrix: {e}")
+        raise
+    finally:
+        await conn.close()
 
 async def load_balance_matrix(chat_id, name):
     """Loads balance matrix from PostgreSQL."""
