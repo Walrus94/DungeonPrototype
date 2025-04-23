@@ -15,16 +15,6 @@ async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
     logging.debug(f"Loading game results for chatId: {chat_id}")
     game_results = await load_game_results(chat_id)
 
-    # Create environment
-    env = BalanceAdjustmentEnv(template_matrix, game_results, matrix_name)
-
-    # Get model manager instance and get/create model
-    model_manager = ModelManager.get_instance()
-    model = model_manager.get_or_create_model(env, matrix_name)
-
-    # Fine-tune model
-    model_manager.fine_tune_and_save(timesteps=2000)
-
     # Generate a new matrix of the specified size
     generated_matrix = np.zeros((rows, columns))
     for i in range(rows):
@@ -38,8 +28,18 @@ async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
 
     # Adjust the matrix using the trained RL model
     try:
+        # Create environment
         env = BalanceAdjustmentEnv(generated_matrix, game_results, matrix_name)
+
         obs = env.reset()
+
+        # Get model manager instance and get/create model
+        model_manager = ModelManager.get_instance()
+        model = model_manager.get_or_create_model(env)
+
+        # Fine-tune model
+        model_manager.fine_tune_and_save(timesteps=2000)
+        
         
         # More adjustment steps for larger matrices
         num_steps = max(10, int(np.sqrt(rows * columns)))

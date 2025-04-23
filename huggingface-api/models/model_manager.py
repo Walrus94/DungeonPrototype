@@ -24,7 +24,7 @@ class ModelManager:
                     cls._instance = ModelManager()
         return cls._instance
     
-    def get_or_create_model(self, env, matrix_name):
+    def get_or_create_model(self, env):
         """Thread-safe model loading or creation"""
         with self.model_lock:
             model_path = os.path.join(HF_MODEL_FILE, "trained_models", "balance_rl_model")
@@ -83,7 +83,7 @@ class AutoModelManager(ModelManager):
                     env = BalanceAdjustmentEnv(data, [game_result], name)
                     
                     # Use get_or_create_model instead of direct loading/creation
-                    self.model = self.get_or_create_model(env, name)
+                    self.model = self.get_or_create_model(env)
                     
                     # Perform quick update with new data
                     self.model.learn(
