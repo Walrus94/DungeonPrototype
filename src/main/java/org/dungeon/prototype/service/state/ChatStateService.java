@@ -2,6 +2,7 @@ package org.dungeon.prototype.service.state;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.dungeon.prototype.async.AsyncJobHandler;
 import org.dungeon.prototype.bot.state.ChatContext;
 import org.dungeon.prototype.bot.state.ChatState;
 import org.dungeon.prototype.exception.ChatStateUpdateException;
@@ -46,6 +47,8 @@ public class ChatStateService {
     BalanceMatrixService balanceMatrixService;
     @Autowired
     MessageService messageService;
+    @Autowired
+    AsyncJobHandler asyncJobHandler;
 
     /**
      * Initializes chat context: sets chat context state
@@ -153,6 +156,7 @@ public class ChatStateService {
                     levelService.remove(chatId);
                 }
             }
+            asyncJobHandler.clearLatch(chatId);
             chatState.setChatState(IDLE);
             chatState.setLastActiveTime(new AtomicLong(System.currentTimeMillis()));
             chatStateByIdMap.put(chatId, chatState);

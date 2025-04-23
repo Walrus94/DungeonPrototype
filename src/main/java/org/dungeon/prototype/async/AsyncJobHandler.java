@@ -142,6 +142,12 @@ public class AsyncJobHandler {
         });
     }
 
+    @Async
+    public void clearLatch(long chatId) {
+        log.info("Clearing latch for chatId: {}", chatId);
+        chatLatches.remove(chatId);
+    }
+
     private <T> Future<T> executeTask(Callable<T> job, TaskType taskType, long chatId, long clusterId) {
         try (var taskScope = new StructuredTaskScope.ShutdownOnFailure()) {
             var context = new TaskContextData(chatId, clusterId, taskType);

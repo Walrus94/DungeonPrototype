@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS matrices
 );
 
 CREATE INDEX IF NOT EXISTS idx_chat_id ON matrices (chat_id);
+ALTER TABLE matrices ADD CONSTRAINT unique_chat_matrix UNIQUE (chat_id, name);
 
 CREATE TABLE IF NOT EXISTS template_matrices
 (
