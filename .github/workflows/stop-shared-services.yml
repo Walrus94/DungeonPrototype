@@ -1,4 +1,4 @@
-name: Restart Shared Services
+name: Stop Shared Services
 
 on:
   workflow_dispatch:
@@ -19,7 +19,7 @@ on:
           - postgres
 
 jobs:
-  restart:
+  stop:
     runs-on: self-hosted
     environment:
       name: test
@@ -32,19 +32,29 @@ jobs:
           persist-credentials: false
           clean: false
 
+      - name: Set required environment variables
+        run: |
+          echo "ENV=${{vars.ENV}}" >> .env
+          echo "GRAFANA_USER=${{secrets.GRAFANA_USER}}" >> .env
+          echo "GRAFANA_PASSWORD=${{secrets.GRAFANA_PASSWORD}}" >> .env
+          echo "KAFKA_PORT=${{vars.KAFKA_PORT}}" >> .env
+          echo "MONGO_DB_PORT=${{vars.MONGO_DB_PORT}}" >> .env
+          echo "MONGO_DB_USER=${{ secrets.MONGO_DB_USER }}" >> .env
+          echo "MONGO_DB_PASSWORD=${{ secrets.MONGO_DB_PASSWORD }}" >> .env
+
       - name: Stop selected shared services
         run: |
           IFS=',' read -ra SERVICES <<< "${{ github.event.inputs.services }}"
           for service in "${SERVICES[@]}"; do
             echo "Stopping $service ..."
-            docker-compose -p shared -f docker-compose.shared.yml stop "$service"
+            docker-compose -p shared -f docker-compose.shared.yml --env-file .env stop "$service"
           done
 
-      - name: Remove unused containers, networks, and volumes
+      - name: Clean up environment file
+        run: rm -f .env
+
+      - name: Remove unused containers and volumes
         run: |
           docker system prune -af &&
           docker volume prune -f
 
-
-      - name: Verify Running Shared Services
-        run: docker ps --filter "name=shared" --format "table {{.Names}}\t{{.Status}}"
