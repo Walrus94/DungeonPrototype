@@ -71,8 +71,8 @@
     "list": [
       {
         "current": {
-          "text": "shared",
-          "value": "shared"
+          "text": "logging",
+          "value": "logging"
         },
         "definition": "",
         "label": "Environment",
@@ -112,12 +112,12 @@
         "label": "Log Level",
         "type": "query",
         "query": {
-          "query": "label_values(level)",
+          "query": "label_values({environment=\"$env\", service=\"$service\"}, level)",
           "refId": "LokiVariableQueryEditor-VariableQuery",
           "stream": "",
           "type": 1
         },
-        "definition": "label_values(level)",
+        "definition": "label_values({environment=\"$env\", service=\"$service\"}, level)",
         "refresh": 2,
         "options": [],
         "includeAll": true,
