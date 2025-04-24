@@ -39,14 +39,7 @@ import java.util.stream.Collectors;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.apache.commons.math3.util.FastMath.max;
-import static org.dungeon.prototype.bot.state.ChatState.AWAITING_NICKNAME;
-import static org.dungeon.prototype.bot.state.ChatState.BATTLE;
-import static org.dungeon.prototype.bot.state.ChatState.GAME;
-import static org.dungeon.prototype.bot.state.ChatState.GAME_MENU;
-import static org.dungeon.prototype.bot.state.ChatState.GENERATING_ITEMS;
-import static org.dungeon.prototype.bot.state.ChatState.GENERATING_LEVEL;
-import static org.dungeon.prototype.bot.state.ChatState.GENERATING_PLAYER;
-import static org.dungeon.prototype.bot.state.ChatState.PRE_GAME_MENU;
+import static org.dungeon.prototype.bot.state.ChatState.*;
 import static org.dungeon.prototype.properties.CallbackType.ITEM_INVENTORY;
 import static org.dungeon.prototype.properties.CallbackType.ITEM_INVENTORY_EQUIP;
 import static org.dungeon.prototype.properties.CallbackType.ITEM_INVENTORY_UN_EQUIP;
@@ -87,7 +80,7 @@ public class MessageService {
     @Autowired
     private KeyboardService keyboardService;
 
-    @ChatStateUpdate(from = AWAITING_NICKNAME, to = PRE_GAME_MENU)
+    @ChatStateUpdate(from = {IDLE, AWAITING_NICKNAME, PRE_GAME_MENU}, to = PRE_GAME_MENU)
     public void sendStartMessage(Long chatId, String nickname, Boolean hasSavedGame) {
         messageSender.sendPhotoMessage(
                 chatId,
