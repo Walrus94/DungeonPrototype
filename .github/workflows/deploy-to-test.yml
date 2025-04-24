@@ -63,6 +63,13 @@ jobs:
           echo "POSTGRES_DATABASE_USER=${{secrets.POSTGRES_DATABASE_USER}}" >> .env
           echo "POSTGRES_DATABASE_PORT=${{vars.POSTGRES_DATABASE_PORT}}" >> .env
 
+      - name: Pre-deploy cleanup
+        run: |
+          docker-compose -p test --env-file .env down --remove-orphans || true
+          docker network rm test_net || true
+          docker volume prune -f || true
+          docker system prune -af || true
+
       - name: Create shared network
         run: |
           if [ ! "$(docker network ls | grep shared_net)" ]; then
