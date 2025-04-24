@@ -42,6 +42,7 @@ public class WalkerBuilder {
     public GridSection[][] nextStep(GridSection[][] grid) {
         log.info("Walker id:{} (reversed:{}, overriding:{}, border path:{}) next step...",
                 id, isReversed, overridingReversedPath, longestPathDefault);
+        log.debug("Current point: {}", currentPoint);
         GridSection currentSection = grid[currentPoint.getX()][currentPoint.getY()];
         log.debug("Current section: {}", currentSection);
 
