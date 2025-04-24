@@ -42,6 +42,8 @@ public class BalanceMatrixService {
                 new BalanceMatrixGenerationRequest("weapon_size_adjustment", weaponAttributeVectorSize, Size.values().length),
                 new BalanceMatrixGenerationRequest("weapon_attack_type_adjustment", weaponAttributeVectorSize, WeaponAttackType.values().length),
                 new BalanceMatrixGenerationRequest("items_quality_adjustment", Quality.values().length, 1),
+                new BalanceMatrixGenerationRequest("wearable_armor_bonus", WearableMaterial.values().length, 1),
+                new BalanceMatrixGenerationRequest("wearable_chance_to_dodge_adjustment", WearableMaterial.values().length, 1),
                 new BalanceMatrixGenerationRequest("player_attack", WeaponAttackType.values().length, MonsterClass.values().length),
                 new BalanceMatrixGenerationRequest("monster_attack", MonsterAttackType.values().length, WearableMaterial.values().length)
         ));
