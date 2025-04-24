@@ -1,0 +1,50 @@
+name: Restart Shared Services
+
+on:
+  workflow_dispatch:
+    inputs:
+      services:
+        description: "Select services to stop from docker-compose.shared.yml"
+        required: true
+        type: choice
+        options:
+          - loki
+          - promtail
+          - prometheus
+          - grafana
+          - mongodb-exporter
+          - zookeeper
+          - kafka
+          - mongo
+          - postgres
+
+jobs:
+  restart:
+    runs-on: self-hosted
+    environment:
+      name: test
+    steps:
+
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          clean: false
+
+      - name: Stop selected shared services
+        run: |
+          IFS=',' read -ra SERVICES <<< "${{ github.event.inputs.services }}"
+          for service in "${SERVICES[@]}"; do
+            echo "Stopping $service ..."
+            docker-compose -p shared -f docker-compose.shared.yml stop "$service"
+          done
+
+      - name: Remove unused containers, networks, and volumes
+        run: |
+          docker system prune -af &&
+          docker volume prune -f
+
+
+      - name: Verify Running Shared Services
+        run: docker ps --filter "name=shared" --format "table {{.Names}}\t{{.Status}}"
