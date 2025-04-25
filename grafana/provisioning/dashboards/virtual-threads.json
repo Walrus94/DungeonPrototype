@@ -12,6 +12,10 @@
         "name": "thread_group",
         "label": "Thread Group",
         "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "PBFA97CFB590B2093"
+        },
         "query": "label_values(jfr_event_threads_live_count, thread_group)",
         "refresh": 2,
         "includeAll": true,
@@ -26,7 +30,7 @@
         "name": "thread",
         "label": "Thread",
         "type": "query",
-        "query": "label_values(thread)",
+        "query": "label_values({job=\"java-app-logs\"}, thread)",
         "definition": "label_values({job=\"java-app-logs\"}, thread)",
         "refresh": 2,
         "includeAll": true,
