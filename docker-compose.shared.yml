@@ -66,29 +66,6 @@ services:
     networks:
       - shared_net
 
-  cryostat:
-    image: quay.io/cryostat/cryostat:latest
-    container_name: cryostat
-    environment:
-      - CRYOSTAT_WEB_PORT=8181
-      - CRYOSTAT_LISTEN_HOST=0.0.0.0
-      - CRYOSTAT_ARCHIVE_STORAGE_PROVIDER=filesystem
-      - CRYOSTAT_ARCHIVE_STORAGE_PATH=/recordings
-    ports:
-      - "8181:8181"
-    volumes:
-        - ./recordings:/recordings
-    restart: unless-stopped
-    labels:
-      environment: logging
-      service: cryostat
-    logging:
-      driver: "json-file"
-      options:
-        labels: environment,service
-    networks:
-      - shared_net
-
   mongodb-exporter:
     image: percona/mongodb_exporter:0.44.0
     container_name: mongodb-exporter

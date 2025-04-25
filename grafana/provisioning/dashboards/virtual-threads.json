@@ -7,45 +7,11 @@
   "version": 1,
   "refresh": "10s",
   "templating": {
-    "list": [
-      {
-        "name": "thread_group",
-        "label": "Thread Group",
-        "type": "query",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "PBFA97CFB590B2093"
-        },
-        "query": "label_values(jfr_event_threads_live_count, thread_group)",
-        "refresh": 2,
-        "includeAll": true,
-        "allValue": ".*",
-        "current": {
-          "text": "All",
-          "value": ".*"
-        },
-        "options": []
-      },
-      {
-        "name": "thread",
-        "label": "Thread",
-        "type": "query",
-        "query": "label_values({job=\"java-app-logs\"}, thread)",
-        "definition": "label_values({job=\"java-app-logs\"}, thread)",
-        "refresh": 2,
-        "includeAll": true,
-        "allValue": ".*",
-        "current": {
-          "text": "All",
-          "value": ".*"
-        },
-        "options": []
-      }
-    ]
+    "list": []
   },
   "panels": [
     {
-      "title": "Active Virtual Threads",
+      "title": "Live Threads",
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
@@ -53,8 +19,8 @@
       },
       "targets": [
         {
-          "expr": "jfr_event_threads_live_count{thread_group=~\"$thread_group\"}",
-          "legendFormat": "Active Virtual Threads"
+          "expr": "jvm_threads_live",
+          "legendFormat": "Live Threads"
         }
       ],
       "fieldConfig": {
@@ -71,7 +37,7 @@
       }
     },
     {
-      "title": "Threads Started (Rate)",
+      "title": "Daemon Threads",
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
@@ -79,41 +45,70 @@
       },
       "targets": [
         {
-          "expr": "rate(jfr_event_threads_started_count{thread_group=~\"$thread_group\"}[1m])",
-          "legendFormat": "New Threads/sec"
+          "expr": "jvm_threads_daemon",
+          "legendFormat": "Daemon Threads"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "threads/s"
+          "unit": "threads"
         }
       }
     },
     {
-      "title": "Loki - Virtual Thread Logs",
-      "type": "logs",
+      "title": "Peak Threads",
+      "type": "timeseries",
       "datasource": {
-        "type": "loki",
-        "uid": "P8E80F9AEF21F6940"
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
       },
       "targets": [
         {
-          "expr": "{job=\"java-app-logs\", thread=~\"$thread\"} |= \"VirtualThread\""
+          "expr": "jvm_threads_peak",
+          "legendFormat": "Peak Threads"
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "threads"
+        }
+      }
     },
     {
-      "title": "Loki - Thread Stack Traces",
-      "type": "logs",
+      "title": "Threads by State",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "targets": [
+        {
+          "expr": "jvm_threads_states",
+          "legendFormat": "{{state}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "threads"
+        }
+      }
+    },
+    {
+      "name": "thread",
+      "label": "Thread",
+      "type": "query",
       "datasource": {
         "type": "loki",
         "uid": "P8E80F9AEF21F6940"
       },
-      "targets": [
-        {
-          "expr": "{job=\"java-app-logs\", thread=~\"$thread\"} |= \"java.lang.Thread.getStackTrace\""
-        }
-      ]
+      "query": "label_values(thread)",
+      "refresh": 2,
+      "includeAll": true,
+      "allValue": ".*",
+      "current": {
+        "text": "All",
+        "value": ".*"
+      }
     }
   ]
 }
