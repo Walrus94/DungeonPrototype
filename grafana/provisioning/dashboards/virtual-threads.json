@@ -26,12 +26,7 @@
         "name": "thread",
         "label": "Thread",
         "type": "query",
-        "query": {
-          "query": "label_values({job=\"java-app-logs\"}, thread)",
-          "refId": "LokiVariableQueryEditor-VariableQuery",
-          "stream": "",
-          "type": 1
-        },
+        "query": "label_values(thread)",
         "definition": "label_values({job=\"java-app-logs\"}, thread)",
         "refresh": 2,
         "includeAll": true,
