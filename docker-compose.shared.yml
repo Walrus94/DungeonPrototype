@@ -66,6 +66,14 @@ services:
     networks:
       - shared_net
 
+  cryostat:
+    image: quay.io/cryostat/cryostat:latest
+    environment:
+      - CRYOSTAT_WEB_PORT=8181
+      - CRYOSTAT_LISTEN_HOST=0.0.0.0
+    ports:
+      - "8181:8181"
+
   mongodb-exporter:
     image: percona/mongodb_exporter:0.44.0
     container_name: mongodb-exporter

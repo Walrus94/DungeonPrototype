@@ -6,13 +6,55 @@
   "schemaVersion": 37,
   "version": 1,
   "refresh": "10s",
+  "templating": {
+    "list": [
+      {
+        "name": "thread_group",
+        "label": "Thread Group",
+        "type": "query",
+        "query": "label_values(jfr_event_threads_live_count, thread_group)",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": ".*"
+        },
+        "options": []
+      },
+      {
+        "name": "thread",
+        "label": "Thread",
+        "type": "query",
+        "query": {
+          "query": "label_values({job=\"java-app-logs\"}, thread)",
+          "refId": "LokiVariableQueryEditor-VariableQuery",
+          "stream": "",
+          "type": 1
+        },
+        "definition": "label_values({job=\"java-app-logs\"}, thread)",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": ".*"
+        },
+        "options": []
+      }
+    ]
+  },
   "panels": [
     {
       "title": "Active Virtual Threads",
       "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
       "targets": [
         {
-          "expr": "jfr_virtual_threads",
+          "expr": "jfr_event_threads_live_count{thread_group=~\"$thread_group\"}",
           "legendFormat": "Active Virtual Threads"
         }
       ],
@@ -22,144 +64,57 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1000
-              }
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1000 }
             ]
           }
         }
       }
     },
     {
-      "title": "Virtual Threads Created (Rate)",
+      "title": "Threads Started (Rate)",
       "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
       "targets": [
         {
-          "expr": "rate(jfr_virtual_threads_created[1m])",
-          "legendFormat": "New Virtual Threads/sec"
+          "expr": "rate(jfr_event_threads_started_count{thread_group=~\"$thread_group\"}[1m])",
+          "legendFormat": "New Threads/sec"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "threads/s",
-          "color": {
-            "mode": "palette-classic"
-          }
-        }
-      }
-    },
-    {
-      "title": "Structured Task Execution Time",
-      "type": "gauge",
-      "targets": [
-        {
-          "expr": "histogram_quantile(0.95, rate(jfr_structured_task_execution_time_seconds_bucket[1m]))",
-          "legendFormat": "95th Percentile Execution Time"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "max": 10,
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 5
-              },
-              {
-                "color": "red",
-                "value": 8
-              }
-            ]
-          }
-        }
-      }
-    },
-    {
-      "title": "CPU Time Spent in Virtual Threads",
-      "type": "timeseries",
-      "targets": [
-        {
-          "expr": "rate(jfr_virtual_thread_cpu_time_seconds[1m])",
-          "legendFormat": "CPU Time in Virtual Threads"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "color": {
-            "mode": "continuous-GrYlRd"
-          }
+          "unit": "threads/s"
         }
       }
     },
     {
       "title": "Loki - Virtual Thread Logs",
       "type": "logs",
+      "datasource": {
+        "type": "loki",
+        "uid": "P8E80F9AEF21F6940"
+      },
       "targets": [
         {
-          "expr": "{job='java-app-logs'} |= \"VirtualThread\"",
-          "datasource": "loki"
+          "expr": "{job='java-app-logs', thread=~\"$thread\"} |= \"VirtualThread\""
         }
       ]
     },
     {
       "title": "Loki - Thread Stack Traces",
       "type": "logs",
+      "datasource": {
+        "type": "loki",
+        "uid": "P8E80F9AEF21F6940"
+      },
       "targets": [
         {
-          "expr": "{job='java-app-logs'} |= \"java.lang.Thread.getStackTrace\"",
-          "datasource": "loki"
+          "expr": "{job='java-app-logs', thread=~\"$thread\"} |= \"java.lang.Thread.getStackTrace\""
         }
       ]
-    },
-    {
-      "title": "Virtual Thread Blocked Time",
-      "type": "timeseries",
-      "targets": [
-        {
-          "expr": "rate(jfr_virtual_thread_blocked_time_seconds[1m])",
-          "legendFormat": "Blocked Time in Virtual Threads"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "color": {
-            "mode": "continuous-GrYlRd"
-          }
-        }
-      }
-    },
-    {
-      "title": "Virtual Thread Wait Time",
-      "type": "timeseries",
-      "targets": [
-        {
-          "expr": "rate(jfr_virtual_thread_wait_time_seconds[1m])",
-          "legendFormat": "Wait Time in Virtual Threads"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "color": {
-            "mode": "continuous-GrYlRd"
-          }
-        }
-      }
     }
   ]
 }

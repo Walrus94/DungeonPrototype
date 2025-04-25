@@ -175,7 +175,7 @@ public class LevelGenerationService {
         log.info("Generating cluster {} with start point {} and end point {}",
                 cluster.getId(), cluster.getStartConnectionPoint(), cluster.getEndConnectionPoint());
         GridSection[][] clusterGrid = generateEmptyMapGrid(cluster.getStartConnectionPoint(), cluster.getEndConnectionPoint());
-        log.debug("Empty cluster grid: {}", printMapGridToLogs(clusterGrid));
+        log.debug("Empty cluster grid:\n {}", printMapGridToLogs(clusterGrid));
         while (!walkerBuilders.isEmpty()) {
             for (WalkerBuilder walker : walkerBuilders) {
                 log.debug("Current walker: {}", walker);
