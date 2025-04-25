@@ -175,13 +175,15 @@ public class LevelGenerationService {
         log.info("Generating cluster {} with start point {} and end point {}",
                 cluster.getId(), cluster.getStartConnectionPoint(), cluster.getEndConnectionPoint());
         GridSection[][] clusterGrid = generateEmptyMapGrid(cluster.getStartConnectionPoint(), cluster.getEndConnectionPoint());
+        log.debug("Empty cluster grid: {}", printMapGridToLogs(clusterGrid));
         while (!walkerBuilders.isEmpty()) {
             for (WalkerBuilder walker : walkerBuilders) {
+                log.debug("Current walker: {}", walker);
                 clusterGrid = walker.nextStep(clusterGrid);
-                log.debug("Current cluster walkers: {}", walkerBuilders);
                 log.debug("Current cluster grid state\n{}", printMapGridToLogs(clusterGrid));
             }
             walkerBuilders.removeIf(WalkerBuilder::isStopped);
+            log.debug("Current cluster walkers: {}", walkerBuilders);
         }
         if (cluster.hasNegativeRooms()) {
             log.info("Processing negative rooms of cluster {}", cluster.getId());

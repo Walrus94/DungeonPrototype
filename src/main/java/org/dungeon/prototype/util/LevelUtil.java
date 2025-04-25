@@ -200,8 +200,10 @@ public class LevelUtil {
     }
 
     public static GridSection[][] generateEmptyMapGrid(Point start, Point end) {
+        log.debug("Generating empty grid...");
         int xSize = end.getX() - start.getX();
         int ySize = end.getY() - start.getY();
+        log.debug("Grid size - x: {}, y: {}", xSize, ySize);
         GridSection[][] grid = new GridSection[xSize][ySize];
         for (int x = start.getX(); x < end.getX(); x++) {
             GridSection[] row = new GridSection[xSize];
