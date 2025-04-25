@@ -99,6 +99,8 @@ public class BalanceMatrixService {
         balanceMatrixRepository.clearBalanceMatrix(chatId, "weapon_complete_dragon_bone_adjustment");
         balanceMatrixRepository.clearBalanceMatrix(chatId, "weapon_size_adjustment");
         balanceMatrixRepository.clearBalanceMatrix(chatId, "weapon_attack_type_adjustment");
+        balanceMatrixRepository.clearBalanceMatrix(chatId, "wearable_armor_bonus");
+        balanceMatrixRepository.clearBalanceMatrix(chatId, "wearable_chance_to_dodge_adjustment");
         balanceMatrixRepository.clearBalanceMatrix(chatId, "items_quality_adjustment");
     }
 }
