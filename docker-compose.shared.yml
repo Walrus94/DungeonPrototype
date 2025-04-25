@@ -72,6 +72,7 @@ services:
     environment:
       - CRYOSTAT_WEB_PORT=8181
       - CRYOSTAT_LISTEN_HOST=0.0.0.0
+      - CRYOSTAT_ARCHIVE_STORAGE_DISABLE=true
     ports:
       - "8181:8181"
     restart: unless-stopped
