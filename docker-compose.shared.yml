@@ -74,6 +74,7 @@ services:
       - CRYOSTAT_LISTEN_HOST=0.0.0.0
     ports:
       - "8181:8181"
+    restart: unless-stopped
     labels:
       environment: logging
       service: cryostat
@@ -81,6 +82,8 @@ services:
       driver: "json-file"
       options:
         labels: environment,service
+    networks:
+      - shared_net
 
   mongodb-exporter:
     image: percona/mongodb_exporter:0.44.0
