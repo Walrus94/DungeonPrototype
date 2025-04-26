@@ -1,10 +1,10 @@
-name: Stop Shared Services
+name: Restart Shared Service
 
 on:
   workflow_dispatch:
     inputs:
       services:
-        description: "Select services to stop from docker-compose.shared.yml"
+        description: "Select service to restart from docker-compose.shared.yml"
         required: true
         type: choice
         options:
@@ -13,17 +13,16 @@ on:
           - prometheus
           - grafana
           - mongodb-exporter
-          - cryostat
           - zookeeper
           - kafka
           - mongo
           - postgres
 
 jobs:
-  stop:
+  restart:
     runs-on: self-hosted
     environment:
-      name: test
+      name: Restart
     steps:
 
       - name: Checkout the repository
@@ -43,12 +42,14 @@ jobs:
           echo "MONGO_DB_USER=${{ secrets.MONGO_DB_USER }}" >> .env
           echo "MONGO_DB_PASSWORD=${{ secrets.MONGO_DB_PASSWORD }}" >> .env
 
-      - name: Stop selected shared services
+      - name: Restart selected shared services
         run: |
           IFS=',' read -ra SERVICES <<< "${{ github.event.inputs.services }}"
           for service in "${SERVICES[@]}"; do
             echo "Stopping $service ..."
             docker-compose -p shared -f docker-compose.shared.yml --env-file .env stop "$service"
+            echo "Starting $service ..."
+            docker-compose -p shared -f docker-compose.shared.yml --env-file .env up "$service" --build -d
           done
 
       - name: Clean up environment file
