@@ -9,27 +9,34 @@
   "templating": {
     "list": [
       {
-        "name": "application",
-        "label": "Application",
-        "type": "query",
-        "datasource": {
-          "type": "loki",
-          "uid": "P8E80F9AEF21F6940"
-        },
-        "query": {
-          "label": "app",
-          "refId": "LokiVariableQueryEditor-ApplicationQuery",
-          "stream": "",
-          "type": 1
-        },
-        "refresh": 2,
-        "includeAll": true,
-        "allValue": ".*",
         "current": {
-          "text": "All",
-          "value": ".*"
+          "text": "",
+          "value": ""
         },
-        "options": []
+        "datasource": "PBFA97CFB590B2093",
+        "includeAll": false,
+        "label": "Application",
+        "name": "application",
+        "options": [],
+        "query": "label_values(application)",
+        "refresh": 2,
+        "regex": "",
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "datasource": "PBFA97CFB590B2093",
+        "includeAll": false,
+        "label": "Instance",
+        "name": "instance",
+        "options": [],
+        "query": "label_values(jvm_memory_used_bytes{application=\"$application\"}, instance)",
+        "refresh": 2,
+        "regex": "",
+        "type": "query"
       },
       {
         "name": "thread",
@@ -42,7 +49,7 @@
         "query": {
           "label": "thread",
           "refId": "LokiVariableQueryEditor-ThreadQuery",
-          "stream": "{app=\"$application\"}",
+          "stream": "{app=\"$application\", instance = \"$instance\"}",
           "type": 1
         },
         "refresh": 2,
