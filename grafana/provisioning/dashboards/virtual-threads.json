@@ -9,6 +9,29 @@
   "templating": {
     "list": [
       {
+        "name": "application",
+        "label": "Application",
+        "type": "query",
+        "datasource": {
+          "type": "loki",
+          "uid": "P8E80F9AEF21F6940"
+        },
+        "query": {
+          "label": "app",
+          "refId": "LokiVariableQueryEditor-ApplicationQuery",
+          "stream": "",
+          "type": 1
+        },
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": ".*"
+        },
+        "options": []
+      },
+      {
         "name": "thread",
         "label": "Thread",
         "type": "query",
@@ -18,8 +41,8 @@
         },
         "query": {
           "label": "thread",
-          "refId": "LokiVariableQueryEditor-VariableQuery",
-          "stream": "",
+          "refId": "LokiVariableQueryEditor-ThreadQuery",
+          "stream": "{app=\"$application\"}",
           "type": 1
         },
         "refresh": 2,
@@ -115,23 +138,6 @@
         "defaults": {
           "unit": "threads"
         }
-      }
-    },
-    {
-      "name": "thread",
-      "label": "Thread",
-      "type": "query",
-      "datasource": {
-        "type": "loki",
-        "uid": "P8E80F9AEF21F6940"
-      },
-      "query": "label_values(thread)",
-      "refresh": 2,
-      "includeAll": true,
-      "allValue": ".*",
-      "current": {
-        "text": "All",
-        "value": ".*"
       }
     },
     {

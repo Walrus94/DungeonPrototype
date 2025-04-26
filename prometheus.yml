@@ -7,21 +7,6 @@ scrape_configs:
     static_configs:
       - targets: ['kafka:7071', 'kafka:9998']
 
-  - job_name: 'cryostat-jfr-metrics'
-    metrics_path: '/api/v2/targets/__meta_cryostat_target_connectUrl__/metrics'
-    scheme: 'http'
-    http_sd_configs:
-      - url: 'http://cryostat:8181/api/v2/discovery'
-        refresh_interval: 30s
-    relabel_configs:
-      - source_labels: [ __meta_cryostat_target_connectUrl ]
-        target_label: connectUrl
-      - source_labels: [ __meta_cryostat_target_connectUrl ]
-        regex: '(.*)'
-        replacement: '${1}'
-        target_label: __metrics_path__
-
-
   - job_name: 'prod-dungeon-prototype-app'
     metrics_path: '/actuator/prometheus'
     static_configs:
