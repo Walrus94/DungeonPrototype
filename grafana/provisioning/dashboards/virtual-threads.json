@@ -38,7 +38,7 @@
       },
       "targets": [
         {
-          "expr": "jvm_threads_live",
+          "expr": "jvm_threads_live_threads",
           "legendFormat": "Live Threads"
         }
       ],
@@ -64,7 +64,7 @@
       },
       "targets": [
         {
-          "expr": "jvm_threads_daemon",
+          "expr": "jvm_threads_daemon_threads",
           "legendFormat": "Daemon Threads"
         }
       ],
@@ -102,7 +102,7 @@
       },
       "targets": [
         {
-          "expr": "jvm_threads_states",
+          "expr": "jvm_threads_states_threads",
           "legendFormat": "{{state}}"
         }
       ],
