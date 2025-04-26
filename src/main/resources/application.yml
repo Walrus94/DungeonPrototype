@@ -32,14 +32,16 @@ management:
   endpoints:
     web:
       exposure:
-        include: metrics,prometheus
+        include: help,info,metrics,prometheus
       base-path: /actuator
   metrics:
     tags:
       application: "dungeon-bot"
     enable:
+      http.server.requests: true
       tomcat: true
       tomcat.threads: true
+      tomcat.threads.busy: true
       jetty: true
       jvm: true
       process: true
