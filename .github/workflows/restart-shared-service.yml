@@ -15,10 +15,9 @@ on:
         - master
         - room-content-population
         - secure-test-environment
-        - update-branch-list-12292818677
         - upgrade-gradle-dependencies
           # END BRANCH LIST
-      services:
+      service:
         description: "Select service to restart from docker-compose.shared.yml"
         required: true
         type: choice
@@ -57,16 +56,20 @@ jobs:
           echo "MONGO_DB_PORT=${{vars.MONGO_DB_PORT}}" >> .env
           echo "MONGO_DB_USER=${{ secrets.MONGO_DB_USER }}" >> .env
           echo "MONGO_DB_PASSWORD=${{ secrets.MONGO_DB_PASSWORD }}" >> .env
+          echo "MONGO_MONITORING_USER=${{ secrets.MONGO_MONITORING_USER }}" >> .env
+          echo "MONGO_MONITORING_PASSWORD=${{ secrets.MONGO_MONITORING_PASSWORD }}" >> .env
+          echo "POSTGRES_DATABASE_NAME=${{vars.POSTGRES_DATABASE_NAME}}" >> .env
+          echo "POSTGRES_DATABASE_PASSWORD=${{secrets.POSTGRES_DATABASE_PASSWORD}}" >> .env
+          echo "POSTGRES_DATABASE_USER=${{secrets.POSTGRES_DATABASE_USER}}" >> .env
+          echo "POSTGRES_DATABASE_PORT=${{vars.POSTGRES_DATABASE_PORT}}" >> .env
 
       - name: Restart selected shared service
         run: |
-          IFS=',' read -ra SERVICES <<< "${{ github.event.inputs.services }}"
-          for service in "${SERVICES[@]}"; do
-            echo "Stopping $service ..."
-            docker-compose -p shared -f docker-compose.shared.yml --env-file .env stop "$service"
-            echo "Starting $service ..."
-            docker-compose -p shared -f docker-compose.shared.yml --env-file .env up "$service" --build -d
-          done
+          SERVICE="${{ github.event.inputs.service }}"
+          echo "Stopping $SERVICE ..."
+          docker-compose -p shared -f docker-compose.shared.yml --env-file .env stop "$SERVICE"
+          echo "Starting $SERVICE ..."
+          docker-compose -p shared -f docker-compose.shared.yml --env-file .env up "$SERVICE" --build -d
 
       - name: Clean up environment file
         run: rm -f .env
