@@ -46,12 +46,7 @@
           "type": "loki",
           "uid": "P8E80F9AEF21F6940"
         },
-        "query": {
-          "label": "thread",
-          "refId": "LokiVariableQueryEditor-ThreadQuery",
-          "stream": "{app=\"$application\", instance = \"$instance\"}",
-          "type": 1
-        },
+        "query": "label_values({application=\"$application\"}, thread)",
         "refresh": 2,
         "includeAll": true,
         "allValue": ".*",
