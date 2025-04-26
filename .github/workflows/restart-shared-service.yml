@@ -9,8 +9,14 @@ on:
         type: choice
         options:
           # BEGIN BRANCH LIST
-        - master
+        - async-task-execution
         - develop
+        - item-generation-refactoring
+        - master
+        - room-content-population
+        - secure-test-environment
+        - update-branch-list-12292818677
+        - upgrade-gradle-dependencies
           # END BRANCH LIST
       services:
         description: "Select service to restart from docker-compose.shared.yml"
