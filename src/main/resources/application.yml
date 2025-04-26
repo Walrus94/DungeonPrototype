@@ -38,9 +38,11 @@ management:
     tags:
       application: "dungeon-bot"
     enable:
+      tomcat: true
       tomcat.threads: true
       jetty: true
       jvm: true
+      process: true
       process.memory: true
       jvm.threads.peak: true
       jvm.threads.live: true
