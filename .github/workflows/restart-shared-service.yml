@@ -3,6 +3,15 @@ name: Restart Shared Service
 on:
   workflow_dispatch:
     inputs:
+      branch:
+        description: "Select branch to checkout"
+        required: true
+        type: choice
+        options:
+          # BEGIN BRANCH LIST
+        - master
+        - develop
+          # END BRANCH LIST
       services:
         description: "Select service to restart from docker-compose.shared.yml"
         required: true
@@ -28,6 +37,7 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.inputs.branch }}
           fetch-depth: 0
           persist-credentials: false
           clean: false
@@ -42,7 +52,7 @@ jobs:
           echo "MONGO_DB_USER=${{ secrets.MONGO_DB_USER }}" >> .env
           echo "MONGO_DB_PASSWORD=${{ secrets.MONGO_DB_PASSWORD }}" >> .env
 
-      - name: Restart selected shared services
+      - name: Restart selected shared service
         run: |
           IFS=',' read -ra SERVICES <<< "${{ github.event.inputs.services }}"
           for service in "${SERVICES[@]}"; do
