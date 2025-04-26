@@ -7,7 +7,26 @@
   "version": 1,
   "refresh": "10s",
   "templating": {
-    "list": []
+    "list": [
+      {
+        "name": "thread",
+        "label": "Thread",
+        "type": "query",
+        "datasource": {
+          "type": "loki",
+          "uid": "P8E80F9AEF21F6940"
+        },
+        "query": "label_values(thread)",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": ".*"
+        },
+        "options": []
+      }
+    ]
   },
   "panels": [
     {
@@ -108,6 +127,29 @@
       "current": {
         "text": "All",
         "value": ".*"
+      }
+    },
+    {
+      "title": "Logs by Selected Thread",
+      "type": "logs",
+      "datasource": {
+        "type": "loki",
+        "uid": "P8E80F9AEF21F6940"
+      },
+      "targets": [
+        {
+          "expr": "{job=\"java-app-logs\", thread=~\"$thread\"} |= \"VirtualThread\""
+        }
+      ],
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": true,
+        "showCommonLabels": false,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
       }
     }
   ]

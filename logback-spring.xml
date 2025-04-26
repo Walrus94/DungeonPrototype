@@ -14,11 +14,10 @@
         <staticLabels>
             <label name="app" value="DungeonPrototypeApplication"/>
             <label name="env" value="${ENV}"/>
+            <label name="job" value="java-app-logs"/>
         </staticLabels>
         <dynamicLabels>
             <label name="level" pattern="%level"/>
-        </dynamicLabels>
-        <dynamicLabels>
             <label name="thread" pattern="%thread"/>
         </dynamicLabels>
         <encoder>
