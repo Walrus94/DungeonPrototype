@@ -18,7 +18,7 @@
         </staticLabels>
         <dynamicLabels>
             <label name="level" pattern="%level"/>
-            <label name="thread" pattern="%thread"/>
+            <label name="thread" pattern="%replace(%thread){\s+}{}"/>
         </dynamicLabels>
         <encoder>
             <pattern>%d{yyyy-MM-dd'T'HH:mm:ss.SSS'Z'} [%thread] %-5level %logger - %msg%n</pattern>
