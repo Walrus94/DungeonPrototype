@@ -144,6 +144,12 @@ class BalanceAdjustmentEnv(gym.Env):
                     else:
                         # Severe penalty for dying to weaker monsters
                         reward -= 25 * (1 + cos_sim)
+        else:
+            # Handle other matrices using weight scale analysis
+            for game_result in self.game_results:
+                if "weightScale" in game_result:
+                    weight_scale_reward = self._calculate_weight_scale_reward(game_result["weightScale"])
+                    reward += weight_scale_reward
 
         return reward
 

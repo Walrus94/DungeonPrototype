@@ -21,8 +21,20 @@ async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
                 # Use value from the template matrix if present
                 generated_matrix[i][j] = template_matrix[i][j]
             else:
-                # Generate a value between 0.7 and 1.3
-                generated_matrix[i][j] = np.random.uniform(0.7, 1.3)
+                # Handle different matrix types with specific requirements
+                if matrix_name == "item_quality_adjustment":
+                    # Ascending values between 0.7 and 1.7
+                    base_value = 0.7 + (i / max(rows - 1, 1)) * 1.0
+                    generated_matrix[i][j] = base_value
+                elif matrix_name == "wearable_armor_bonus":
+                    # Integer values between -2 and 4
+                    generated_matrix[i][j] = float(np.random.randint(-2, 5))
+                elif matrix_name == "wearable_chance_to_dodge_adjustment":
+                    # Values between 0.1 and 0.5
+                    generated_matrix[i][j] = np.random.uniform(0.1, 0.5)
+                else:
+                    # Default case: values between 0.7 and 1.3
+                    generated_matrix[i][j] = np.random.uniform(0.7, 1.3)
 
     # Adjust the matrix using the trained RL model
     try:
