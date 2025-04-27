@@ -108,7 +108,7 @@
         "type": "query"
       },
       {
-        "name": "loglevel",
+        "name": "level",
         "label": "Log Level",
         "type": "query",
         "query": {
