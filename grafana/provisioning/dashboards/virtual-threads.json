@@ -151,7 +151,7 @@
       },
       "targets": [
         {
-          "expr": "{job=\"java-app-logs\", thread=~\"$thread\"} |= \"VirtualThread\""
+          "expr": "{job=\"java-app-logs\", instance=\"instance\", thread=\"$thread\"} | logfmt"
         }
       ],
       "options": {
