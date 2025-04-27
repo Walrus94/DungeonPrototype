@@ -36,8 +36,4 @@ scrape_configs:
         target_label: __discarded__
 
     pipeline_stages:
-      - regex:
-          expression: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z \[(?P<thread>[^\]]+)\] (?P<level>\S+)'
-      - labels:
-          thread:
-          level:
+      - docker: {}
