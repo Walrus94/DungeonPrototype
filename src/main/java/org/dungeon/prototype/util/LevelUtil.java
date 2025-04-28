@@ -251,7 +251,7 @@ public class LevelUtil {
 
     public static String printMapGridToLogs(GridSection[][] map) {
         StringBuilder result = new StringBuilder();
-        for (int y = map.length - 1; y >= 0; y--) {
+        for (int y = map[0].length - 1; y >= 0; y--) {
             for (GridSection[] gridSections : map) {
                 if (gridSections[y].isConnectionPoint()) {
                     result.append(getCrossroadIcon());
