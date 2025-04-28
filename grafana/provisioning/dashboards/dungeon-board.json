@@ -55,7 +55,7 @@
             "uid": "P8E80F9AEF21F6940"
           },
           "editorMode": "builder",
-          "expr": "{environment=\"$env\", service=\"$service\", level=~\"level\"} | logfmt",
+          "expr": "{environment=\"$env\", service=\"$service\", level=~\"$level\"} | logfmt",
           "queryType": "range",
           "refId": "A"
         }
