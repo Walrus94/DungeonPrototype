@@ -175,12 +175,12 @@ public class LevelGenerationService {
         log.info("Generating cluster {} with start point {} and end point {}",
                 cluster.getId(), cluster.getStartConnectionPoint(), cluster.getEndConnectionPoint());
         GridSection[][] clusterGrid = generateEmptyMapGrid(cluster.getStartConnectionPoint(), cluster.getEndConnectionPoint());
-//        log.debug("Empty cluster grid:\n {}", printMapGridToLogs(clusterGrid));
+        log.debug("Empty cluster grid:\n {}", printMapGridToLogs(clusterGrid));
         while (!walkerBuilders.isEmpty()) {
             for (WalkerBuilder walker : walkerBuilders) {
                 log.debug("Current walker: {}", walker);
                 clusterGrid = walker.nextStep(clusterGrid);
-//                log.debug("Current cluster grid state\n{}", printMapGridToLogs(clusterGrid));
+                log.debug("Current cluster grid state\n{}", printMapGridToLogs(clusterGrid));
             }
             walkerBuilders.removeIf(WalkerBuilder::isStopped);
             log.debug("Current cluster walkers: {}", walkerBuilders);
@@ -200,13 +200,13 @@ public class LevelGenerationService {
     private void copyGridSection(GridSection[][] grid, Point startConnectionPoint, Point endConnectionPoint, GridSection[][] gridSection) {
         log.info("Copying grid section from {} to {}",
                 startConnectionPoint, endConnectionPoint);
-//        log.debug("Grid section\n{}", printMapGridToLogs(gridSection));
-//        log.debug("Grid before copying\n{}", printMapGridToLogs(grid));
-        IntStream.range(startConnectionPoint.getX(), endConnectionPoint.getX() + 1)
-                .forEach(x -> IntStream.range(startConnectionPoint.getY(), endConnectionPoint.getY() + 1)
+        log.debug("Grid section\n{}", printMapGridToLogs(gridSection));
+        log.debug("Grid before copying\n{}", printMapGridToLogs(grid));
+        IntStream.range(startConnectionPoint.getX(), endConnectionPoint.getX())
+                .forEach(x -> IntStream.range(startConnectionPoint.getY(), endConnectionPoint.getY())
                         .forEach(y -> {
                             if (!isStartOrEnd(x, y, startConnectionPoint, endConnectionPoint))
-                                grid[x][y] = gridSection[x - startConnectionPoint.getX()][y - startConnectionPoint.getY()];
+                                grid[x][y] = gridSection[x - startConnectionPoint.getX()][y - startConnectionPoint.getY() ];
                         }));
         log.debug("Grid after copying\n{}", printMapGridToLogs(grid));
     }
@@ -565,7 +565,7 @@ public class LevelGenerationService {
         val negativeAdjacentSections = adjacentSections.stream()
                 .filter(section -> section.getStepsFromStart() < 0)
                 .collect(Collectors.toSet());
-        if (negativeAdjacentSections.size() > 0) {
+        if (!negativeAdjacentSections.isEmpty()) {
             negativeAdjacentSections
                     .forEach(section -> processNegativeBranch(section, stepsFromStart, grid, cluster));
         }
