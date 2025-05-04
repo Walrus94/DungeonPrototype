@@ -14,7 +14,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
-import static org.dungeon.prototype.util.LevelUtil.getAdjacentSections;
 import static org.dungeon.prototype.util.LevelUtil.getAdjacentSectionsInCluster;
 import static org.dungeon.prototype.util.LevelUtil.isPointInCluster;
 
@@ -95,7 +94,7 @@ public class WalkerBuilder {
 
     private Optional<GridSection> selectNextStep(GridSection[][] grid) {
         log.info("Choosing next step...");
-        Set<GridSection> adjacentSections = getAdjacentSections(currentPoint, grid);
+        Set<GridSection> adjacentSections = getAdjacentSectionsInCluster(currentPoint, grid, cluster);
         log.info("{} adjacent sections in cluster {}: {}", currentPoint, cluster, adjacentSections);
         if (isReversed) {
             if (adjacentSections.stream().anyMatch(section -> cluster.getStartConnectionPoint().equals(section.getPoint()))) {
@@ -128,7 +127,7 @@ public class WalkerBuilder {
                         .filter(section -> !currentPoint.equals(section.getPoint()))
                         .filter(section -> section.getStepsFromStart() == 0)
                         .filter(section -> !cluster.getEndConnectionPoint().equals(section.getPoint()))
-                        .max(Comparator.comparing(section -> getAdjacentSections(section.getPoint(), grid)
+                        .max(Comparator.comparing(section -> getAdjacentSectionsInCluster(section.getPoint(), grid, cluster)
                                 .stream()
                                 .filter(adjacentSection -> !isPointInCluster(adjacentSection.getPoint(), cluster))
                                 .count()));
@@ -159,7 +158,7 @@ public class WalkerBuilder {
                     return adjacentSections.stream()
                             .filter(section -> section.getStepsFromStart() == 0)
                             .filter(section -> !cluster.getStartConnectionPoint().equals(section.getPoint()))
-                            .max(Comparator.comparing(section -> getAdjacentSections(section.getPoint(), grid)
+                            .max(Comparator.comparing(section -> getAdjacentSectionsInCluster(section.getPoint(), grid, cluster)
                                     .stream()
                                     .filter(adjacentSection -> !isPointInCluster(adjacentSection.getPoint(), cluster))
                                     .count()));
