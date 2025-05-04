@@ -205,12 +205,12 @@ public class LevelUtil {
         int ySize = end.getY() - start.getY();
         log.debug("Grid size - x: {}, y: {}", xSize, ySize);
         GridSection[][] grid = new GridSection[xSize][ySize];
-        for (int x = start.getX(); x < end.getX(); x++) {
-            GridSection[] row = new GridSection[xSize];
-            for (int y = start.getY(); y < end.getY(); y++) {
-                row[y - start.getY()] = new GridSection(x, y);
+        for (int x = 0; x < xSize; x++) {
+            GridSection[] row = new GridSection[ySize];
+            for (int y = 0; y < ySize; y++) {
+                row[y] = new GridSection(x, y);
             }
-            grid[x - start.getX()] = row;
+            grid[x] = row;
         }
         return grid;
     }
@@ -251,7 +251,7 @@ public class LevelUtil {
 
     public static String printMapGridToLogs(GridSection[][] map) {
         StringBuilder result = new StringBuilder();
-        for (int y = map[0].length - 2; y >= 0; y--) {
+        for (int y = map[0].length - 1; y >= 0; y--) {
             for (GridSection[] gridSections : map) {
                 if (gridSections[y].isConnectionPoint()) {
                     result.append(getCrossroadIcon());
