@@ -16,6 +16,7 @@ import org.dungeon.prototype.service.level.LevelService;
 import org.dungeon.prototype.service.message.MessageService;
 import org.dungeon.prototype.service.room.MonsterService;
 import org.dungeon.prototype.service.room.RoomService;
+import org.dungeon.prototype.service.stats.GameResultService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -38,6 +39,8 @@ public class GeneralAspectHandler {
     private PlayerService playerService;
     @Autowired
     private MessageService messageService;
+    @Autowired
+    private GameResultService gameResultService;
     @Autowired
     private ItemService itemService;
 
@@ -77,9 +80,10 @@ public class GeneralAspectHandler {
 
     private void handleBeforeTurn(JoinPoint joinPoint) {
         Object[] args = joinPoint.getArgs();
-        if (args.length > 0 && args[0] instanceof Long) {
+        if (args.length > 0 && args[0] instanceof Long chatId) {
             if (args.length > 1 && args[1] instanceof Player player) {
                 playerService.updatePlayer(effectService.updatePlayerEffects(player));
+                gameResultService.addPlayerStep(chatId, player.getWeight());
             }
         }
     }
@@ -94,6 +98,7 @@ public class GeneralAspectHandler {
                     itemService.dropCollection(chatId);
                     player.getEffects().clear();
                     playerService.updatePlayer(player);
+                    gameResultService.registerDeathAndSaveResult(chatId);
                     messageService.sendDeathMessage(chatId);
                     return;
                 }
@@ -106,6 +111,7 @@ public class GeneralAspectHandler {
                             }
                             monster.setCurrentAttack(monster.getAttackPattern().poll());
                             monsterService.updateMonster(effectService.updateMonsterEffects(monsterRoom.getMonster()));
+                            gameResultService.incrementBattleStep(chatId);
                             messageService.sendMonsterRoomMessage(chatId, player, room);
                         }
                     }

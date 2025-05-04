@@ -61,7 +61,7 @@ public class DungeonBot extends SpringWebhookBot {
             //handles message text if present
             long chatId = update.getMessage().getChatId();
             if (!authUsers.isEmpty() && !authUsers.contains(chatId)) {
-                log.info("User {} failed to authenticate", chatId);
+                log.warn("User {} failed to authenticate", chatId);
                 throw new ChatException(AUTH_EXCEPTION_MESSAGE, chatId);
             }
             log.info("User {} successfully authenticated!", chatId);
@@ -75,7 +75,7 @@ public class DungeonBot extends SpringWebhookBot {
                     callbackQuery.getMessage().getChatId();
             callbackHandler.handleCallbackQuery(chatId, callbackQuery);
         }
-        return null; //TODO: consider returning messages here instead of passing through aspect
+        return null;
     }
 
     @Override
@@ -157,27 +157,23 @@ public class DungeonBot extends SpringWebhookBot {
     }
 
     private void processTextMessage(Long chatId, String messageText) {
-        if (messageText.equals("/start") && chatStateService.isStartAvailable(chatId)) {
-            botCommandHandler.processStartAction(chatId);
-            return;
+        log.debug("Received message: {} from chatId: {}", messageText, chatId);
+        switch (messageText) {
+            case "/start" -> {
+                if (chatStateService.isStartAvailable(chatId)) botCommandHandler.processStartAction(chatId);
+            }
+            case "/map" -> {
+                if (chatStateService.isGameMenuAvailable(chatId)) botCommandHandler.processMapAction(chatId);
+            }
+            case "/inventory" -> {
+                if (chatStateService.isInventoryAvailable(chatId)) botCommandHandler.processInventoryAction(chatId);
+            }
+            case "/stats" -> {
+                if (chatStateService.isGameMenuAvailable(chatId)) botCommandHandler.processStatsAction(chatId);
+            }
+            case "/stop" -> botCommandHandler.processStopAction(chatId);
+            default -> handlePrompt(chatId, messageText);
         }
-        if (messageText.equals("/map") && chatStateService.isGameMenuAvailable(chatId)) {
-            botCommandHandler.processMapAction(chatId);
-            return;
-        }
-        if (messageText.equals("/inventory") && chatStateService.isInventoryAvailable(chatId)) {
-            botCommandHandler.processInventoryAction(chatId);
-            return;
-        }
-        if (messageText.equals("/stats") && chatStateService.isGameMenuAvailable(chatId)) {
-            botCommandHandler.processStatsAction(chatId);
-            return;
-        }
-        if (messageText.equals("/stop")) {
-            botCommandHandler.processStopAction(chatId);
-            return;
-        }
-        handlePrompt(chatId, messageText);
     }
 
     private void handlePrompt(long chatId, String messageText) {

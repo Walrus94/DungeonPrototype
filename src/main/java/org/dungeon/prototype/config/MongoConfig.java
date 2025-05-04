@@ -3,16 +3,16 @@ package org.dungeon.prototype.config;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import jakarta.validation.constraints.NotNull;
-import org.dungeon.prototype.repository.converters.DirectionReadingConverter;
-import org.dungeon.prototype.repository.converters.DirectionWritingConverter;
-import org.dungeon.prototype.repository.converters.EffectAttributeReadingConverter;
-import org.dungeon.prototype.repository.converters.EffectAttributeWritingConverter;
-import org.dungeon.prototype.repository.converters.PlayerAttributeReadingConverter;
-import org.dungeon.prototype.repository.converters.PlayerAttributeWritingConverter;
-import org.dungeon.prototype.repository.converters.PointReadingConverter;
-import org.dungeon.prototype.repository.converters.PointWritingConverter;
-import org.dungeon.prototype.repository.converters.WearableTypeReadingConverter;
-import org.dungeon.prototype.repository.converters.WearableTypeWritingConverter;
+import org.dungeon.prototype.repository.mongo.converters.DirectionReadingConverter;
+import org.dungeon.prototype.repository.mongo.converters.DirectionWritingConverter;
+import org.dungeon.prototype.repository.mongo.converters.EffectAttributeReadingConverter;
+import org.dungeon.prototype.repository.mongo.converters.EffectAttributeWritingConverter;
+import org.dungeon.prototype.repository.mongo.converters.PlayerAttributeReadingConverter;
+import org.dungeon.prototype.repository.mongo.converters.PlayerAttributeWritingConverter;
+import org.dungeon.prototype.repository.mongo.converters.PointReadingConverter;
+import org.dungeon.prototype.repository.mongo.converters.PointWritingConverter;
+import org.dungeon.prototype.repository.mongo.converters.WearableTypeReadingConverter;
+import org.dungeon.prototype.repository.mongo.converters.WearableTypeWritingConverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Configuration
-@EnableMongoRepositories(basePackages = "org.dungeon.prototype.repository")
+@EnableMongoRepositories(basePackages = "org.dungeon.prototype.repository.mongo")
 public class MongoConfig extends AbstractMongoClientConfiguration {
     private final String port;
     private final String database;

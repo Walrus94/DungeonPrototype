@@ -138,9 +138,9 @@ public class LevelUtil {
         };
     }
 
-    public static boolean isPointOnGrid(Point point, int gridSize) {
-        return point.getY() < gridSize && point.getY() > -1 &&
-                point.getX() < gridSize && point.getX() > -1;
+    public static boolean isPointOnGrid(Point point, GridSection[][] grid) {
+        return point.getY() < grid.length && point.getY() > -1 &&
+                point.getX() < grid[0].length && point.getX() > -1;
     }
 
     public static Set<GridSection> getAdjacentSections(Point currentPoint, GridSection[][] grid) {
@@ -149,7 +149,7 @@ public class LevelUtil {
                         new Point(currentPoint.getX(), currentPoint.getY() + 1),
                         new Point(currentPoint.getX(), currentPoint.getY() - 1))
                 .unordered()
-                .filter(point -> isPointOnGrid(point, grid.length))
+                .filter(point -> isPointOnGrid(point, grid))
                 .map(point -> grid[point.getX()][point.getY()])
                 .collect(Collectors.toSet());
     }
@@ -187,11 +187,27 @@ public class LevelUtil {
         return result.toString();
     }
 
-    public static GridSection[][] generateEmptyMapGrid(Integer gridSize) {
+    public static GridSection[][] generateEmptyMapGrid(int gridSize) {
         GridSection[][] grid = new GridSection[gridSize][gridSize];
         for (int x = 0; x < gridSize; x++) {
             GridSection[] row = new GridSection[gridSize];
             for (int y = 0; y < gridSize; y++) {
+                row[y] = new GridSection(x, y);
+            }
+            grid[x] = row;
+        }
+        return grid;
+    }
+
+    public static GridSection[][] generateEmptyMapGrid(Point start, Point end) {
+        log.debug("Generating empty grid...");
+        int xSize = end.getX() - start.getX();
+        int ySize = end.getY() - start.getY();
+        log.debug("Grid size - x: {}, y: {}", xSize, ySize);
+        GridSection[][] grid = new GridSection[xSize][ySize];
+        for (int x = 0; x < xSize; x++) {
+            GridSection[] row = new GridSection[ySize];
+            for (int y = 0; y < ySize; y++) {
                 row[y] = new GridSection(x, y);
             }
             grid[x] = row;
@@ -235,7 +251,7 @@ public class LevelUtil {
 
     public static String printMapGridToLogs(GridSection[][] map) {
         StringBuilder result = new StringBuilder();
-        for (int y = map.length - 1; y >= 0; y--) {
+        for (int y = map[0].length - 1; y >= 0; y--) {
             for (GridSection[] gridSections : map) {
                 if (gridSections[y].isConnectionPoint()) {
                     result.append(getCrossroadIcon());
