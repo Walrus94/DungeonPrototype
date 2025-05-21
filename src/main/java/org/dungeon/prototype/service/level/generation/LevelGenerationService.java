@@ -653,8 +653,8 @@ public class LevelGenerationService {
                                 .longestPathDefault(true)
                                 .pathFromStart(0)
                                 .cluster(cluster)
-                                .currentPoint(new Point(cluster.getEndConnectionPoint().getX() - cluster.getStartConnectionPoint().getX(),
-                                        cluster.getEndConnectionPoint().getY() - cluster.getStartConnectionPoint().getY()))
+                                .currentPoint(new Point(cluster.getEndConnectionPoint().getX() - cluster.getStartConnectionPoint().getX() - 1,
+                                        cluster.getEndConnectionPoint().getY() - cluster.getStartConnectionPoint().getY() - 1))
                                 .build());
             }
             int fromStartWalkersNumber = getRandomInt(1, 2);
