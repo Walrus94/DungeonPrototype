@@ -671,7 +671,7 @@ public class LevelGenerationService {
                             .isReversed(false)
                             .longestPathDefault(fromStartWalkersNumber == 2 && i == 0)
                             .cluster(cluster)
-                            .currentPoint(cluster.getStartConnectionPoint())
+                            .currentPoint(new Point(0, 0))
                             .build());
                 } else {
                     walkers.add(WalkerBuilder.builder()
@@ -679,7 +679,8 @@ public class LevelGenerationService {
                             .pathFromStart(0)
                             .longestPathDefault(fromEndWalkersNumber == 1 || i == 2)
                             .cluster(cluster)
-                            .currentPoint(cluster.getEndConnectionPoint())
+                            .currentPoint(new Point(cluster.getEndConnectionPoint().getX() - cluster.getStartConnectionPoint().getX() - 1,
+                                    cluster.getEndConnectionPoint().getY() - cluster.getStartConnectionPoint().getY() - 1))
                             .build());
                 }
             });
