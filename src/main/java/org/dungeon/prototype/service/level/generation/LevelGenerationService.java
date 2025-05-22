@@ -646,7 +646,7 @@ public class LevelGenerationService {
                                 .isReversed(false)
                                 .cluster(cluster)
                                 .longestPathDefault(false)
-                                .currentPoint(cluster.getStartConnectionPoint())
+                                .currentPoint(new Point(0, 0))
                                 .build(),
                         WalkerBuilder.builder()
                                 .isReversed(true)
