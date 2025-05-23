@@ -138,11 +138,6 @@ public class LevelUtil {
         };
     }
 
-    public static boolean isPointOnGrid(Point point, GridSection[][] grid) {
-        return point.getY() < grid.length && point.getY() > -1 &&
-                point.getX() < grid[0].length && point.getX() > -1;
-    }
-
     public static Set<GridSection> getAdjacentSections(Point currentPoint, GridSection[][] grid) {
         return Stream.of(new Point(currentPoint.getX() + 1, currentPoint.getY()),
                         new Point(currentPoint.getX() - 1, currentPoint.getY()),
@@ -159,13 +154,6 @@ public class LevelUtil {
         return getAdjacentSections(currentPoint, grid).stream()
                 .filter(section -> isPointInCluster(section.getPoint(), cluster))
                 .collect(Collectors.toSet());
-    }
-
-    public static boolean isPointInCluster(Point point, LevelGridCluster cluster) {
-        return cluster.getStartConnectionPoint().getX() <= point.getX() &&
-                cluster.getStartConnectionPoint().getY() <= point.getY() &&
-                cluster.getEndConnectionPoint().getX() >= point.getX() &&
-                cluster.getEndConnectionPoint().getY() >= point.getY();
     }
 
     public static String printMap(GridSection[][] grid, LevelMap levelMap, Point position, Direction direction) {
@@ -241,6 +229,18 @@ public class LevelUtil {
         };
         byte[] bytes = icon.getBytes(StandardCharsets.UTF_8);
         return new String(bytes, StandardCharsets.UTF_8);
+    }
+
+    private static boolean isPointOnGrid(Point point, GridSection[][] grid) {
+        return point.getY() < grid.length && point.getY() > -1 &&
+                point.getX() < grid[0].length && point.getX() > -1;
+    }
+
+    private static boolean isPointInCluster(Point point, LevelGridCluster cluster) {
+        return cluster.getStartConnectionPoint().getX() <= point.getX() &&
+                cluster.getStartConnectionPoint().getY() <= point.getY() &&
+                cluster.getEndConnectionPoint().getX() >= point.getX() &&
+                cluster.getEndConnectionPoint().getY() >= point.getY();
     }
 
     public static String getBlankIcon() {

@@ -15,7 +15,6 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.dungeon.prototype.util.LevelUtil.getAdjacentSections;
-import static org.dungeon.prototype.util.LevelUtil.isPointInCluster;
 
 
 @Data
@@ -127,10 +126,8 @@ public class WalkerBuilder {
                         .filter(section -> !currentPoint.equals(section.getPoint()))
                         .filter(section -> section.getStepsFromStart() == 0)
                         .filter(section -> !getEndPoint().equals(section.getPoint()))
-                        .max(Comparator.comparing(section -> getAdjacentSections(section.getPoint(), grid)
-                                .stream()
-                                .filter(adjacentSection -> !isPointInCluster(adjacentSection.getPoint(), cluster))
-                                .count()));
+                        .max(Comparator.comparing(section -> (long) getAdjacentSections(section.getPoint(), grid)
+                                .size()));
             }
             return adjacentSections.stream()
                     .filter(section -> !currentPoint.equals(section.getPoint()))
