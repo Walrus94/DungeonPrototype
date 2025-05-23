@@ -33,6 +33,7 @@ public abstract class Item {
         return (int) (getWeight().toVector().getNorm() * getSellingPriceRatio());
     }
     public Item(Item item) {
+        this.id = item.getId();
         this.name = item.getName();
         this.chatId = item.getChatId();
         this.effects = item.getEffects();

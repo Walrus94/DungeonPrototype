@@ -19,18 +19,18 @@ import org.dungeon.prototype.model.room.content.MonsterRoom;
 import org.dungeon.prototype.model.room.content.RoomContent;
 import org.dungeon.prototype.model.room.content.Shrine;
 import org.dungeon.prototype.properties.CallbackType;
-import org.dungeon.prototype.repository.LevelRepository;
-import org.dungeon.prototype.repository.converters.mapstruct.LevelMapper;
+import org.dungeon.prototype.repository.mongo.LevelRepository;
+import org.dungeon.prototype.repository.mongo.converters.mapstruct.LevelMapper;
 import org.dungeon.prototype.service.PlayerService;
 import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.level.generation.LevelGenerationService;
 import org.dungeon.prototype.service.message.MessageService;
 import org.dungeon.prototype.service.room.RoomService;
+import org.dungeon.prototype.service.stats.GameResultService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.isNull;
@@ -53,16 +53,18 @@ public class LevelService {
     private MessageService messageService;
     @Autowired
     private EffectService effectService;
+    @Autowired
+    private GameResultService gameResultService;
 
     /**
      * Generates items and first level of new game
      *
      * @param chatId id of chat where game starts
      */
-    public void startNewGame(Long chatId, Player player) {
-        val level = startNewLevel(chatId, player, 1);
+    public void startNewGame(Long chatId) {
+        Level level = startNewLevel(chatId, 1);
         log.info("Starting new game...");
-        messageService.sendNewLevelMessage(chatId, player, level, 1);
+        messageService.sendNewLevelMessage(chatId, playerService.getPlayer(chatId), level, 1);
     }
 
     /**
@@ -72,7 +74,8 @@ public class LevelService {
      */
     public void nextLevel(Long chatId, Player player) {
         val number = getLevelNumber(chatId) + 1;
-        val level = startNewLevel(chatId, player, number);
+        val level = startNewLevel(chatId, number);
+        gameResultService.dungeonLevelReached(chatId);
         player = effectService.updateArmorEffect(player);
         player.restoreArmor();
         playerService.updatePlayer(player);
@@ -116,7 +119,8 @@ public class LevelService {
             player.setCurrentRoomId(nextRoom.getId());
             player.setDirection(newDirection);
             playerService.updatePlayer(player);
-            if (nextRoom.getRoomContent() instanceof MonsterRoom) {
+            if (nextRoom.getRoomContent() instanceof MonsterRoom monsterRoom) {
+                gameResultService.addCurrentMonster(chatId, monsterRoom.getMonster().getMonsterClass(), monsterRoom.getMonster().getWeight());
                 messageService.sendMonsterRoomMessage(chatId, player, nextRoom);
             } else {
                 messageService.sendRoomMessage(chatId, player, nextRoom);
@@ -234,22 +238,14 @@ public class LevelService {
         return projection.getNumber();
     }
 
-    public Level startNewLevel(Long chatId, Player player, Integer levelNumber) {
+    public Level startNewLevel(Long chatId, Integer levelNumber) {
         messageService.sendLevelGeneratingInfoMessage(chatId, levelNumber);
-        var level = levelGenerationService.generateLevel(chatId, player, levelNumber);
+        var level = levelGenerationService.generateAndPopulateLevel(chatId, levelNumber);
         if (levelRepository.existsByChatId(chatId)) {
             levelRepository.removeByChatId(chatId);
         }
         level = saveOrUpdateLevel(level);
         log.info("Level generated: {}", level);
-        val direction = level.getRoomsMap().get(level.getStart()).getAdjacentRooms().entrySet().stream()
-                .filter(entry -> Objects.nonNull(entry.getValue()) && entry.getValue())
-                .map(Map.Entry::getKey)
-                .findFirst().orElse(null);
-        player.setDirection(direction);
-        player.setCurrentRoom(level.getStart());
-        player.setCurrentRoomId(level.getRoomsMap().get(level.getStart()).getId());
-        playerService.updatePlayer(player);
         return level;
     }
 

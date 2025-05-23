@@ -55,7 +55,7 @@
             "uid": "P8E80F9AEF21F6940"
           },
           "editorMode": "builder",
-          "expr": "{environment=\"$env\", service=\"$service\"} | logfmt",
+          "expr": "{environment=\"$env\", service=\"$service\", level=~\"$level\"} | logfmt",
           "queryType": "range",
           "refId": "A"
         }
@@ -71,8 +71,8 @@
     "list": [
       {
         "current": {
-          "text": "shared",
-          "value": "shared"
+          "text": "logging",
+          "value": "logging"
         },
         "definition": "",
         "label": "Environment",
@@ -90,8 +90,8 @@
       },
       {
         "current": {
-          "text": "cloudflared",
-          "value": "cloudflared"
+          "text": "grafana",
+          "value": "grafana"
         },
         "definition": "",
         "label": "Service",
@@ -106,7 +106,28 @@
         "refresh": 2,
         "regex": "",
         "type": "query"
+      },
+      {
+        "name": "level",
+        "label": "Log Level",
+        "type": "query",
+        "query": {
+          "query": "label_values({environment=\"$env\", service=\"$service\"}, level)",
+          "refId": "LokiVariableQueryEditor-VariableQuery",
+          "stream": "",
+          "type": 1
+        },
+        "definition": "label_values({environment=\"$env\", service=\"$service\"}, level)",
+        "refresh": 2,
+        "options": [],
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": ".*"
+        }
       }
+
     ]
   },
   "time": {
