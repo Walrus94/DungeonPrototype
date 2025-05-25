@@ -25,7 +25,7 @@ public class BalanceMatrixRepository {
 
     public float getValue(Long chatId, String name, int row, int col) {
         String sql =
-                String.format("SELECT (data[%d][%d])::double precision AS cell FROM matrices WHERE chat_id = ? AND name = ?",
+                String.format("SELECT (data[%d][%d])::float4 AS cell FROM matrices WHERE chat_id = ? AND name = ?",
                         row, col);
         return jdbcTemplate.query(sql, ps -> {
             ps.setLong(1, chatId);
