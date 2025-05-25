@@ -5,7 +5,7 @@ import os
 import logging
 from config.settings import HF_MODEL_FILE
 from datetime import datetime
-from db.postgres import load_template_matrix, load_chat_matrices, load_balance_matrix
+from db.mongo import load_template_matrix, load_chat_matrices, load_balance_matrix
 from models.rl_env import BalanceAdjustmentEnv
 
 class ModelManager:

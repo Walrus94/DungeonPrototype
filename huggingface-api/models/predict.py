@@ -1,8 +1,7 @@
 from huggingface_sb3 import load_from_hub
 from stable_baselines3 import PPO
 from models.rl_env import BalanceAdjustmentEnv
-from db.postgres import load_template_matrix
-from db.mongo import load_game_results
+from db.mongo import load_template_matrix, load_game_results
 from models.model_manager import ModelManager
 import numpy as np
 import logging

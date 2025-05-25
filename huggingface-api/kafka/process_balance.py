@@ -1,7 +1,7 @@
 import logging
 import json
 from models.predict import generate_balance_matrix
-from db.postgres import save_balance_matrix
+from db.mongo import save_balance_matrix
 
 async def process_kafka_balance_message(message):
     """Handles multiple balance matrix generation requests from Kafka."""
