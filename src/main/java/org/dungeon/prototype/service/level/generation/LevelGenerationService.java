@@ -44,6 +44,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -131,9 +132,9 @@ public class LevelGenerationService {
         val clusters = clusterConnectionPoints
                 .stream()
                 .filter(point -> !clusterConnectionPoints.getFirst().equals(point))
-                .collect(Collectors.toMap(Function.identity(), point ->
-                        new LevelGridCluster(clusterConnectionPoints
-                                .get(clusterConnectionPoints.indexOf(point) - 1), point)));
+                .map(point -> new LevelGridCluster(clusterConnectionPoints
+                                .get(clusterConnectionPoints.indexOf(point) - 1), point))
+                .collect(Collectors.toMap(LevelGridCluster::getId, Function.identity()));
 
         val walkersMap = initializeWalkers(clusters.values());
 
@@ -142,31 +143,39 @@ public class LevelGenerationService {
         initConnectionSections(grid, clusterConnectionPoints);
         level.setClusterConnectionPoints(clusterConnectionPoints);
 
-        val clusterGridMap = clusters.values().stream().collect(Collectors.toMap(Function.identity(),
-                cluster -> (Future<GridSection[][]>) asyncJobHandler.submitMapGenerationTask(() -> {
-                            //todo remove after debugging
-                            try {
-                                return generateGridSection(cluster, walkersMap.get(cluster));
-                            } catch (Exception e) {
-                                throw new DungeonPrototypeException(e.getMessage());
-                            }
-                        },
-                        TaskType.LEVEL_GENERATION, chatId, cluster.getId())));
+        asyncJobHandler.initializeMapClusterQueue(chatId, clusters.size());
+        clusters.values().forEach(
+                cluster -> {
+                    try {
+                        asyncJobHandler.executeMapGenerationTask(() -> {
+                                    //todo remove after debugging
+                                    try {
+                                        return generateGridSection(cluster, walkersMap.get(cluster));
+                                    } catch (Exception e) {
+                                        throw new DungeonPrototypeException(e.getMessage());
+                                    }
+                                },
+                                TaskType.LEVEL_GENERATION, chatId, cluster.getId());
+                    } catch (InterruptedException e) {
+                        throw new DungeonPrototypeException(e.getMessage());
+                    }
+                }
+        );
 
-        while (clusterGridMap.values().stream().anyMatch(cluster -> !cluster.isDone())) {
-            clusterGridMap.entrySet().stream()
-                    .filter(entry -> entry.getValue().isDone())
-                    .findFirst().ifPresent(completedEntry -> {
-                        try {
-                            copyGridSection(grid, completedEntry.getKey().getStartConnectionPoint(), completedEntry.getKey().getEndConnectionPoint(), completedEntry.getValue().get());
-                        } catch (InterruptedException | ExecutionException e) {
-                            throw new DungeonPrototypeException(e.getMessage());
-                        }
-                    });
+        AtomicInteger counter = new AtomicInteger(clusters.size());
+
+        while (counter.get() > 0) {
+            asyncJobHandler.retrieveMapGenerationResults(chatId).ifPresent(cluster -> {
+                val clusterData = clusters.get(cluster.clusterId());
+                copyGridSection(grid, clusterData.getStartConnectionPoint(), clusterData.getEndConnectionPoint(), cluster.clusterGrid());
+                counter.getAndDecrement();
+            });
         }
 
+
         level.setGrid(grid);
-        level.setClusters(clusters);
+        level.setClusters(clusters.values().stream()
+                .collect(Collectors.toMap(LevelGridCluster::getEndConnectionPoint, Function.identity())));
 
         return level;
     }
@@ -206,7 +215,7 @@ public class LevelGenerationService {
                 .forEach(x -> IntStream.range(startConnectionPoint.getY(), endConnectionPoint.getY())
                         .forEach(y -> {
                             if (!isStartOrEnd(x, y, startConnectionPoint, endConnectionPoint))
-                                grid[x][y] = gridSection[x - startConnectionPoint.getX()][y - startConnectionPoint.getY() ];
+                                grid[x][y] = gridSection[x - startConnectionPoint.getX() - 1][y - startConnectionPoint.getY() - 1];
                         }));
         log.debug("Grid after copying\n{}", printMapGridToLogs(grid));
     }

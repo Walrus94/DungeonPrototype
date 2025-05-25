@@ -1,39 +1,46 @@
 package org.dungeon.prototype.async;
 
 import lombok.extern.slf4j.Slf4j;
-import org.dungeon.prototype.async.metrics.TaskContext;
-import org.dungeon.prototype.async.metrics.TaskContextData;
+import lombok.val;
 import org.dungeon.prototype.async.metrics.TaskMetrics;
 import org.dungeon.prototype.exception.DungeonPrototypeException;
 import org.dungeon.prototype.model.document.item.ItemType;
+import org.dungeon.prototype.model.level.generation.GeneratedCluster;
+import org.dungeon.prototype.model.level.ui.GridSection;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
-import java.util.concurrent.StructuredTaskScope;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 @Service
 @Slf4j
 public class AsyncJobHandler {
 
     private final AsyncTaskExecutor asyncTaskExecutor;
-    private final Map<Long, CountDownLatch> chatLatches;
-
+    private final CompletionService<GeneratedCluster> asyncTaskCompletionService;
+    private final Map<Long, ChatConcurrentState> chatConcurrentStateMap;
     private final TaskMetrics taskMetrics;
 
     public AsyncJobHandler(@Qualifier(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME)
                            AsyncTaskExecutor asyncTaskExecutor, TaskMetrics taskMetrics) {
         this.asyncTaskExecutor = asyncTaskExecutor;
-        this.chatLatches = new ConcurrentHashMap<>();
+        this.asyncTaskCompletionService = new ExecutorCompletionService<>(asyncTaskExecutor);
+        this.chatConcurrentStateMap = new ConcurrentHashMap<>();
         this.taskMetrics = taskMetrics;
     }
 
@@ -41,14 +48,15 @@ public class AsyncJobHandler {
     public void submitItemGenerationTask(Runnable job, TaskType taskType, long chatId) {
         log.debug("Submitting item generation {} task for chatId: {}", taskType, chatId);
         asyncTaskExecutor.submit(() -> {
-            chatLatches.computeIfAbsent(chatId, k -> new CountDownLatch(ItemType.values().length));//TODO: increment when Usable items generation is implemented
+            chatConcurrentStateMap.computeIfAbsent(chatId,
+                    k -> new ChatConcurrentState(chatId, new CountDownLatch(ItemType.values().length)));//TODO: increment when Usable items generation is implemented
             try {
                 job.run();
             } catch (Exception e) {
                 throw new DungeonPrototypeException(e.getMessage());
             } finally {
-                log.info("Counting down ({}) latch for chatId: {}", chatLatches.get(chatId).getCount(), chatId);
-                chatLatches.get(chatId).countDown();
+                log.info("Counting down ({}) latch for chatId: {}", chatConcurrentStateMap.get(chatId).getLatch().getCount(), chatId);
+                chatConcurrentStateMap.get(chatId).getLatch().countDown();
             }
         });
     }
@@ -58,14 +66,14 @@ public class AsyncJobHandler {
         log.debug("Submitting effect generation {} task for chatId: {}", taskType, chatId);
         asyncTaskExecutor.submit(() -> {
             try {
-                while (!chatLatches.containsKey(chatId)) {
+                while (!chatConcurrentStateMap.containsKey(chatId)) {
                     log.info("Waiting for latch to be created for chatId: {}", chatId);
                     Thread.sleep(1000);
                 }
-                while (chatLatches.get(chatId).getCount() > 1) {
+                while (chatConcurrentStateMap.get(chatId).getLatch().getCount() > 1) {
                     log.info("Waiting for vanilla items to generate for chatId: {}", chatId);
                     try {
-                        chatLatches.get(chatId).await();
+                        chatConcurrentStateMap.get(chatId).getLatch().await();
                     } catch (InterruptedException e) {
                         throw new DungeonPrototypeException(e.getMessage());
                     }
@@ -74,9 +82,45 @@ public class AsyncJobHandler {
             } catch (Exception e) {
                 throw new DungeonPrototypeException(e.getMessage());
             } finally {
-                chatLatches.get(chatId).countDown();
+                chatConcurrentStateMap.get(chatId).getLatch().countDown();
             }
         });
+    }
+
+    public void executeMapGenerationTask(Callable<GridSection[][]> job, TaskType taskType, long chatId, long clusterId) throws InterruptedException {
+        asyncTaskCompletionService.submit(() -> {
+            log.debug("Submitting map generation task of type {} for chatId: {}", taskType, chatId);
+            return new GeneratedCluster(chatId, clusterId, job.call());
+        });
+    }
+
+    @Scheduled(fixedRate = 1000)
+    public void updateMapGenerationResults() {
+        try {
+            val result = asyncTaskCompletionService.take().get(10, TimeUnit.SECONDS);
+            if (chatConcurrentStateMap.containsKey(result.chatId())) {
+                chatConcurrentStateMap.get(result.chatId()).getGridSectionsQueue().put(result);
+            }
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            log.error("Error while waiting for map generation: ", e);
+            throw new DungeonPrototypeException(e.getMessage());
+        }
+    }
+
+    public Optional<GeneratedCluster> retrieveMapGenerationResults(long chatId) {
+        log.debug("Retrieving map generation results for chatId: {}", chatId);
+        if (chatConcurrentStateMap.containsKey(chatId)) {
+            val queue = chatConcurrentStateMap.get(chatId).getGridSectionsQueue();
+            try {
+                return Optional.ofNullable(queue.poll(10, TimeUnit.SECONDS));
+            } catch (InterruptedException e) {
+                log.error("Error while retrieving map generation results: ", e);
+                throw new DungeonPrototypeException(e.getMessage());
+            }
+        } else {
+            log.warn("No map generation results found for chatId: {}", chatId);
+        }
+        return Optional.empty();
     }
 
     @Async
@@ -84,18 +128,18 @@ public class AsyncJobHandler {
         log.debug("Submitting task of type {} for chatId: {}", taskType, chatId);
         return asyncTaskExecutor.submit(() -> {
             try {
-                while (!chatLatches.containsKey(chatId)) {
+                while (!chatConcurrentStateMap.containsKey(chatId)) {
                     log.info("Waiting for latch to be created for chatId: {}", chatId);
                     Thread.sleep(1000);
                 }
-                while (chatLatches.get(chatId).getCount() > 0) {
-                    chatLatches.get(chatId).await();
+                while (chatConcurrentStateMap.get(chatId).getLatch().getCount() > 0) {
+                    chatConcurrentStateMap.get(chatId).getLatch().await();
                 }
                 return job.call();
             } catch (InterruptedException e) {
                 throw new DungeonPrototypeException(e.getMessage());
             } finally {
-                chatLatches.remove(chatId);
+                chatConcurrentStateMap.remove(chatId);
             }
         });
     }
@@ -105,27 +149,19 @@ public class AsyncJobHandler {
         log.debug("Submitting task of type {} for chatId: {}", taskType, chatId);
         asyncTaskExecutor.submit(() -> {
             try {
-                while (!chatLatches.containsKey(chatId)) {
+                while (!chatConcurrentStateMap.containsKey(chatId)) {
                     log.info("Waiting for latch to be created for chatId: {}", chatId);
                     Thread.sleep(1000);
                 }
-                while (chatLatches.get(chatId).getCount() > 0) {
-                    chatLatches.get(chatId).await();
+                while (chatConcurrentStateMap.get(chatId).getLatch().getCount() > 0) {
+                    chatConcurrentStateMap.get(chatId).getLatch().await();
                 }
                 job.run();
             } catch (InterruptedException e) {
                 throw new DungeonPrototypeException(e.getMessage());
             } finally {
-                chatLatches.remove(chatId);
+                chatConcurrentStateMap.remove(chatId);
             }
-        });
-    }
-
-    @Async
-    public Future<?> submitMapGenerationTask(Callable<?> job, TaskType taskType, long chatId, long clusterId) {
-        log.debug("Submitting map generation task for chatId: {}, clusterId: {}", chatId, clusterId);
-        return asyncTaskExecutor.submit(() -> {
-            executeTask(job, taskType, chatId, clusterId);
         });
     }
 
@@ -145,38 +181,12 @@ public class AsyncJobHandler {
     @Async
     public void clearLatch(long chatId) {
         log.info("Clearing latch for chatId: {}", chatId);
-        chatLatches.remove(chatId);
+        chatConcurrentStateMap.get(chatId).setLatch(null);
     }
 
-    private <T> Future<T> executeTask(Callable<T> job, TaskType taskType, long chatId, long clusterId) {
-        try (var taskScope = new StructuredTaskScope.ShutdownOnFailure()) {
-            var context = new TaskContextData(chatId, clusterId, taskType);
-            taskScope.fork(() -> ScopedValue
-                    .where(TaskContext.CONTEXT, context)
-                    .call(() -> {
-                        long start = System.currentTimeMillis();
-                        taskMetrics.addActiveTask(context);
-                        try {
-                            job.call();
-                        } catch (Exception e) {
-                            taskMetrics.getTaskFailureCounter(taskType.name()).increment();
-                            throw e;
-                        } finally {
-                            long elapsed = System.currentTimeMillis() - start;
-                            taskMetrics.removeCompletedTask(context);
-                            taskMetrics.getTaskTimer(taskType.name()).record(elapsed, TimeUnit.MILLISECONDS);
-                        }
-                        return null;
-                    }));
-            try {
-                taskScope.join();
-                taskScope.throwIfFailed();
-            } catch (InterruptedException | ExecutionException e) {
-                throw new DungeonPrototypeException("Task execution interrupted:" + e.getMessage());
-            } finally {
-                taskMetrics.removeCompletedTask(context);
-            }
+    public void initializeMapClusterQueue(long chatId, int size) {
+        if (chatConcurrentStateMap.containsKey(chatId)) {
+            chatConcurrentStateMap.get(chatId).setGridSectionsQueue(new LinkedBlockingQueue<>(size));
         }
-        return null;
     }
 }
