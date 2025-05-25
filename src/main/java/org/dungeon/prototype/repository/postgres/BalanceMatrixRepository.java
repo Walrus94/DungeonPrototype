@@ -23,14 +23,14 @@ public class BalanceMatrixRepository {
         return Boolean.TRUE.equals(jdbcTemplate.queryForObject(sql, Boolean.class, chatId, matrixName));
     }
 
-    public double getValue(Long chatId, String name, int row, int col) {
+    public float getValue(Long chatId, String name, int row, int col) {
         String sql = String.format("SELECT data[%d][%d] FROM matrices WHERE chat_id = ? AND name = ?", row, col);
         return jdbcTemplate.query(sql, ps -> {
-            ps.setInt(1, Math.toIntExact(chatId));
+            ps.setLong(1, chatId);
             ps.setString(2, name);
         }, rs -> {
             if (rs.next()) {
-                return rs.getDouble("cell");
+                return rs.getFloat("cell");
             } else {
                 throw new EmptyResultDataAccessException(1);
             }

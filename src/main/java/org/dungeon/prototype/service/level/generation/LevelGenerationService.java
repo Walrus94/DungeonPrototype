@@ -41,7 +41,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -133,7 +132,7 @@ public class LevelGenerationService {
                 .stream()
                 .filter(point -> !clusterConnectionPoints.getFirst().equals(point))
                 .map(point -> new LevelGridCluster(clusterConnectionPoints
-                                .get(clusterConnectionPoints.indexOf(point) - 1), point))
+                        .get(clusterConnectionPoints.indexOf(point) - 1), point))
                 .collect(Collectors.toMap(LevelGridCluster::getId, Function.identity()));
 
         val walkersMap = initializeWalkers(clusters.values());
@@ -635,12 +634,12 @@ public class LevelGenerationService {
             if (cluster.isSmallCluster()) {
                 log.info("Small cluster, adding two border walkers to start cluster...");
                 return Arrays.asList(WalkerBuilder.builder()
-                        .pathFromStart(0)
-                        .isReversed(false)
-                        .cluster(cluster)
-                        .longestPathDefault(true)
-                        .currentPoint(new Point(0, 0))
-                        .build(),
+                                .pathFromStart(0)
+                                .isReversed(false)
+                                .cluster(cluster)
+                                .longestPathDefault(true)
+                                .currentPoint(new Point(0, 0))
+                                .build(),
                         WalkerBuilder.builder()
                                 .pathFromStart(0)
                                 .isReversed(false)
