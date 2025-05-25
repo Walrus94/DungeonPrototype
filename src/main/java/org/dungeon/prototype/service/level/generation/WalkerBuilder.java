@@ -41,7 +41,7 @@ public class WalkerBuilder {
         log.info("Walker id:{} (reversed:{}, overriding:{}, border path:{}) next step...",
                 id, isReversed, overridingReversedPath, longestPathDefault);
         log.debug("Current point: {}", currentPoint);
-        GridSection currentSection = grid[currentPoint.getX()][currentPoint.getY()];
+        GridSection currentSection = grid[currentPoint.getY()][currentPoint.getX()];
         log.debug("Current section: {}", currentSection);
 
         val nextGridSectionOptional = selectNextStep(grid);
