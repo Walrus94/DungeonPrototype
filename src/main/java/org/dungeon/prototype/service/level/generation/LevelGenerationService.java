@@ -82,7 +82,7 @@ public class LevelGenerationService {
     public Level generateAndPopulateLevel(Long chatId, Integer levelNumber) {
         var levelMap = generateLevelMap(chatId, levelNumber);
         log.debug("Generated level map\n{}", printMapGridToLogs(levelMap.getGrid()));
-        val futureLevel = (Future<Level>) asyncJobHandler.submitMapPopulationTask(() -> {
+        val futureLevel = asyncJobHandler.submitMapPopulationTask(() -> {
             //TODO remove after debugging
             try {
                 return populateLevel(chatId, levelNumber, levelMap);

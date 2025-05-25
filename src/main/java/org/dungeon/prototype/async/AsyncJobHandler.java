@@ -5,6 +5,7 @@ import lombok.val;
 import org.dungeon.prototype.async.metrics.TaskMetrics;
 import org.dungeon.prototype.exception.DungeonPrototypeException;
 import org.dungeon.prototype.model.document.item.ItemType;
+import org.dungeon.prototype.model.level.Level;
 import org.dungeon.prototype.model.level.generation.GeneratedCluster;
 import org.dungeon.prototype.model.level.ui.GridSection;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -124,7 +125,7 @@ public class AsyncJobHandler {
     }
 
     @Async
-    public Future<?> submitMapPopulationTask(Callable<?> job, TaskType taskType, long chatId) {
+    public Future<Level> submitMapPopulationTask(Callable<Level> job, TaskType taskType, long chatId) {
         log.debug("Submitting task of type {} for chatId: {}", taskType, chatId);
         return asyncTaskExecutor.submit(() -> {
             try {
