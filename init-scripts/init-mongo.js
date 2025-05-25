@@ -1,8 +1,3 @@
-#!/bin/bash
-echo "Initializing MongoDB with environment variables..."
-
-# Run MongoDB commands using the environment variables
-mongo -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase "admin" <<EOF
 db = db.getSiblingDB("admin");
 db.createUser({
   user: "${MONGO_MONITORING_USER}",
@@ -13,4 +8,3 @@ db.createUser({
           { role: "read", db: "admin" }
       ]
 });
-EOF

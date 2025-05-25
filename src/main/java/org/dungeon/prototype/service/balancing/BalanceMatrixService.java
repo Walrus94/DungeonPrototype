@@ -10,7 +10,7 @@ import org.dungeon.prototype.model.kafka.request.balance.BalanceMatricesRequest;
 import org.dungeon.prototype.model.kafka.request.balance.BalanceMatrixGenerationRequest;
 import org.dungeon.prototype.model.monster.MonsterAttackType;
 import org.dungeon.prototype.model.monster.MonsterClass;
-import org.dungeon.prototype.repository.postgres.BalanceMatrixRepository;
+import org.dungeon.prototype.repository.mongo.BalanceMatrixRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -50,7 +50,7 @@ public class BalanceMatrixService {
     }
 
     public double getBalanceMatrixValue(long chatId, String name, int row, int col) {
-        while (!balanceMatrixRepository.isMatrixExists(chatId, name)) {
+        while (!balanceMatrixRepository.existsByChatIdAndName(chatId, name)) {
             log.info("Waiting for balance matrix {} table to be created for chatId: {}", name, chatId);
             try {
                 Thread.sleep(1000);
@@ -59,11 +59,13 @@ public class BalanceMatrixService {
                 throw new DungeonPrototypeException(e.getMessage());
             }
         }
-        return balanceMatrixRepository.getValue(chatId, name, row, col);
+        return balanceMatrixRepository.getMatrixCellValue(chatId, name, row, col).orElseThrow(
+                () -> new DungeonPrototypeException("Balance matrix value not found for chatId: " + chatId + ", name: " + name + ", row: " + row + ", col: " + col)
+        ).getValue();
     }
 
     public double[][] getBalanceMatrix(long chatId, String name) {
-        while (!balanceMatrixRepository.isMatrixExists(chatId, name)) {
+        while (!balanceMatrixRepository.existsByChatIdAndName(chatId, name)) {
             log.info("Waiting for balance matrix {} table to be created for chatId: {}", name, chatId);
             try {
                 Thread.sleep(1000);
@@ -72,7 +74,7 @@ public class BalanceMatrixService {
                 throw new DungeonPrototypeException(e.getMessage());
             }
         }
-        return balanceMatrixRepository.getBalanceMatrix(chatId,  name);
+        return convertMatrix(balanceMatrixRepository.findByChatIdAndName(chatId, name).getData());
     }
 
     public double[] getBalanceVector(long chatId, String name, int col) {
@@ -88,19 +90,12 @@ public class BalanceMatrixService {
     }
 
     public void clearMatrices(long chatId) {
-        balanceMatrixRepository.clearBalanceMatrix(chatId, "player_attack");
-        balanceMatrixRepository.clearBalanceMatrix(chatId, "monster_attack");
-        balanceMatrixRepository.clearBalanceMatrix(chatId, "weapon_type_attr");
-        balanceMatrixRepository.clearBalanceMatrix(chatId, "weapon_handling_type_adjustment");
-        balanceMatrixRepository.clearBalanceMatrix(chatId, "weapon_material_adjustment");
-        balanceMatrixRepository.clearBalanceMatrix(chatId, "weapon_handler_material_adjustment");
-        balanceMatrixRepository.clearBalanceMatrix(chatId, "weapon_complete_wood_adjustment");
-        balanceMatrixRepository.clearBalanceMatrix(chatId, "weapon_complete_steel_adjustment");
-        balanceMatrixRepository.clearBalanceMatrix(chatId, "weapon_complete_dragon_bone_adjustment");
-        balanceMatrixRepository.clearBalanceMatrix(chatId, "weapon_size_adjustment");
-        balanceMatrixRepository.clearBalanceMatrix(chatId, "weapon_attack_type_adjustment");
-        balanceMatrixRepository.clearBalanceMatrix(chatId, "wearable_armor_bonus");
-        balanceMatrixRepository.clearBalanceMatrix(chatId, "wearable_chance_to_dodge_adjustment");
-        balanceMatrixRepository.clearBalanceMatrix(chatId, "items_quality_adjustment");
+        balanceMatrixRepository.deleteAllByChatId(chatId);
+    }
+
+    private double[][] convertMatrix(List<List<Double>> matrix) {
+        return matrix.stream()
+                .map(row -> row.stream().mapToDouble(Double::doubleValue).toArray())
+                .toArray(double[][]::new);
     }
 }

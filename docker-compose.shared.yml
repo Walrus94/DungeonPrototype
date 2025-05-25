@@ -186,6 +186,8 @@ services:
       driver: "json-file"
       options:
         labels: environment,service
+    volumes:
+      - .init-scripts/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_DB_USER}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_DB_PASSWORD}
