@@ -22,9 +22,9 @@ public class BalanceMatrixRepository {
         return Boolean.TRUE.equals(jdbcTemplate.queryForObject(sql, Boolean.class, chatId, matrixName));
     }
 
-    public double getValue(Long chatId, String name, int row, int col) {
+    public float getValue(Long chatId, String name, int row, int col) {
         String sql = "SELECT data[?][?] FROM matrices WHERE chat_id = ? AND name = ?";
-        return jdbcTemplate.queryForObject(sql, Double.class, row, col, chatId, name);
+        return jdbcTemplate.queryForObject(sql, Float.class, row, col, chatId, name);
     }
 
     public void clearBalanceMatrix(long chatId, String name) {
