@@ -1,5 +1,6 @@
 package org.dungeon.prototype.repository.postgres;
 
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -22,9 +23,18 @@ public class BalanceMatrixRepository {
         return Boolean.TRUE.equals(jdbcTemplate.queryForObject(sql, Boolean.class, chatId, matrixName));
     }
 
-    public double getValue(long chatId, String name, int row, int col) {
-        String sql = String.format("SELECT data[%d][%d] FROM matrices WHERE chat_id = %s AND name = %s)", row, col, chatId, name);
-        return jdbcTemplate.queryForObject(sql, new Object[]{chatId}, Double.class);
+    public double getValue(Long chatId, String name, int row, int col) {
+        String sql = String.format("SELECT data[%d][%d] FROM matrices WHERE chat_id = ? AND name = ?", row, col);
+        return jdbcTemplate.query(sql, ps -> {
+            ps.setInt(1, Math.toIntExact(chatId));
+            ps.setString(2, name);
+        }, rs -> {
+            if (rs.next()) {
+                return rs.getDouble("cell");
+            } else {
+                throw new EmptyResultDataAccessException(1);
+            }
+        });
     }
 
     public void clearBalanceMatrix(long chatId, String name) {
