@@ -192,7 +192,7 @@ public class LevelUtil {
         int xSize = end.getX() - start.getX();
         int ySize = end.getY() - start.getY();
         log.debug("Grid size - x: {}, y: {}", xSize, ySize);
-        GridSection[][] grid = new GridSection[xSize][ySize];
+        GridSection[][] grid = new GridSection[ySize][xSize];
         for (int x = 0; x < xSize; x++) {
             GridSection[] row = new GridSection[ySize];
             for (int y = 0; y < ySize; y++) {
