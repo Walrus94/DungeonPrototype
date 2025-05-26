@@ -160,7 +160,7 @@ public class WalkerBuilder {
                 }
                 return adjacentSections.stream()
                         .filter(section -> section.getStepsFromStart() == 0)
-                        .filter(section -> new Point(0, 0).equals(section.getPoint()))
+                        .filter(section -> !new Point(0, 0).equals(section.getPoint()))
                         .min(Comparator.comparing(gridSection ->
                                 getAdjacentSections(gridSection.getPoint(), grid)
                                         .stream()
