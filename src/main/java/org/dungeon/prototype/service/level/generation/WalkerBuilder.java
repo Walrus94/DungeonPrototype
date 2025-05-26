@@ -154,7 +154,7 @@ public class WalkerBuilder {
                 if (longestPathDefault) {
                     return adjacentSections.stream()
                             .filter(section -> section.getStepsFromStart() == 0)
-                            .filter(section -> new Point(0, 0).equals(section.getPoint()))
+                            .filter(section -> !new Point(0, 0).equals(section.getPoint()))
                             .max(Comparator.comparing(section -> (long) getAdjacentSections(section.getPoint(), grid)
                                     .size()));
                 }
