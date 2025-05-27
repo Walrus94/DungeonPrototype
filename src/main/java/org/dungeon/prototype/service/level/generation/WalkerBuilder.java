@@ -41,7 +41,7 @@ public class WalkerBuilder {
         log.info("Walker id:{} (reversed:{}, overriding:{}, border path:{}) next step...",
                 id, isReversed, overridingReversedPath, longestPathDefault);
         log.debug("Current point: {}", currentPoint);
-        GridSection currentSection = grid[currentPoint.getY()][currentPoint.getX()];
+        GridSection currentSection = grid[currentPoint.getX()][currentPoint.getY()];
         log.debug("Current section: {}", currentSection);
 
         val nextGridSectionOptional = selectNextStep(grid);
@@ -75,7 +75,7 @@ public class WalkerBuilder {
                     log.info("Setting next point, path from start: {}", pathFromStart);
                 }
             }
-            grid[currentPoint.getY()][currentPoint.getX()] = nextGridSection;
+            grid[currentPoint.getX()][currentPoint.getY()] = nextGridSection;
         } else {
             stopped = true;
             log.info("Stopped walker id:{}", this.id);
@@ -101,7 +101,7 @@ public class WalkerBuilder {
                 overridingReversedPath = true;
                 isReversed = false;
                 pathFromStart = 0;
-                val nextSection = grid[currentPoint.getY()][currentPoint.getX()];
+                val nextSection = grid[currentPoint.getX()][currentPoint.getY()];
                 pathToFinish = nextSection.getStepsFromStart();
                 return Optional.of(nextSection);
             }
@@ -117,7 +117,7 @@ public class WalkerBuilder {
                 pathFromStart = foundSection.getStepsFromStart();
                 foundSection.setDeadEnd(false);
                 cluster.removeDeadEnd(foundSection);
-                val nextSection = grid[currentPoint.getY()][currentPoint.getX()];
+                val nextSection = grid[currentPoint.getX()][currentPoint.getY()];
                 pathToFinish = nextSection.getStepsFromStart();
                 return Optional.of(nextSection);
             }
