@@ -37,8 +37,6 @@ dependencies {
     implementation 'org.telegram:telegrambots-spring-boot-starter:6.9.7.1'
     implementation 'log4j:log4j:1.2.17'
     implementation 'org.mapstruct:mapstruct:1.5.5.Final'
-    implementation 'org.postgresql:postgresql:42.7.2'
-    implementation 'com.zaxxer:HikariCP:6.2.1'
 
     implementation 'org.springframework.kafka:spring-kafka:3.2.4'
     implementation 'org.apache.kafka:kafka-clients:3.8.0'
