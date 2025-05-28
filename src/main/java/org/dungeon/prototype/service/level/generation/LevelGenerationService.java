@@ -214,7 +214,7 @@ public class LevelGenerationService {
                 .forEach(x -> IntStream.range(startConnectionPoint.getY(), endConnectionPoint.getY())
                         .forEach(y -> {
                             if (!isStartOrEnd(x, y, startConnectionPoint, endConnectionPoint))
-                                grid[y][x] = gridSection[y - startConnectionPoint.getY() - 1][x - startConnectionPoint.getX() - 1];
+                                grid[x][y] = gridSection[x - startConnectionPoint.getX()][y - startConnectionPoint.getY()];
                         }));
         log.debug("Grid after copying\n{}", printMapGridToLogs(grid));
     }
