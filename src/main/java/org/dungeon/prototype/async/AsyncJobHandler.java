@@ -95,6 +95,7 @@ public class AsyncJobHandler {
         });
     }
 
+    @Async
     @Scheduled(fixedRate = 1000)
     public void updateMapGenerationResults() {
         try {
@@ -108,8 +109,8 @@ public class AsyncJobHandler {
         }
     }
 
+    @Async
     public Optional<GeneratedCluster> retrieveMapGenerationResults(long chatId) {
-        log.debug("Retrieving map generation results for chatId: {}", chatId);
         if (chatConcurrentStateMap.containsKey(chatId)) {
             val queue = chatConcurrentStateMap.get(chatId).getGridSectionsQueue();
             try {
@@ -118,8 +119,6 @@ public class AsyncJobHandler {
                 log.error("Error while retrieving map generation results: ", e);
                 throw new DungeonPrototypeException(e.getMessage());
             }
-        } else {
-            log.warn("No map generation results found for chatId: {}", chatId);
         }
         return Optional.empty();
     }
