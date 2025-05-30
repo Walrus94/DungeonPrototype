@@ -64,6 +64,10 @@ jobs:
           echo "POSTGRES_DATABASE_USER=${{secrets.POSTGRES_DATABASE_USER}}" >> .env
           echo "POSTGRES_DATABASE_PORT=${{vars.POSTGRES_DATABASE_PORT}}" >> .env
 
+      - name: Generate init-mongo.js from template
+        run: |
+          envsubst < init-mongo-monitoring-user.template.js > init-scripts/init-mongo-monitoring-user.js
+
       - name: Pre-deploy cleanup
         run: |
           docker-compose -p test --env-file .env down --remove-orphans || true
