@@ -109,7 +109,7 @@ public class AsyncJobHandler {
         }
     }
 
-    @Async
+
     public Optional<GeneratedCluster> retrieveMapGenerationResults(long chatId) {
         if (chatConcurrentStateMap.containsKey(chatId)) {
             val queue = chatConcurrentStateMap.get(chatId).getGridSectionsQueue();
