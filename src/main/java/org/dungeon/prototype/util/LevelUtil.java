@@ -232,8 +232,8 @@ public class LevelUtil {
     }
 
     private static boolean isPointOnGrid(Point point, GridSection[][] grid) {
-        return point.getY() < grid.length && point.getY() > -1 &&
-                point.getX() < grid[0].length && point.getX() > -1;
+        return point.getX() < grid.length && point.getX() > -1 &&
+                point.getY() < grid[0].length && point.getY() > -1;
     }
 
     private static boolean isPointInCluster(Point point, LevelGridCluster cluster) {
