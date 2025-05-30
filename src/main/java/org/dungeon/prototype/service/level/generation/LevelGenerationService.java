@@ -164,11 +164,16 @@ public class LevelGenerationService {
         AtomicInteger counter = new AtomicInteger(clusters.size());
 
         while (counter.get() > 0) {
-            asyncJobHandler.retrieveMapGenerationResults(chatId).ifPresent(cluster -> {
-                val clusterData = clusters.get(cluster.clusterId());
-                copyGridSection(grid, clusterData.getStartConnectionPoint(), clusterData.getEndConnectionPoint(), cluster.clusterGrid());
-                counter.getAndDecrement();
-            });
+            try {
+                val completedCluster = asyncJobHandler.retrieveMapGenerationResults(chatId).get();
+                if (nonNull(completedCluster)) {
+                    val clusterData = clusters.get(completedCluster.clusterId());
+                    copyGridSection(grid, clusterData.getStartConnectionPoint(), clusterData.getEndConnectionPoint(), completedCluster.clusterGrid());
+                    counter.getAndDecrement();
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                throw new DungeonPrototypeException(e.getMessage());
+            }
         }
 
 

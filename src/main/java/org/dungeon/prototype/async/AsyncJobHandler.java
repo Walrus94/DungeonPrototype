@@ -16,8 +16,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -101,7 +101,7 @@ public class AsyncJobHandler {
         try {
             val result = asyncTaskCompletionService.take().get(10, TimeUnit.SECONDS);
             if (chatConcurrentStateMap.containsKey(result.chatId())) {
-                chatConcurrentStateMap.get(result.chatId()).getGridSectionsQueue().put(result);
+                chatConcurrentStateMap.get(result.chatId()).getGridSectionsQueue().offer(result);
             }
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             log.error("Error while waiting for map generation: ", e);
@@ -110,17 +110,18 @@ public class AsyncJobHandler {
     }
 
 
-    public Optional<GeneratedCluster> retrieveMapGenerationResults(long chatId) {
+    @Async
+    public CompletableFuture<GeneratedCluster> retrieveMapGenerationResults(long chatId) {
         if (chatConcurrentStateMap.containsKey(chatId)) {
             val queue = chatConcurrentStateMap.get(chatId).getGridSectionsQueue();
             try {
-                return Optional.ofNullable(queue.poll(10, TimeUnit.SECONDS));
+                return CompletableFuture.completedFuture(queue.poll(10, TimeUnit.SECONDS));
             } catch (InterruptedException e) {
                 log.error("Error while retrieving map generation results: ", e);
                 throw new DungeonPrototypeException(e.getMessage());
             }
         }
-        return Optional.empty();
+        return CompletableFuture.completedFuture(null);
     }
 
     @Async
