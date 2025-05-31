@@ -668,8 +668,8 @@ public class LevelGenerationService {
                                 .longestPathDefault(true)
                                 .pathFromStart(0)
                                 .cluster(cluster)
-                                .currentPoint(new Point(cluster.getEndConnectionPoint().getX() - cluster.getStartConnectionPoint().getX() - 1,
-                                        cluster.getEndConnectionPoint().getY() - cluster.getStartConnectionPoint().getY() - 1))
+                                .currentPoint(new Point(cluster.getEndConnectionPoint().getX() - cluster.getStartConnectionPoint().getX(),
+                                        cluster.getEndConnectionPoint().getY() - cluster.getStartConnectionPoint().getY()))
                                 .build());
             }
             int fromStartWalkersNumber = getRandomInt(1, 2);
@@ -694,8 +694,8 @@ public class LevelGenerationService {
                             .pathFromStart(0)
                             .longestPathDefault(fromEndWalkersNumber == 1 || i == 2)
                             .cluster(cluster)
-                            .currentPoint(new Point(cluster.getEndConnectionPoint().getX() - cluster.getStartConnectionPoint().getX() - 1,
-                                    cluster.getEndConnectionPoint().getY() - cluster.getStartConnectionPoint().getY() - 1))
+                            .currentPoint(new Point(cluster.getEndConnectionPoint().getX() - cluster.getStartConnectionPoint().getX(),
+                                    cluster.getEndConnectionPoint().getY() - cluster.getStartConnectionPoint().getY()))
                             .build());
                 }
             });
