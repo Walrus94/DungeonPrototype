@@ -95,9 +95,13 @@ public class AsyncJobHandler {
         });
     }
 
-    @Async
     @Scheduled(fixedRate = 1000)
     public void updateMapGenerationResults() {
+        updateMapGenerationResultsAsync();
+    }
+
+    @Async
+    public void updateMapGenerationResultsAsync() {
         try {
             val result = asyncTaskCompletionService.take().get(10, TimeUnit.SECONDS);
             if (chatConcurrentStateMap.containsKey(result.chatId())) {
