@@ -54,6 +54,7 @@ import static java.util.Objects.nonNull;
 import static org.apache.commons.math3.util.FastMath.abs;
 import static org.apache.commons.math3.util.FastMath.max;
 import static org.dungeon.prototype.util.LevelUtil.generateEmptyMapGrid;
+import static org.dungeon.prototype.util.LevelUtil.getAdjacentSections;
 import static org.dungeon.prototype.util.LevelUtil.getAdjacentSectionsInCluster;
 import static org.dungeon.prototype.util.LevelUtil.getIcon;
 import static org.dungeon.prototype.util.LevelUtil.printMapGridToLogs;
@@ -484,7 +485,7 @@ public class LevelGenerationService {
         log.info("Processing deadEnds of cluster {}", cluster);
         List<GridSection> processedDeadEnds = new ArrayList<>();
         cluster.getDeadEnds().removeIf(deadEnd -> {
-            val adjacentSections = getAdjacentSectionsInCluster(deadEnd.getPoint(), grid, cluster);
+            val adjacentSections = getAdjacentSections(deadEnd.getPoint(), grid);
             if (adjacentSections.stream()
                     .anyMatch(section -> section.getStepsFromStart() == deadEnd.getStepsFromStart() + 1) &&
                     adjacentSections.stream()
@@ -506,7 +507,7 @@ public class LevelGenerationService {
                         while (path <= oldPath) {
                             oldPath--;
                             GridSection found = currentSection;
-                            for (GridSection section : getAdjacentSectionsInCluster(currentSection.getPoint(), grid, cluster)) {
+                            for (GridSection section : getAdjacentSections(currentSection.getPoint(), grid)) {
                                 if (oldPath == section.getStepsFromStart()) {
                                     found = section;
                                     break;
@@ -527,7 +528,7 @@ public class LevelGenerationService {
         });
         log.info("Processed dead ends:{}", processedDeadEnds);
         processedDeadEnds.removeIf(deadEnd -> {
-            val adjacentSections = getAdjacentSectionsInCluster(deadEnd.getPoint(), grid, cluster);
+            val adjacentSections = getAdjacentSections(deadEnd.getPoint(), grid);
             if (adjacentSections.stream()
                     .anyMatch(section -> section.getStepsFromStart() == deadEnd.getStepsFromStart() + 1) &&
                     adjacentSections.stream()
@@ -577,7 +578,7 @@ public class LevelGenerationService {
 
     private void processNegativeSections(GridSection[][] grid, LevelGridCluster cluster, GridSection currentSection) {
         log.info("Processing section {} of cluster {}", currentSection, cluster);
-        val adjacentSections = getAdjacentSectionsInCluster(currentSection.getPoint(), grid, cluster);
+        val adjacentSections = getAdjacentSections(currentSection.getPoint(), grid);
         var stepsFromStart = currentSection.getStepsFromStart();
         val negativeAdjacentSections = adjacentSections.stream()
                 .filter(section -> section.getStepsFromStart() < 0)
@@ -605,7 +606,7 @@ public class LevelGenerationService {
         while (currentSection.isPresent()) {
             lastSection = currentSection;
             Optional<GridSection> nextSection = Optional.empty();
-            for (GridSection adjacentSection : getAdjacentSectionsInCluster(currentSection.get().getPoint(), grid, cluster)) {
+            for (GridSection adjacentSection : getAdjacentSections(currentSection.get().getPoint(), grid)) {
                 if (adjacentSection.getStepsFromStart() == currentSection.get().getStepsFromStart() - 1) {
                     nextSection = Optional.of(adjacentSection);
                     counter++;
