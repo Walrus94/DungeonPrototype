@@ -205,7 +205,7 @@ public class WalkerBuilder {
     }
 
     private Point getEndPoint() {
-        return new Point(cluster.getEndConnectionPoint().getX() - cluster.getStartConnectionPoint().getX() -1,
-                cluster.getEndConnectionPoint().getY() - cluster.getStartConnectionPoint().getY() - 1);
+        return new Point(cluster.getEndConnectionPoint().getX() - cluster.getStartConnectionPoint().getX(),
+                cluster.getEndConnectionPoint().getY() - cluster.getStartConnectionPoint().getY());
     }
 }
