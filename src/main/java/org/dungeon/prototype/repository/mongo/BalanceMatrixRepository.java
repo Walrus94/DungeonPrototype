@@ -11,7 +11,7 @@ import java.util.Optional;
 @Repository
 public interface BalanceMatrixRepository extends MongoRepository<BalanceMatrixDocument, String> {
     boolean existsByChatIdAndName(long chatId, String name);
-    BalanceMatrixDocument findByChatIdAndName(long chatId, String name);
+    Optional<BalanceMatrixDocument> findByChatIdAndName(long chatId, String name);
     @Aggregation(pipeline = {
             "{ '$match': { 'chatId': ?0, 'name': ?1 } }",
             "{ '$project': { 'data': { '$arrayElemAt': ['$data', ?2] } } }",

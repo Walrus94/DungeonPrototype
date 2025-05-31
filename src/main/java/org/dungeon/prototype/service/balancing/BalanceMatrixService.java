@@ -74,7 +74,10 @@ public class BalanceMatrixService {
                 throw new DungeonPrototypeException(e.getMessage());
             }
         }
-        return convertMatrix(balanceMatrixRepository.findByChatIdAndName(chatId, name).getData());
+        return convertMatrix(balanceMatrixRepository.findByChatIdAndName(chatId, name)
+                .orElseThrow(() ->
+                        new DungeonPrototypeException("Unable to find balance matrix for chatId: " + chatId + ", name: " + name))
+                .getData());
     }
 
     public double[] getBalanceVector(long chatId, String name, int col) {
