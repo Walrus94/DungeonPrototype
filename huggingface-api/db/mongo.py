@@ -73,7 +73,6 @@ async def save_balance_matrix(chat_id: int, name: str, matrix: np.ndarray) -> bo
             {
                 '$set': {
                     'data': matrix.tolist(),
-                    'updated_at': {'$currentDate': True}
                 }
             },
             upsert=True
