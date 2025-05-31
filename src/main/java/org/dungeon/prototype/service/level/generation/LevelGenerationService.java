@@ -99,7 +99,7 @@ public class LevelGenerationService {
             }
         }
         try {
-            val level =  futureLevel.get();
+            val level = futureLevel.get();
             asyncJobHandler.clearLatch(chatId);
             return level;
         } catch (InterruptedException | ExecutionException e) {
@@ -217,8 +217,8 @@ public class LevelGenerationService {
                 startConnectionPoint, endConnectionPoint);
         log.debug("Grid section\n{}", printMapGridToLogs(gridSection));
         log.debug("Grid before copying\n{}", printMapGridToLogs(grid));
-        IntStream.range(startConnectionPoint.getX(), endConnectionPoint.getX())
-                .forEach(x -> IntStream.range(startConnectionPoint.getY(), endConnectionPoint.getY())
+        IntStream.range(startConnectionPoint.getX(), endConnectionPoint.getX() + 1)
+                .forEach(x -> IntStream.range(startConnectionPoint.getY(), endConnectionPoint.getY() + 1)
                         .forEach(y -> {
                             if (!isStartOrEnd(x, y, startConnectionPoint, endConnectionPoint)) {
                                 grid[x][y] = gridSection[x - startConnectionPoint.getX()][y - startConnectionPoint.getY()];
