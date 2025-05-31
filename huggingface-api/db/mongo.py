@@ -103,3 +103,20 @@ async def load_chat_matrices(chat_id: int) -> Dict[str, np.ndarray]:
     except Exception as e:
         logging.error(f"Error loading chat matrices: {e}")
         return {}
+
+def init_balance_matrices_index():
+    """Initialize compound index for balance matrices collection."""
+    try:
+        logging.info("Creating compound index for balance matrices...")
+        balance_matrices_collection.create_index(
+            [("chat_id", 1), ("name", 1)],
+            unique=True,
+            background=True
+        )
+        logging.info("Balance matrices index created successfully")
+    except Exception as e:
+        logging.error(f"Error creating balance matrices index: {e}")
+        raise
+
+# Initialize index when module is loaded
+init_balance_matrices_index()
