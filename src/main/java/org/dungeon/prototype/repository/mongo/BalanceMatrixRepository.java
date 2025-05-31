@@ -14,8 +14,8 @@ public interface BalanceMatrixRepository extends MongoRepository<BalanceMatrixDo
     BalanceMatrixDocument findByChatIdAndName(long chatId, String name);
     @Aggregation(pipeline = {
             "{ '$match': { 'chatId': ?0, 'name': ?1 } }",
-            "{ '$project': { 'data': { '$arrayElemAt': ['$data', ?3] } } }",
-            "{ '$project': { 'value': { '$arrayElemAt': ['$data', ?2] } } }"
+            "{ '$project': { 'data': { '$arrayElemAt': ['$data', ?2] } } }",
+            "{ '$project': { 'value': { '$arrayElemAt': ['$data', ?3] } } }"
     })
     Optional<MatrixValueProjection> getMatrixCellValue(Long chatId, String name, int row, int col);
     void deleteAllByChatId(long chatId);
