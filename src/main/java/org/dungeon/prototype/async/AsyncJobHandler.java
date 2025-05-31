@@ -28,6 +28,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static java.util.Objects.isNull;
+
 @Service
 @Slf4j
 public class AsyncJobHandler {
@@ -67,7 +69,7 @@ public class AsyncJobHandler {
         log.debug("Submitting effect generation {} task for chatId: {}", taskType, chatId);
         asyncTaskExecutor.submit(() -> {
             try {
-                while (!chatConcurrentStateMap.containsKey(chatId)) {
+                while (!chatConcurrentStateMap.containsKey(chatId) || isNull(chatConcurrentStateMap.get(chatId).getLatch())) {
                     log.info("Waiting for latch to be created for chatId: {}", chatId);
                     Thread.sleep(1000);
                 }
@@ -88,6 +90,7 @@ public class AsyncJobHandler {
         });
     }
 
+    @Async
     public void executeMapGenerationTask(Callable<GridSection[][]> job, TaskType taskType, long chatId, long clusterId) throws InterruptedException {
         asyncTaskCompletionService.submit(() -> {
             log.debug("Submitting map generation task of type {} for chatId: {}", taskType, chatId);
