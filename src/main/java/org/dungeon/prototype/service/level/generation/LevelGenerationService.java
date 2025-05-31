@@ -99,7 +99,9 @@ public class LevelGenerationService {
             }
         }
         try {
-            return futureLevel.get();
+            val level =  futureLevel.get();
+            asyncJobHandler.clearLatch(chatId);
+            return level;
         } catch (InterruptedException | ExecutionException e) {
             throw new DungeonPrototypeException(e.getMessage());
         }

@@ -52,14 +52,13 @@ public class AsyncJobHandler {
         log.debug("Submitting item generation {} task for chatId: {}", taskType, chatId);
         asyncTaskExecutor.submit(() -> {
             chatConcurrentStateMap.computeIfAbsent(chatId,
-                    k -> new ChatConcurrentState(chatId, new CountDownLatch(ItemType.values().length)));//TODO: increment when Usable items generation is implemented
+                    k -> new ChatConcurrentState(chatId, new CountDownLatch(ItemType.values().length - 1)));
             try {
                 job.run();
-            } catch (Exception e) {
-                throw new DungeonPrototypeException(e.getMessage());
-            } finally {
                 log.info("Counting down ({}) latch for chatId: {}", chatConcurrentStateMap.get(chatId).getLatch().getCount(), chatId);
                 chatConcurrentStateMap.get(chatId).getLatch().countDown();
+            } catch (Exception e) {
+                throw new DungeonPrototypeException(e.getMessage());
             }
         });
     }
@@ -80,22 +79,21 @@ public class AsyncJobHandler {
                     } catch (InterruptedException e) {
                         throw new DungeonPrototypeException(e.getMessage());
                     }
+                    log.info("Counting down ({}) latch for chatId: {}", chatConcurrentStateMap.get(chatId).getLatch().getCount(), chatId);
+                    chatConcurrentStateMap.get(chatId).getLatch().countDown();
                 }
                 job.run();
             } catch (Exception e) {
                 throw new DungeonPrototypeException(e.getMessage());
             } finally {
-                chatConcurrentStateMap.get(chatId).getLatch().countDown();
             }
         });
     }
 
     @Async
     public void executeMapGenerationTask(Callable<GridSection[][]> job, TaskType taskType, long chatId, long clusterId) throws InterruptedException {
-        asyncTaskCompletionService.submit(() -> {
-            log.debug("Submitting map generation task of type {} for chatId: {}", taskType, chatId);
-            return new GeneratedCluster(chatId, clusterId, job.call());
-        });
+        log.debug("Submitting map generation task of type {} for chatId: {}", taskType, chatId);
+        asyncTaskCompletionService.submit(() -> new GeneratedCluster(chatId, clusterId, job.call()));
     }
 
     @Scheduled(fixedRate = 1000)
@@ -119,7 +117,7 @@ public class AsyncJobHandler {
 
     @Async
     public CompletableFuture<GeneratedCluster> retrieveMapGenerationResults(long chatId) {
-        if (chatConcurrentStateMap.containsKey(chatId)) {
+        if (chatConcurrentStateMap.containsKey(chatId) && !chatConcurrentStateMap.get(chatId).getGridSectionsQueue().isEmpty()) {
             val queue = chatConcurrentStateMap.get(chatId).getGridSectionsQueue();
             try {
                 return CompletableFuture.completedFuture(queue.poll(10, TimeUnit.SECONDS));
@@ -146,8 +144,6 @@ public class AsyncJobHandler {
                 return job.call();
             } catch (InterruptedException e) {
                 throw new DungeonPrototypeException(e.getMessage());
-            } finally {
-                chatConcurrentStateMap.remove(chatId);
             }
         });
     }
@@ -167,8 +163,6 @@ public class AsyncJobHandler {
                 job.run();
             } catch (InterruptedException e) {
                 throw new DungeonPrototypeException(e.getMessage());
-            } finally {
-                chatConcurrentStateMap.remove(chatId);
             }
         });
     }
