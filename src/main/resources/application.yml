@@ -8,6 +8,7 @@ spring:
       database: ${SPRING_DATA_MONGODB_DATABASE}
       username: ${SPRING_DATA_MONGODB_USERNAME}
       password: ${SPRING_DATA_MONGODB_PASSWORD}
+      auto-index-creation: true
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
     producer:
