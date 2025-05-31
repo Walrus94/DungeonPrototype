@@ -31,8 +31,8 @@ jobs:
         with:
           ref: ${{ github.event.inputs.branch }}
           fetch-depth: 0
-          persist-credentials: true
-          clean: true
+          persist-credentials: false
+          clean: false
 
       - name: Set environment variables
         run: |
