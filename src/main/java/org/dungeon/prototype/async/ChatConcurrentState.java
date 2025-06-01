@@ -16,6 +16,12 @@ public class ChatConcurrentState {
     public ChatConcurrentState(long chatId, CountDownLatch latch) {
         this.chatId = chatId;
         this.latch = latch;
-        this.gridSectionsQueue = new LinkedBlockingQueue<>();
+    }
+
+    public void offerGridSection(GeneratedCluster gridSection) {
+        if (gridSectionsQueue == null) {
+            gridSectionsQueue = new LinkedBlockingQueue<>();
+        }
+        gridSectionsQueue.offer(gridSection);
     }
 }

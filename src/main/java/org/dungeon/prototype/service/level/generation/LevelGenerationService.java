@@ -145,7 +145,6 @@ public class LevelGenerationService {
         initConnectionSections(grid, clusterConnectionPoints);
         level.setClusterConnectionPoints(clusterConnectionPoints);
 
-        asyncJobHandler.initializeMapClusterQueue(chatId, clusters.size());
         clusters.values().forEach(
                 cluster -> {
                     try {

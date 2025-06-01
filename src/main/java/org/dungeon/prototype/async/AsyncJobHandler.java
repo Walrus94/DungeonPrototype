@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 
 @Service
 @Slf4j
@@ -106,7 +107,7 @@ public class AsyncJobHandler {
         try {
             val result = asyncTaskCompletionService.take().get(10, TimeUnit.SECONDS);
             if (chatConcurrentStateMap.containsKey(result.chatId())) {
-                chatConcurrentStateMap.get(result.chatId()).getGridSectionsQueue().offer(result);
+                chatConcurrentStateMap.get(result.chatId()).offerGridSection(result);
             }
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             log.warn("Error while waiting for map generation: ", e);
@@ -116,7 +117,8 @@ public class AsyncJobHandler {
 
     @Async
     public CompletableFuture<GeneratedCluster> retrieveMapGenerationResults(long chatId) {
-        if (chatConcurrentStateMap.containsKey(chatId) && !chatConcurrentStateMap.get(chatId).getGridSectionsQueue().isEmpty()) {
+        if (chatConcurrentStateMap.containsKey(chatId) && nonNull(chatConcurrentStateMap.get(chatId).getGridSectionsQueue()) &&
+        !chatConcurrentStateMap.get(chatId).getGridSectionsQueue().isEmpty()) {
             val queue = chatConcurrentStateMap.get(chatId).getGridSectionsQueue();
             try {
                 return CompletableFuture.completedFuture(queue.poll(10, TimeUnit.SECONDS));
@@ -183,11 +185,5 @@ public class AsyncJobHandler {
     public void clearLatch(long chatId) {
         log.info("Clearing latch for chatId: {}", chatId);
         chatConcurrentStateMap.get(chatId).setLatch(null);
-    }
-
-    public void initializeMapClusterQueue(long chatId, int size) {
-        if (chatConcurrentStateMap.containsKey(chatId)) {
-            chatConcurrentStateMap.get(chatId).setGridSectionsQueue(new LinkedBlockingQueue<>(size));
-        }
     }
 }
