@@ -109,7 +109,7 @@ public class AsyncJobHandler {
                 chatConcurrentStateMap.get(result.chatId()).offerGridSection(result);
             }
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            log.warn("Error while waiting for map generation: ", e);
+            log.warn("Error while waiting for map generation: {}", e.getMessage());
         }
     }
 
@@ -122,10 +122,10 @@ public class AsyncJobHandler {
             try {
                 return CompletableFuture.completedFuture(queue.poll(10, TimeUnit.SECONDS));
             } catch (InterruptedException e) {
-                log.error("Error while retrieving map generation results: ", e);
-                throw new DungeonPrototypeException(e.getMessage());
+                log.warn("Unable while retrieving map generation results for chatId: {}: {} ", chatId, e.getMessage());
             }
         }
+        log.debug("Map generation results not available for chatId: {}", chatId);
         return CompletableFuture.completedFuture(null);
     }
 

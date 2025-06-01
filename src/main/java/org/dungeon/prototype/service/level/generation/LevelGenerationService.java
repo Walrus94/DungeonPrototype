@@ -152,10 +152,10 @@ public class LevelGenerationService {
                 if (nonNull(completedCluster)) {
                     val clusterData = clusters.get(completedCluster.clusterId());
                     copyGridSection(grid, clusterData.getStartConnectionPoint(), clusterData.getEndConnectionPoint(), completedCluster.clusterGrid());
-                    counter.getAndDecrement();
+                    log.info("Cluster copied successfully, remaining clusters: {}", counter.getAndDecrement());
                 }
             } catch (InterruptedException | ExecutionException e) {
-                throw new DungeonPrototypeException(e.getMessage());
+                log.warn("Error while retrieving cluster generation results: ", e);
             }
         }
 
