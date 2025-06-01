@@ -24,7 +24,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -92,7 +91,7 @@ public class AsyncJobHandler {
     }
 
     @Async
-    public void executeMapGenerationTask(Callable<GridSection[][]> job, TaskType taskType, long chatId, long clusterId) throws InterruptedException {
+    public void executeMapGenerationTask(Callable<GridSection[][]> job, TaskType taskType, long chatId, long clusterId) {
         log.debug("Submitting map generation task of type {} for chatId: {}", taskType, chatId);
         asyncTaskCompletionService.submit(() -> new GeneratedCluster(chatId, clusterId, job.call()));
     }

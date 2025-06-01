@@ -82,14 +82,8 @@ public class LevelGenerationService {
     public Level generateAndPopulateLevel(Long chatId, Integer levelNumber) {
         var levelMap = generateLevelMap(chatId, levelNumber);
         log.debug("Generated level map\n{}", printMapGridToLogs(levelMap.getGrid()));
-        val futureLevel = asyncJobHandler.submitMapPopulationTask(() -> {
-            //TODO remove after debugging
-            try {
-                return populateLevel(chatId, levelNumber, levelMap);
-            } catch (Exception e) {
-                throw new DungeonPrototypeException(e.getMessage());
-            }
-        }, TaskType.LEVEL_GENERATION, chatId);
+        val futureLevel = asyncJobHandler.submitMapPopulationTask(() ->
+                populateLevel(chatId, levelNumber, levelMap), TaskType.LEVEL_GENERATION, chatId);
         while (!futureLevel.isDone()) {
             try {
                 return futureLevel.get(1, TimeUnit.MINUTES);
@@ -146,21 +140,8 @@ public class LevelGenerationService {
         level.setClusterConnectionPoints(clusterConnectionPoints);
 
         clusters.values().forEach(
-                cluster -> {
-                    try {
-                        asyncJobHandler.executeMapGenerationTask(() -> {
-                                    //todo remove after debugging
-                                    try {
-                                        return generateGridSection(cluster, walkersMap.get(cluster));
-                                    } catch (Exception e) {
-                                        throw new DungeonPrototypeException(e.getMessage());
-                                    }
-                                },
-                                TaskType.LEVEL_GENERATION, chatId, cluster.getId());
-                    } catch (InterruptedException e) {
-                        throw new DungeonPrototypeException(e.getMessage());
-                    }
-                }
+                cluster -> asyncJobHandler.executeMapGenerationTask(() ->
+                                generateGridSection(cluster, walkersMap.get(cluster)), TaskType.LEVEL_GENERATION, chatId, cluster.getId())
         );
 
         AtomicInteger counter = new AtomicInteger(clusters.size());
@@ -178,6 +159,7 @@ public class LevelGenerationService {
             }
         }
 
+        log.info("All clusters generated, current grid state:\n{}", printMapGridToLogs(grid));
 
         level.setGrid(grid);
         level.setClusters(clusters.values().stream()
@@ -212,7 +194,7 @@ public class LevelGenerationService {
         return clusterGrid;
     }
 
-    private void copyGridSection(GridSection[][] grid, Point startConnectionPoint, Point endConnectionPoint, GridSection[][] gridSection) {
+    private GridSection[][] copyGridSection(GridSection[][] grid, Point startConnectionPoint, Point endConnectionPoint, GridSection[][] gridSection) {
         log.info("Copying grid section from {} to {}",
                 startConnectionPoint, endConnectionPoint);
         log.debug("Grid section\n{}", printMapGridToLogs(gridSection));
@@ -226,6 +208,7 @@ public class LevelGenerationService {
                             }
                         }));
         log.debug("Grid after copying\n{}", printMapGridToLogs(grid));
+        return grid;
     }
 
     /**
