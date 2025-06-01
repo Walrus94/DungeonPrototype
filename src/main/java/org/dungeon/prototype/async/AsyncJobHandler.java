@@ -109,8 +109,7 @@ public class AsyncJobHandler {
                 chatConcurrentStateMap.get(result.chatId()).getGridSectionsQueue().offer(result);
             }
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            log.error("Error while waiting for map generation: ", e);
-            throw new DungeonPrototypeException(e.getMessage());
+            log.warn("Error while waiting for map generation: ", e);
         }
     }
 
