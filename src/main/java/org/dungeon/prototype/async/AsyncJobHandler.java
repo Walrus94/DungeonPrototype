@@ -125,7 +125,6 @@ public class AsyncJobHandler {
                 log.warn("Unable while retrieving map generation results for chatId: {}: {} ", chatId, e.getMessage());
             }
         }
-        log.debug("Map generation results not available for chatId: {}", chatId);
         return CompletableFuture.completedFuture(null);
     }
 
