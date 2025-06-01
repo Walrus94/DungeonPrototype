@@ -56,8 +56,9 @@ services:
       driver: "json-file"
       options:
         labels: environment,service
+    command: --storage.tsdb.retention.time=7d
     volumes:
-        - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus.yml:/prometheus/prometheus.yml
     restart: unless-stopped
     depends_on:
       - mongodb-exporter
@@ -66,36 +67,17 @@ services:
       - shared_net
 
   mongodb-exporter:
-    image: crobox/mongodb-exporter:latest
+    image: percona/mongodb_exporter:0.44.0
     container_name: mongodb-exporter
-    environment:
-      MONGODB_URI: mongodb://${MONGO_DB_USER}:${MONGO_DB_PASSWORD}@mongo:${MONGO_DB_PORT}/admin
-    ports:
-      - "9216:9216"
-    restart: unless-stopped
-    labels:
-      environment: logging
-      service: mongodb-exporter
-    logging:
-      driver: "json-file"
-      options:
-        labels: environment,service
-    networks:
-      - shared_net
-    depends_on:
-     - mongodb-exporter-percona
-
-  mongodb-exporter-percona:
-    image: percona/mongodb_exporter:0.42.0
-    container_name: mongodb-exporter-percona
-    environment:
-      MONGODB_URI: mongodb://${MONGO_DB_USER}:${MONGO_DB_PASSWORD}@mongo:${MONGO_DB_PORT}/admin?ssl=true
+    command:
+      - "--web.listen-address=:9001"
+      - "--mongodb.uri=mongodb://${MONGO_MONITORING_USER}:${MONGO_MONITORING_PASSWORD}@mongo:${MONGO_DB_PORT}/?authSource=admin"
     ports:
       - "9001:9001"
     restart: unless-stopped
     labels:
       environment: logging
-      service: mongodb-exporter-percona
+      service: mongodb-exporter
     logging:
       driver: "json-file"
       options:
@@ -159,6 +141,8 @@ services:
       - zookeeper
     ports:
       - ${KAFKA_PORT}:${KAFKA_PORT}
+      - "9998:9998"
+      - "7071:7071"
     labels:
       environment: shared
       service: kafka
@@ -171,12 +155,21 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:${KAFKA_PORT}
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'false'
       KAFKA_DEFAULT_PARTITIONS: 3
       KAFKA_DEFAULT_REPLICATION_FACTOR: 1
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_LOG4J_LOGGERS: "kafka.consumer.logger=INFO"
+#      TODO: Uncomment the following lines to enable JMX monitoring
+#      KAFKA_JMX_PORT: 9998
+#      KAFKA_JMX_OPTS: >
+#        -javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7071:/opt/jmx/config.yml
+#        -Dcom.sun.management.jmxremote
+#        -Dcom.sun.management.jmxremote.authenticate=false
+#        -Dcom.sun.management.jmxremote.ssl=false
+#        -Dcom.sun.management.jmxremote.rmi.port=9998
+#      volumes: ./jmx-exporter:/opt/jmx:ro
 
   mongo:
     image: mongo:latest
@@ -193,6 +186,12 @@ services:
       driver: "json-file"
       options:
         labels: environment,service
+    volumes:
+      - ./init-scripts:/docker-entrypoint-initdb.d
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_DB_USER}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_DB_PASSWORD}
+      MONGO_INITDB_DATABASE: admin
+      MONGO_MONITORING_USERNAME: ${MONGO_MONITORING_USER}
+      MONGO_MONITORING_PASSWORD: ${MONGO_MONITORING_PASSWORD}
+

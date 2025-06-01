@@ -11,19 +11,25 @@ import org.dungeon.prototype.model.inventory.items.Weapon;
 import org.dungeon.prototype.model.inventory.items.Wearable;
 import org.dungeon.prototype.model.weight.Weight;
 import org.dungeon.prototype.properties.CallbackType;
-import org.dungeon.prototype.repository.ItemRepository;
-import org.dungeon.prototype.repository.converters.mapstruct.ItemMapper;
-import org.dungeon.prototype.repository.projections.ItemWeightProjection;
+import org.dungeon.prototype.repository.mongo.ItemRepository;
+import org.dungeon.prototype.repository.mongo.converters.mapstruct.ItemMapper;
+import org.dungeon.prototype.repository.mongo.projections.ItemWeightProjection;
 import org.dungeon.prototype.service.item.generation.ItemNamingService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.stereotype.Service;
 
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -32,9 +38,11 @@ import static java.util.Objects.nonNull;
 import static org.apache.commons.math3.util.FastMath.abs;
 
 @Slf4j
-@Component
+@Service
 public class ItemService {
     private final ItemMapper itemMapper = ItemMapper.INSTANCE;
+    @Value("${bot.files.images}")
+    private String imgPath;
     @Autowired
     private ItemNamingService itemNamingService;
     @Autowired
@@ -47,7 +55,6 @@ public class ItemService {
      * @param item to save
      * @return saved item
      */
-    @Transactional
     public Item saveItem(Item item) {
         val itemDocument = ItemMapper.INSTANCE.mapToDocument(item);
         val savedItemDocument = itemRepository.save(itemDocument);
@@ -66,7 +73,6 @@ public class ItemService {
      * @param wearableType to look for
      * @return found item
      */
-    @Transactional
     public Wearable getMostLightweightWearable(Long chatId, WearableType wearableType) {
         List<ItemDocument> documents = itemRepository.findWearablesByChatIdTypeAndMinWeight(chatId, wearableType, PageRequest.of(0, 1));
         if (isNull(documents) || documents.isEmpty()) {
@@ -74,16 +80,7 @@ public class ItemService {
             throw new EntityNotFoundException(chatId, wearableType.toString(), CallbackType.MENU_BACK);
         }
 
-        //TODO: refactor
-        var document = documents.getFirst();
-        if (nonNull(document) && isNull(document.getName())) {
-            itemNamingService.requestNameGeneration(itemMapper.mapToWearable(document));
-            log.info("Waiting for name generation of item {} for chat {}...", document.getId(), chatId);
-            while (isNull(document.getName())) {
-                document = itemRepository.findByChatIdAndId(document.getChatId(), document.getId()).orElse(null);
-            }
-            log.info("Name for item id:{} acquired: {}", document.getId(), document.getName());
-        }
+        ItemDocument document = requestItemName(chatId, documents);
         return itemMapper.mapToWearable(document);
     }
 
@@ -94,7 +91,6 @@ public class ItemService {
      * @param chatId current chat id
      * @return found item
      */
-    @Transactional
     public Weapon getMostLightWeightMainWeapon(Long chatId) {
         val documents = itemRepository.findMainWeaponByChatIdAndMinWeight(chatId, PageRequest.of(0, 1));
         if (isNull(documents) || documents.isEmpty()) {
@@ -102,16 +98,7 @@ public class ItemService {
             throw new EntityNotFoundException(chatId, "weapon", CallbackType.MENU_BACK);
         }
 
-        //TODO: refactor
-        var document = documents.getFirst();
-        if (nonNull(document) && isNull(document.getName())) {
-            itemNamingService.requestNameGeneration(itemMapper.mapToWeapon(document));
-            log.info("Waiting for name generation of item {} for chat {}...", document.getId(), chatId);
-            while (isNull(document.getName())) {
-                document = itemRepository.findByChatIdAndId(document.getChatId(), document.getId()).orElse(null);
-            }
-            log.info("Name for item id:{} acquired: {}", document.getId(), document.getName());
-        }
+        ItemDocument document = requestItemName(chatId, documents);
         return itemMapper.mapToWeapon(document);
     }
 
@@ -137,15 +124,6 @@ public class ItemService {
                 .findFirst().map(ItemWeightProjection::getId)
                 .orElseThrow(() -> new EntityNotFoundException(chatId, "item", CallbackType.MENU_BACK));
         return findItem(chatId, itemId);
-    }
-
-    private double getLimitWeightForSpecialItem(int playerLuck, List<Double> weights) {
-        double max = weights.stream().mapToDouble(weight -> weight).max().getAsDouble();
-        double min = weights.stream().mapToDouble(weight -> weight).min().getAsDouble();
-
-        return (max - min) * playerLuck / 10.0;
-
-
     }
 
     /**
@@ -206,12 +184,28 @@ public class ItemService {
         return null;
     }
 
+    public Map<String, Double> findAllItemsWeightsByChatId(long chatId) {
+        val itemWeights = itemRepository.findAllWeightsByChatId(chatId);
+        return itemWeights.stream()
+                .collect(Collectors.toMap(ItemWeightProjection::getId, ItemWeightProjection::getWeightAbs, (a, b) -> a, LinkedHashMap::new));
+    }
+
     /**
      * Removes all currents chat items from repository
      *
      * @param chatId id of current chat
      */
     public void dropCollection(Long chatId) {
+        String filenamePattern = chatId + "_*.png";
+
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(Path.of(imgPath), filenamePattern)) {
+            for (Path filePath : stream) {
+                Files.deleteIfExists(filePath);
+                log.info("Deleted: {}", filePath);
+            }
+        } catch (Exception e) {
+            log.error("Error deleting images for chatId {}: {}", chatId,  e.getMessage());
+        }
         itemRepository.deleteAllByChatId(chatId);
     }
 
@@ -222,7 +216,6 @@ public class ItemService {
      * @param <T>   class, extending {@link Item}
      * @return saved items
      */
-    @Transactional
     public <T extends Item> Set<Item> saveItems(List<T> items) {
         val itemDocuments = items.stream().map(ItemMapper.INSTANCE::mapToDocument).toList();
         val savedItemDocuments = itemRepository.saveAll(itemDocuments);
@@ -233,20 +226,41 @@ public class ItemService {
         }).collect(Collectors.toSet());
     }
 
+    private ItemDocument requestItemName(Long chatId, List<ItemDocument> documents) {
+        //TODO: refactor
+        var document = documents.getFirst();
+        if (nonNull(document) && isNull(document.getName())) {
+            itemNamingService.requestNameGeneration(document);
+            log.info("Waiting for name generation of item {} for chat {}...", document.getId(), chatId);
+            while (isNull(Objects.requireNonNull(document).getName())) {
+                document = itemRepository.findByChatIdAndId(document.getChatId(), document.getId()).orElse(null);
+            }
+            log.info("Name for item id:{} acquired: {}", document.getId(), document.getName());
+        }
+        return document;
+    }
+
+    private double getLimitWeightForSpecialItem(int playerLuck, List<Double> weights) {
+        double max = weights.stream().mapToDouble(weight -> weight).max().getAsDouble();
+        double min = weights.stream().mapToDouble(weight -> weight).min().getAsDouble();
+
+        return (max - min) * playerLuck / 10.0;
+    }
+
     private Set<Item> findItems(Long chatId, List<String> itemIds) {
         val itemDocuments = itemRepository.findAllByChatIdAndIdIn(chatId, itemIds);
         var items = itemDocuments.stream()
+                .peek(item -> {
+                    if (isNull(item.getName())) {
+                        itemNamingService.requestNameGeneration(item);
+                    }
+                })
                 .map(itemDocument ->
                         switch (itemDocument.getItemType()) {
                             case WEAPON -> ItemMapper.INSTANCE.mapToWeapon(itemDocument);
                             case WEARABLE -> ItemMapper.INSTANCE.mapToWearable(itemDocument);
                             case USABLE -> ItemMapper.INSTANCE.mapToUsable(itemDocument);
                         })
-                .peek(item -> {
-                    if (isNull(item.getName())) {
-                        itemNamingService.requestNameGeneration(item);
-                    }
-                })
                 .collect(Collectors.toCollection(HashSet::new));
         while (items.stream().anyMatch(item -> isNull(item.getName()))) {
             items = items.stream().map(item -> {
@@ -256,6 +270,9 @@ public class ItemService {
                         return item;
                     }
                     val updatedItemDocument = updatedItemDocumentOptional.get();
+                    if (isNull(updatedItemDocument.getName())) {
+                        return item;
+                    }
                     return switch (updatedItemDocument.getItemType()) {
                         case WEAPON -> ItemMapper.INSTANCE.mapToWeapon(updatedItemDocument);
                         case WEARABLE -> ItemMapper.INSTANCE.mapToWearable(updatedItemDocument);

@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.annotations.aspect.ChatStateUpdate;
 import org.dungeon.prototype.annotations.aspect.ClearChatContext;
-import org.dungeon.prototype.bot.state.ChatState;
 import org.dungeon.prototype.exception.ChatException;
 import org.dungeon.prototype.exception.EntityNotFoundException;
 import org.dungeon.prototype.exception.PlayerException;
@@ -40,14 +39,7 @@ import java.util.stream.Collectors;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.apache.commons.math3.util.FastMath.max;
-import static org.dungeon.prototype.bot.state.ChatState.AWAITING_NICKNAME;
-import static org.dungeon.prototype.bot.state.ChatState.BATTLE;
-import static org.dungeon.prototype.bot.state.ChatState.GAME;
-import static org.dungeon.prototype.bot.state.ChatState.GAME_MENU;
-import static org.dungeon.prototype.bot.state.ChatState.GENERATING_ITEMS;
-import static org.dungeon.prototype.bot.state.ChatState.GENERATING_LEVEL;
-import static org.dungeon.prototype.bot.state.ChatState.GENERATING_PLAYER;
-import static org.dungeon.prototype.bot.state.ChatState.PRE_GAME_MENU;
+import static org.dungeon.prototype.bot.state.ChatState.*;
 import static org.dungeon.prototype.properties.CallbackType.ITEM_INVENTORY;
 import static org.dungeon.prototype.properties.CallbackType.ITEM_INVENTORY_EQUIP;
 import static org.dungeon.prototype.properties.CallbackType.ITEM_INVENTORY_UN_EQUIP;
@@ -88,6 +80,7 @@ public class MessageService {
     @Autowired
     private KeyboardService keyboardService;
 
+    @ChatStateUpdate(from = {IDLE, AWAITING_NICKNAME, PRE_GAME_MENU}, to = PRE_GAME_MENU)
     public void sendStartMessage(Long chatId, String nickname, Boolean hasSavedGame) {
         messageSender.sendPhotoMessage(
                 chatId,
@@ -155,15 +148,17 @@ public class MessageService {
     @ChatStateUpdate(from = {GAME, GAME_MENU}, to = GAME_MENU)
     public void sendInventoryItemMessage(Long chatId, Item item, CallbackType inventoryType, Optional<String> itemType) {
         if (itemType.isPresent()) {
-            messageSender.sendMessage(
+            messageSender.sendPhotoMessage(
                     chatId,
                     getInventoryEquippedItemInfoMessageCaption(item, itemType.get()),
-                    keyboardService.getEquippedItemInfoReplyMarkup(inventoryType, item.getSellingPrice()));
+                    keyboardService.getEquippedItemInfoReplyMarkup(inventoryType, item.getSellingPrice()),
+                    FileUtil.getItemImage(chatId, item.getId()));
         } else {
-            messageSender.sendMessage(
+            messageSender.sendPhotoMessage(
                     chatId,
                     getInventoryUnEquippedItemInfoMessageCaption(item),
-                    keyboardService.getInventoryItemInfoReplyMarkup(item, inventoryType));
+                    keyboardService.getInventoryItemInfoReplyMarkup(item, inventoryType),
+                    FileUtil.getItemImage(chatId, item.getId()));
         }
     }
 
@@ -175,10 +170,11 @@ public class MessageService {
     }
 
     public void sendMerchantBuyItemMessage(Long chatId, Item item) {
-        messageSender.sendMessage(
+        messageSender.sendPhotoMessage(
                 chatId,
                 getMerchantSellItemInfoMessageCaption(item),
-                keyboardService.getMerchantBuyItemInfoReplyMarkup(item));
+                keyboardService.getMerchantBuyItemInfoReplyMarkup(item),
+                FileUtil.getItemImage(chatId, item.getId()));
     }
 
     public void sendMerchantSellMenuMessage(Long chatId, Player player) {
@@ -192,22 +188,22 @@ public class MessageService {
                         Collections.singletonList(MERCHANT_BUY_MENU)));
     }
 
-    @ChatStateUpdate(from = ChatState.PRE_GAME_MENU, to = ChatState.GENERATING_ITEMS)
+    @ChatStateUpdate(from = {PRE_GAME_MENU, GENERATING_LEVEL, GENERATING_PLAYER, GENERATING_ITEMS}, to = GENERATING_ITEMS)
     public void sendItemsGeneratingInfoMessage(Long chatId) {
         messageSender.sendInfoMessage(chatId, "Generating items...");
     }
 
-    @ChatStateUpdate(from = {GAME, GENERATING_PLAYER}, to = GENERATING_LEVEL)
+    @ChatStateUpdate(from = {GAME, GENERATING_PLAYER, GENERATING_ITEMS}, to = GENERATING_LEVEL)
     public void sendLevelGeneratingInfoMessage(long chatId, Integer levelNumber) {
         messageSender.sendInfoMessage(chatId, String.format("Generating level %d...", levelNumber));
     }
 
-    @ChatStateUpdate(from = GENERATING_ITEMS, to = GENERATING_PLAYER)
+    @ChatStateUpdate(from = {GENERATING_ITEMS, GENERATING_LEVEL}, to = GENERATING_PLAYER)
     public void sendPlayerGeneratingInfoMessage(Long chatId) {
         messageSender.sendInfoMessage(chatId, "Generating player and packing up inventory...");
     }
 
-    @ChatStateUpdate(from = ChatState.GENERATING_LEVEL, to = GAME)
+    @ChatStateUpdate(from = {GENERATING_LEVEL, GENERATING_PLAYER}, to = GAME)
     public void sendNewLevelMessage(Long chatId, Player player, Level level, int number) {
         if (nonNull(level)) {
             log.info("Player started level {}, current point: {}\n\nPlayer: {}", number, level.getStart(), player);

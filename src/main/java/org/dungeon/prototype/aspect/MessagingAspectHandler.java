@@ -2,9 +2,9 @@ package org.dungeon.prototype.aspect;
 
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.annotation.After;
 import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.annotation.Before;
 import org.dungeon.prototype.bot.DungeonBot;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -19,7 +19,7 @@ public class MessagingAspectHandler {
     @Autowired
     DungeonBot dungeonBot;
 
-    @Before(value = "@annotation(org.dungeon.prototype.annotations.aspect.AnswerCallback)")
+    @After(value = "@annotation(org.dungeon.prototype.annotations.aspect.AnswerCallback)")
     public void answerCallback(JoinPoint joinPoint) {
         handleCallbackAnswer(joinPoint);
     }

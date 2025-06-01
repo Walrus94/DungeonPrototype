@@ -14,14 +14,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.dungeon.prototype.util.FileUtil.*;
 
 @Service
 public class RoomRenderer {
-    private final Map<EnumMap<CallbackType, Boolean>, BufferedImage> backgroundCache = new HashMap<>();
+    private final Map<EnumMap<CallbackType, Boolean>, BufferedImage> backgroundCache = new ConcurrentHashMap<>();
 
     public InputFile generateRoomImage(long chatId, EnumMap<CallbackType, Boolean> adjacentRoomsMap, RoomContent content) {
         BufferedImage background;

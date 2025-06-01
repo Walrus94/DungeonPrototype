@@ -3,8 +3,9 @@ package org.dungeon.prototype.bot;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.annotations.aspect.AnswerCallback;
+import org.dungeon.prototype.async.AsyncJobHandler;
+import org.dungeon.prototype.async.TaskType;
 import org.dungeon.prototype.exception.CallbackParsingException;
-import org.dungeon.prototype.exception.ItemGenerationException;
 import org.dungeon.prototype.exception.RestrictedOperationException;
 import org.dungeon.prototype.model.player.PlayerAttribute;
 import org.dungeon.prototype.model.room.content.MonsterRoom;
@@ -12,6 +13,7 @@ import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.properties.KeyboardButtonProperties;
 import org.dungeon.prototype.service.BattleService;
 import org.dungeon.prototype.service.PlayerService;
+import org.dungeon.prototype.service.balancing.BalanceMatrixService;
 import org.dungeon.prototype.service.effect.EffectService;
 import org.dungeon.prototype.service.inventory.InventoryService;
 import org.dungeon.prototype.service.item.generation.ItemGenerator;
@@ -24,9 +26,16 @@ import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
 
-import static org.dungeon.prototype.properties.CallbackType.*;
+import static org.dungeon.prototype.properties.CallbackType.BOOTS;
+import static org.dungeon.prototype.properties.CallbackType.GLOVES;
+import static org.dungeon.prototype.properties.CallbackType.HEAD;
+import static org.dungeon.prototype.properties.CallbackType.INVENTORY;
+import static org.dungeon.prototype.properties.CallbackType.LEFT_HAND;
+import static org.dungeon.prototype.properties.CallbackType.MENU_BACK;
+import static org.dungeon.prototype.properties.CallbackType.MERCHANT_SELL_MENU;
+import static org.dungeon.prototype.properties.CallbackType.RIGHT_HAND;
+import static org.dungeon.prototype.properties.CallbackType.VEST;
 import static org.dungeon.prototype.util.LevelUtil.getDirectionSwitchByCallBackData;
 import static org.dungeon.prototype.util.LevelUtil.getErrorMessageByCallBackData;
 import static org.dungeon.prototype.util.LevelUtil.getNextPointInDirection;
@@ -36,6 +45,8 @@ import static org.dungeon.prototype.util.LevelUtil.getNextPointInDirection;
 public class CallbackHandler {
     @Autowired
     BotCommandHandler botCommandHandler;
+    @Autowired
+    AsyncJobHandler asyncJobHandler;
     @Autowired
     private PlayerService playerService;
     @Autowired
@@ -51,6 +62,8 @@ public class CallbackHandler {
     @Autowired
     private BattleService battleService;
     @Autowired
+    private BalanceMatrixService balanceMatrixService;
+    @Autowired
     private TreasureService treasureService;
     @Autowired
     private KeyboardButtonProperties keyboardButtonProperties;
@@ -58,46 +71,32 @@ public class CallbackHandler {
     /**
      * Handles callbacks from incoming updates
      * and executes corresponding services methods
-     * @param chatId id of updated chat
+     *
+     * @param chatId        id of updated chat
      * @param callbackQuery query with callback data
      */
     @AnswerCallback
     public void handleCallbackQuery(Long chatId, CallbackQuery callbackQuery) {
         val callData = callbackQuery.getData();
-        try {
-            val callBackData = getCallbackType(callData);
 
+        val callBackData = getCallbackType(callData);
+        try {
             switch (callBackData) {
-                case START_GAME ->
-                        handleStartingNewGame(chatId);
-                case CONTINUE_GAME ->
-                        handleContinuingGame(chatId);
-                case NEXT_LEVEL ->
-                        handleNextLevel(chatId);
-                case LEFT, RIGHT, FORWARD, BACK ->
-                        handleMovingToRoom(chatId, callBackData);
-                case ATTACK, SECONDARY_ATTACK ->
-                        handleAttack(chatId, callBackData);
-                case TREASURE_OPEN ->
-                        handleOpeningTreasure(chatId);
-                case TREASURE_GOLD_COLLECTED ->
-                        handleCollectingTreasureGold(chatId);
-                case SHRINE ->
-                        handleShrineRefill(chatId);
-                case MERCHANT_BUY_MENU, MERCHANT_BUY_MENU_BACK ->
-                        handleOpenMerchantBuyMenu(chatId);
-                case MERCHANT_SELL_MENU, MERCHANT_SELL_MENU_BACK ->
-                        handleOpenMerchantSellMenu(chatId);
-                case MAP ->
-                        handleSendingMapMessage(chatId);
-                case INVENTORY, ITEM_INVENTORY_BACK ->
-                        handleSendingInventoryMessage(chatId);
-                case PLAYER_STATS ->
-                        playerService.sendPlayerStatsMessage(chatId);
-                case MENU_BACK ->
-                        handleSendingRoomMessage(chatId);
-                case TREASURE_COLLECT_ALL ->
-                        handleCollectingTreasure(chatId);
+                case START_GAME -> handleStartingNewGame(chatId);
+                case CONTINUE_GAME -> handleContinuingGame(chatId);
+                case NEXT_LEVEL -> handleNextLevel(chatId);
+                case LEFT, RIGHT, FORWARD, BACK -> handleMovingToRoom(chatId, callBackData);
+                case ATTACK, SECONDARY_ATTACK -> handleAttack(chatId, callBackData);
+                case TREASURE_OPEN -> handleOpeningTreasure(chatId);
+                case TREASURE_GOLD_COLLECTED -> handleCollectingTreasureGold(chatId);
+                case SHRINE -> handleShrineRefill(chatId);
+                case MERCHANT_BUY_MENU, MERCHANT_BUY_MENU_BACK -> handleOpenMerchantBuyMenu(chatId);
+                case MERCHANT_SELL_MENU, MERCHANT_SELL_MENU_BACK -> handleOpenMerchantSellMenu(chatId);
+                case MAP -> handleSendingMapMessage(chatId);
+                case INVENTORY, ITEM_INVENTORY_BACK -> handleSendingInventoryMessage(chatId);
+                case PLAYER_STATS -> playerService.sendPlayerStatsMessage(chatId);
+                case MENU_BACK -> handleSendingRoomMessage(chatId);
+                case TREASURE_COLLECT_ALL -> handleCollectingTreasure(chatId);
                 case RESTORE_ARMOR -> roomService.restoreArmor(chatId);
                 case SHARPEN_WEAPON -> inventoryService.sharpenWeapon(chatId);
             }
@@ -105,7 +104,6 @@ public class CallbackHandler {
             log.warn("Processing composite callback, parsing failed: {}", e.getMessage());
             parseCompositeCallbackData(chatId, callData);
         }
-
     }
 
     private void parseCompositeCallbackData(Long chatId, String callData) {
@@ -213,18 +211,17 @@ public class CallbackHandler {
     }
 
     private void handleStartingNewGame(Long chatId) {
-        try {
-            itemGenerator.generateItems(chatId).get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new ItemGenerationException(chatId, e.getMessage(), START_GAME);
-        }
-        log.info("Item generation completed for chat {}!", chatId);
-        val defaultInventory = inventoryService.getDefaultInventory(chatId);
-        var player = playerService.getPlayerPreparedForNewGame(chatId, defaultInventory);
-        player = effectService.updatePlayerEffects(player);
-        player = effectService.updateArmorEffect(player);
-        log.info("Player loaded: {}", player);
-        levelService.startNewGame(chatId, player);
+        balanceMatrixService.initializeBalanceMatrices(chatId);
+        itemGenerator.generateItems(chatId);
+        asyncJobHandler.submitTask(() -> {
+            val defaultInventory = inventoryService.getDefaultInventory(chatId);
+            var player = playerService.getPlayerPreparedForNewGame(chatId, defaultInventory);
+            player = effectService.updatePlayerEffects(player);
+            player = effectService.updateArmorEffect(player);
+            inventoryService.saveOrUpdateInventory(defaultInventory);
+            playerService.updatePlayer(player);
+        }, TaskType.PREPARE_PLAYER, chatId);
+        levelService.startNewGame(chatId);
     }
 
     private void handleContinuingGame(Long chatId) {

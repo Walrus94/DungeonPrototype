@@ -1,0 +1,11 @@
+hostPort: kafka:9999
+startDelaySeconds: 0
+ssl: false
+lowercaseOutputName: true
+rules:
+  - pattern: "kafka.server<type=(.+), name=(.+)><>Value"
+  - pattern: "kafka.controller<type=(.+), name=(.+)><>Value"
+  - pattern: "kafka.network<type=(.+), name=(.+)><>Value"
+  - pattern: "kafka.log<type=(.+), name=(.+)><>Value"
+  - pattern: "java.lang<type=GarbageCollector, name=(.+)><>CollectionCount"
+  - pattern: "java.lang<type=GarbageCollector, name=(.+)><>CollectionTime"

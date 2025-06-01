@@ -9,11 +9,12 @@ import org.dungeon.prototype.model.monster.Monster;
 import org.dungeon.prototype.model.player.Player;
 import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.content.MonsterRoom;
-import org.dungeon.prototype.properties.BattleProperties;
 import org.dungeon.prototype.properties.CallbackType;
+import org.dungeon.prototype.service.balancing.BalanceMatrixService;
 import org.dungeon.prototype.service.level.LevelService;
 import org.dungeon.prototype.service.message.MessageService;
 import org.dungeon.prototype.service.room.MonsterService;
+import org.dungeon.prototype.service.stats.GameResultService;
 import org.dungeon.prototype.util.RandomUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -36,7 +37,9 @@ public class BattleService {
     @Autowired
     private MessageService messageService;
     @Autowired
-    private BattleProperties battleProperties;
+    private BalanceMatrixService balanceMatrixService;
+    @Autowired
+    private GameResultService gameResultService;
 
     /**
      * Processes "attack" action, which performs attacking monster with selected weapon,
@@ -56,9 +59,11 @@ public class BattleService {
 
         if (monster.getHp() < 1) {
             log.info("Monster killed!");
+            gameResultService.saveDefeatedMonster(chatId);
             levelService.updateAfterMonsterKill(currentRoom);
             val newLevelAchieved = player.addXp(monster.getXpReward());
             if (newLevelAchieved) {
+                gameResultService.playerLevelReached(chatId);
                 messageService.sendLevelUpgradeMessage(chatId, player);
             } else {
                 playerService.updatePlayer(player);
@@ -82,21 +87,24 @@ public class BattleService {
 
         val monsterAttack = monster.getCurrentAttack();
         val inventory = player.getInventory();
+        val attackFactor = switch (monsterAttack.getAttackType()) {
+            case SLASH, GROWL -> inventory.getHelmet() == null ? 1.0 :
+                balanceMatrixService.getBalanceMatrixValue(player.getChatId(), "monster_attack",
+                        monsterAttack.getAttackType().ordinal(),
+                        player.getInventory().getHelmet().getAttributes().getWearableMaterial().ordinal());
+            default -> inventory.getVest() == null ? 1.0 :
+                balanceMatrixService.getBalanceMatrixValue(player.getChatId(), "monster_attack",
+                        monsterAttack.getAttackType().ordinal(),
+                        player.getInventory().getVest().getAttributes().getWearableMaterial().ordinal());
+        };
         val chanceToDodge = player.getChanceToDodge();
         log.info("Chance to dodge: {}", chanceToDodge);
         if (RandomUtil.flipAdjustedCoin(chanceToDodge)) {
             log.info("Monster attack dodged!");
             return;
         }
-        val attackTypeMap = battleProperties.getPlayerDefenseRatioMatrix().get(monsterAttack.getAttackType()).getMaterialDefenseRatioMap();
         log.info("Monster attack: {}", monsterAttack.getAttackType());
-        val diff = switch (monsterAttack.getAttackType()) {
-            case SLASH, GROWL ->
-                    (int) (monsterAttack.getAttack() * (inventory.getHelmet() == null ? 1.0 : attackTypeMap.get(inventory.getHelmet().getAttributes().getWearableMaterial())));
-            default ->
-                    (int) (monsterAttack.getAttack() * (inventory.getVest() == null ? 1.0 : attackTypeMap.get(inventory.getVest().getAttributes().getWearableMaterial())));
-        };
-
+        val diff = (int) (monsterAttack.getAttack() * (attackFactor));
         if (player.getDefense() > 0) {
             player.decreaseDefence(diff);
             log.info("Player's armor decreased by: {}", 1);
@@ -110,13 +118,14 @@ public class BattleService {
     private void playerAttacks(Monster monster, Player player, CallbackType attackType) {
         val attack = ATTACK.equals(attackType) ? player.getPrimaryAttack() :
                 player.getSecondaryAttack();
+        val attackFactor = balanceMatrixService.getBalanceMatrixValue(player.getChatId(), "player_attack", attack.getAttackType().ordinal(), monster.getMonsterClass().ordinal());
         val chanceToMiss = attack.getChanceToMiss();
         log.info("Chance to miss: {}", chanceToMiss);
         if (RandomUtil.flipAdjustedCoin(chanceToMiss)) {
             log.info("Player missed!");
             return;
         }
-        var attackPower = attack.getAttack();
+        var attackPower = attack.getAttack() * attackFactor;
         val criticalHitChance = attack.getCriticalHitChance();
         log.info("Critical hit chance: {}", criticalHitChance);
 
@@ -134,8 +143,7 @@ public class BattleService {
             monster.addEffect(knockOut);
         }
         log.info("Player attacks with attack type: {}", attack.getAttackType());
-        val monsterDefenseRatioMap = battleProperties.getMonsterDefenseRatioMatrix().get(attack.getAttackType()).getMonsterDefenseRatioMap();
-        val decreaseAmount = (int) (attackPower * monsterDefenseRatioMap.get(monster.getMonsterClass()));
+        val decreaseAmount = (int) attackPower;
         monster.decreaseHp(decreaseAmount);
         log.info("Monster health decreased by {}", decreaseAmount);
     }

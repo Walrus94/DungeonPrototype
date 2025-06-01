@@ -7,10 +7,11 @@ WORKDIR /app
 COPY . /app
 
 # Install any needed packages
-RUN pip install --no-cache-dir huggingface-hub confluent-kafka pymongo
+RUN pip install --no-cache-dir -r requirements.txt
 
 RUN pip install llama-cpp-python \
-    --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --verbose
+    --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+
 
 # Run the application
-ENTRYPOINT python app.py tail -f /dev/null
+ENTRYPOINT ["python", "app.py", "tail", "-f", "/dev/null"]

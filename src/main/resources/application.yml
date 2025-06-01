@@ -1,4 +1,6 @@
 spring:
+  application:
+    name: dungeon-bot
   data:
     mongodb:
       uri: ${SPRING_DATA_MONGODB_URI}
@@ -6,20 +8,41 @@ spring:
       database: ${SPRING_DATA_MONGODB_DATABASE}
       username: ${SPRING_DATA_MONGODB_USERNAME}
       password: ${SPRING_DATA_MONGODB_PASSWORD}
+      auto-index-creation: true
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+  profiles:
+    active: ${SPRING_ACTIVE_PROFILE}
 
 management:
   endpoints:
     web:
       exposure:
-        include: prometheus
-  endpoint:
-    prometheus:
-      enabled: true
+        include: help,info,metrics,prometheus
+      base-path: /actuator
+  metrics:
+    tags:
+      application: "dungeon-bot"
+    enable:
+      http.server.requests: true
+      tomcat: true
+      tomcat.threads: true
+      tomcat.threads.busy: true
+      jetty: true
+      jvm: true
+      process: true
+      process.memory: true
+      jvm.threads.peak: true
+      jvm.threads.live: true
+      jvm.threads.daemon: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
 
 server:
   port: ${BOT_WEBHOOK_PORT}
@@ -30,9 +53,13 @@ bot:
   webhook: ${BOT_WEBHOOK_URL}
   token: ${BOT_AUTH_TOKEN}
   auth-users: ${AUTH_USERS}
+  files:
+    images: ${IMAGE_PATH}
 
 kafka-topics:
   item-naming-topic: ${ITEM_NAMING_TOPIC}
+  balance-matrix-topic: ${BALANCE_MATRIX_TOPIC}
+  game-results-topic: ${GAME_RESULTS_TOPIC}
 
 messaging:
   bar-blocks: 6
@@ -204,357 +231,30 @@ generation:
     selling-price-ratio: 0.9
     buying-price-ratio: 1.2
     weapon:
-      weapon-attributes-pool-size: 1000
+      weapon-attribute-vector-size: 5
+      weapon-attributes-pool-size: 500
       weapon-per-game: 200
-      default-attributes:
-        sword:
-          attack: 6
-          critical-hit-chance: 0.3
-          critical-hit-multiplier: 1.2
-          chance-to-miss: 0.5
-          chance-to-knock-out: 0.0
-        axe:
-          attack: 8
-          critical-hit-chance: 0.3
-          critical-hit-multiplier: 1.1
-          chance-to-miss: 0.7
-          chance-to-knock-out: 0.1
-        mace:
-          attack: 8
-          critical-hit-chance: 0.3
-          critical-hit-multiplier: 1.1
-          chance-to-miss: 0.6
-          chance-to-knock-out: 0.2
-        club:
-          attack: 8
-          critical-hit-chance: 0.2
-          critical-hit-multiplier: 1.2
-          chance-to-miss: 0.5
-          chance-to-knock-out: 0.4
-        dagger:
-          attack: 4
-          critical-hit-chance: 0.4
-          critical-hit-multiplier: 1.05
-          chance-to-miss: 0.4
-          chance-to-knock-out: 0.0
-        spear:
-          attack: 7
-          critical-hit-chance: 0.3
-          critical-hit-multiplier: 1.1
-          chance-to-miss: 0.6
-          chance-to-knock-out: 0.2
-        staff:
-          attack: 5
-          critical-hit-chance: 0.3
-          critical-hit-multiplier: 1.3
-          chance-to-miss: 0.2
-          chance-to-knock-out: 0.0
-      handling-adjustment-attributes:
-        single-handed:
-          attack-ratio: 0.95
-          chance-to-miss-ratio: 0.9
-          critical-chance-ratio: 1.05
-          critical-multiplier-ratio: 1.1
-          knock-out-chance-ratio: 1.0
-        two-handed:
-          attack-ratio: 1.15
-          chance-to-miss-ratio: 1.1
-          critical-chance-ratio: 0.95
-          critical-multiplier-ratio: 1.2
-          knock-out-chance-ratio: 1.0
-      weapon-material-adjustment-attributes:
-        steel:
-          attack-ratio: 1.1
-          chance-to-miss-ratio: 1.0
-          critical-chance-ratio: 1.05
-          critical-multiplier-ratio: 1.0
-          knock-out-chance-ratio: 1.0
-        wood:
-          attack-ratio: 1.0
-          chance-to-miss-ratio: 1.0
-          critical-chance-ratio: 1.0
-          critical-multiplier-ratio: 1.05
-          knock-out-chance-ratio: 0.9
-        stone:
-          attack-ratio: 1.2
-          chance-to-miss-ratio: 1.0
-          critical-chance-ratio: 1.0
-          critical-multiplier-ratio: 1.1
-          knock-out-chance-ratio: 1.2
-        iron:
-          attack-ratio: 1.1
-          chance-to-miss-ratio: 1.0
-          critical-chance-ratio: 1.1
-          critical-multiplier-ratio: 1.0
-          knock-out-chance-ratio: 1.0
-        platinum:
-          attack-ratio: 1.0
-          chance-to-miss-ratio: 1.0
-          critical-chance-ratio: 1.3
-          critical-multiplier-ratio: 1.2
-          knock-out-chance-ratio: 1.0
-        diamond:
-          attack-ratio: 1.3
-          chance-to-miss-ratio: 1.0
-          critical-chance-ratio: 1.3
-          critical-multiplier-ratio: 1.3
-          knock-out-chance-ratio: 1.0
-        mithril:
-          attack-ratio: 1.5
-          chance-to-miss-ratio: 1.0
-          critical-chance-ratio: 1.5
-          critical-multiplier-ratio: 1.4
-          knock-out-chance-ratio: 1.0
-        obsidian:
-          attack-ratio: 1.4
-          chance-to-miss-ratio: 1.0
-          critical-chance-ratio: 1.4
-          critical-multiplier-ratio: 1.5
-          knock-out-chance-ratio: 1.0
-        enchanted-wood:
-          attack-ratio: 1.1
-          chance-to-miss-ratio: 1.0
-          critical-chance-ratio: 1.2
-          critical-multiplier-ratio: 1.3
-          knock-out-chance-ratio: 1.0
-        dragon-bone:
-          attack-ratio: 1.3
-          chance-to-miss-ratio: 1.0
-          critical-chance-ratio: 1.2
-          critical-multiplier-ratio: 1.5
-          knock-out-chance-ratio: 1.0
-      weapon-handler-material-adjustment-attributes:
-        wood:
-          attack-ratio: 1.0
-          chance-to-miss-ratio: 1.0
-          critical-chance-ratio: 1.0
-          critical-multiplier-ratio: 1.0
-          knock-out-chance-ratio: 1.0
-        steel:
-          attack-ratio: 1.0
-          chance-to-miss-ratio: 1.0
-          critical-chance-ratio: 1.05
-          critical-multiplier-ratio: 1.1
-          knock-out-chance-ratio: 1.0
-        leather:
-          attack-ratio: 1.0
-          chance-to-miss-ratio: 0.9
-          critical-chance-ratio: 1.1
-          critical-multiplier-ratio: 1.0
-          knock-out-chance-ratio: 1.0
-        treated-leather:
-          attack-ratio: 1.0
-          chance-to-miss-ratio: 0.6
-          critical-chance-ratio: 1.15
-          critical-multiplier-ratio: 1.2
-          knock-out-chance-ratio: 1.0
-        dragon-bone:
-          attack-ratio: 1.3
-          chance-to-miss-ratio: 1.0
-          critical-chance-ratio: 1.2
-          critical-multiplier-ratio: 1.3
-          knock-out-chance-ratio: 1.0
-      complete-material-adjustment-attributes:
-        dragon-bone:
-          attack-ratio: 1.5
-          chance-to-miss-ratio: 0.3
-          critical-chance-ratio: 1.7
-          critical-multiplier-ratio: 1.6
-          knock-out-chance-ratio: 1.0
-        wood:
-          attack-ratio: 1.0
-          chance-to-miss-ratio: 1.0
-          critical-chance-ratio: 1.0
-          critical-multiplier-ratio: 1.0
-          knock-out-chance-ratio: 1.1
-        steel:
-          attack-ratio: 1.1
-          chance-to-miss-ratio: 1.0
-          critical-chance-ratio: 1.0
-          critical-multiplier-ratio: 1.0
-          knock-out-chance-ratio: 1.0
-      size-adjustment-attributes:
-        small:
-          attack-ratio: 0.9
-          critical-chance-ratio: 1.0
-          critical-multiplier-ratio: 1.0
-          chance-to-miss-ratio: 0.8
-          knock-out-chance-ratio: 1.0
-        medium:
-          attack-ratio: 1.0
-          critical-chance-ratio: 1.0
-          critical-multiplier-ratio: 1.0
-          chance-to-miss-ratio: 0.9
-          knock-out-chance-ratio: 1.0
-        large:
-          attack-ratio: 1.2
-          critical-chance-ratio: 1.0
-          critical-multiplier-ratio: 1.0
-          chance-to-miss-ratio: 1.15
-          knock-out-chance-ratio: 1.0
-      attack-type-adjustment-attributes:
-        stab:
-          attack-ratio: 1.0
-          critical-chance-ratio: 1.3
-          critical-multiplier-ratio: 1.0
-          chance-to-miss-ratio: 1.0
-          knock-out-chance-ratio: 1.0
-        slash:
-          attack-ratio: 1.2
-          critical-chance-ratio: 1.0
-          critical-multiplier-ratio: 1.2
-          chance-to-miss-ratio: 1.0
-          knock-out-chance-ratio: 0.0
-        blunt:
-          attack-ratio: 1.0
-          critical-chance-ratio: 1.0
-          critical-multiplier-ratio: 1.0
-          chance-to-miss-ratio: 1.0
-          knock-out-chance-ratio: 1.4
-        strike:
-          attack-ratio: 1.0
-          knock-out-chance-ratio: 1.0
-          critical-multiplier-ratio: 1.0
-          chance-to-miss-ratio: 1.0
-          critical-chance-ratio: 1.0
-
-      quality-adjustment-ratio:
-        common: 0.8
-        rare: 1.1
-        epic: 1.3
-        legendary: 1.4
-        mythic: 1.6
 
     wearables:
       wearable-attribute-pool-size: 150
       wearables-per-game: 100
 
       default-armor: 5
-      chance-to-dodge-ratio:
-        cloth: 0.0
-        leather: 0.3
-        iron: 0.2
-        steel: 0.1
-        chain-mail: 0.0
-        enchanted-leather: 0.3
-        treated-leather: 0.4
-        mithril: 0.0
-        elven-silk: 0.0
-        wool: 0.0
-      armor-bonus:
-        cloth: -2
-        leather: -1
-        treated-leather: 0
-        enchanted-leather: -1
-        iron: 2
-        steel: 3
-        chain-mail: 4
-        elven-silk: 0
-        mithril: 4
-        wool: 0
-      quality-adjustment-ratio:
-        common: 0.8
-        rare: 1.1
-        epic: 1.3
-        legendary: 1.4
-        mythic: 1.6
 
     effects:
       minimum-amount-per-item-map:
-        common: 1
+        common: 0
         rare: 1
-        epic: 1
-        legendary: 2
-        mythic: 2
+        epic: 2
+        legendary: 3
+        mythic: 3
       maximum-amount-per-item-map:
-        common: 2
+        common: 1
         rare: 2
         epic: 3
         legendary: 3
         mythic: 4
 
-battle:
-  player-defense-ratio-matrix:
-    slash:
-      material-defense-ratio-map:
-        iron: 0.7
-        steel: 0.8
-        mithril: 1.1
-    growl:
-      material-defense-ratio-map:
-        iron: 1.0
-        steel: 0.9
-        mithril: 0.7
-    vampire-bite:
-      material-defense-ratio-map:
-        cloth: 0.6
-        leather: 0.7
-        iron: 0.85
-        steel: 0.9
-        chain-mail: 0.95
-        enchanted-leather: 1.2
-        treated-leather: 0.8
-        mithril: 1.3
-    bite:
-      material-defense-ratio-map:
-        cloth: 0.6
-        leather: 0.7
-        iron: 1.1
-        steel: 1.15
-        chain-mail: 1.2
-        enchanted-leather: 0.7
-        treated-leather: 0.8
-        mithril: 1.2
-    fire-spit:
-      material-defense-ratio-map:
-        cloth: 0.3
-        leather: 0.35
-        iron: 0.7
-        steel: 0.8
-        chain-mail: 0.85
-        enchanted-leather: 0.75
-        treated-leather: 0.65
-        mithril: 1.1
-    poison-spit:
-      material-defense-ratio-map:
-        cloth: 0.4
-        leather: 0.65
-        iron: 0.5
-        steel: 0.55
-        chain-mail: 0.6
-        enchanted-leather: 0.8
-        treated-leather: 0.7
-        mithril: 1.15
-#  TODO: adjust values
-  monster-defense-ratio-matrix:
-    slash:
-      monster-defense-ratio-map:
-        dragon: 1.0
-        swamp-beast: 1.0
-        vampire: 1.0
-        werewolf: 1.0
-        zombie: 1.0
-    strike:
-      monster-defense-ratio-map:
-        dragon: 1.0
-        swamp-beast: 1.0
-        vampire: 1.0
-        werewolf: 1.0
-        zombie: 1.0
-    blunt:
-      monster-defense-ratio-map:
-        dragon: 1.0
-        swamp-beast: 1.0
-        vampire: 1.0
-        werewolf: 1.0
-        zombie: 1.0
-    stab:
-      monster-defense-ratio-map:
-        dragon: 1.0
-        swamp-beast: 1.0
-        vampire: 1.0
-        werewolf: 1.0
-        zombie: 1.0
 
 player:
   attributes: #TODO: consider different classes

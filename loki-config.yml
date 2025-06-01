@@ -1,5 +1,8 @@
 auth_enabled: false
 
+table_manager:
+  retention_deletes_enabled: true
+  retention_period: 7d
 server:
   http_listen_port: 3100
   grpc_listen_port: 9096

@@ -7,7 +7,7 @@ import lombok.val;
 import org.dungeon.prototype.model.Point;
 import org.dungeon.prototype.model.level.generation.LevelGridCluster;
 import org.dungeon.prototype.model.level.ui.GridSection;
-import org.dungeon.prototype.service.WalkerUniqueIdFactory;
+import org.dungeon.prototype.service.UniqueIdFactory;
 
 import java.util.Comparator;
 import java.util.Objects;
@@ -15,8 +15,6 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.dungeon.prototype.util.LevelUtil.getAdjacentSections;
-import static org.dungeon.prototype.util.LevelUtil.getAdjacentSectionsInCluster;
-import static org.dungeon.prototype.util.LevelUtil.isPointInCluster;
 
 
 @Data
@@ -24,7 +22,7 @@ import static org.dungeon.prototype.util.LevelUtil.isPointInCluster;
 @Builder
 public class WalkerBuilder {
     @Builder.Default
-    private Long id = WalkerUniqueIdFactory.getInstance().getNextId();
+    private long id = UniqueIdFactory.getInstance().getNextId();
     private Point previousPoint;
     private Point currentPoint;
     private boolean isReversed;
@@ -39,9 +37,10 @@ public class WalkerBuilder {
     private int pathFromStart = 0;
     private LevelGridCluster cluster;
 
-    public void nextStep(GridSection[][] grid) {
+    public GridSection[][] nextStep(GridSection[][] grid) {
         log.info("Walker id:{} (reversed:{}, overriding:{}, border path:{}) next step...",
                 id, isReversed, overridingReversedPath, longestPathDefault);
+        log.debug("Current point: {}", currentPoint);
         GridSection currentSection = grid[currentPoint.getX()][currentPoint.getY()];
         log.debug("Current section: {}", currentSection);
 
@@ -81,22 +80,23 @@ public class WalkerBuilder {
             stopped = true;
             log.info("Stopped walker id:{}", this.id);
             if (!isReversed && !overridingReversedPath) {
-                if (getAdjacentSectionsInCluster(currentPoint, grid, cluster).stream()
-                        .noneMatch(section -> cluster.getEndConnectionPoint().equals(section.getPoint()))) {
+                if (getAdjacentSections(currentPoint, grid).stream()
+                        .noneMatch(section -> getEndPoint().equals(section.getPoint()))) {
                     currentSection.setDeadEnd(true);
                     cluster.addDeadEnd(currentSection);
                 }
                 log.info("Stopped walker, setting dead end to {}", currentSection);
             }
         }
+        return grid;
     }
 
     private Optional<GridSection> selectNextStep(GridSection[][] grid) {
         log.info("Choosing next step...");
-        Set<GridSection> adjacentSections = getAdjacentSectionsInCluster(currentPoint, grid, cluster);
+        Set<GridSection> adjacentSections = getAdjacentSections(currentPoint, grid);
         log.info("{} adjacent sections in cluster {}: {}", currentPoint, cluster, adjacentSections);
         if (isReversed) {
-            if (adjacentSections.stream().anyMatch(section -> cluster.getStartConnectionPoint().equals(section.getPoint()))) {
+            if (adjacentSections.stream().anyMatch(section -> new Point(0, 0).equals(section.getPoint()))) {
                 log.info("Reversed walker reached start of cluster, switching to overriding mode");
                 overridingReversedPath = true;
                 isReversed = false;
@@ -107,13 +107,13 @@ public class WalkerBuilder {
             }
             if (adjacentSections.stream().anyMatch(section -> section.getStepsFromStart() > 0 &&
                     !currentPoint.equals(section.getPoint()) &&
-                    !cluster.getEndConnectionPoint().equals(section.getPoint()))) {
+                    !getEndPoint().equals(section.getPoint()))) {
                 log.info("Reversed walker have adjacent section visited, switching to override mode");
                 overridingReversedPath = true;
                 isReversed = false;
                 val foundSection = adjacentSections.stream().filter(section -> section.getStepsFromStart() > 0 &&
                         !currentPoint.equals(section.getPoint()) &&
-                        !cluster.getEndConnectionPoint().equals(section.getPoint())).findFirst().get();
+                        !getEndPoint().equals(section.getPoint())).findFirst().get();
                 pathFromStart = foundSection.getStepsFromStart();
                 foundSection.setDeadEnd(false);
                 cluster.removeDeadEnd(foundSection);
@@ -125,21 +125,19 @@ public class WalkerBuilder {
                 return adjacentSections.stream()
                         .filter(section -> !currentPoint.equals(section.getPoint()))
                         .filter(section -> section.getStepsFromStart() == 0)
-                        .filter(section -> !cluster.getEndConnectionPoint().equals(section.getPoint()))
-                        .max(Comparator.comparing(section -> getAdjacentSections(section.getPoint(), grid)
-                                .stream()
-                                .filter(adjacentSection -> !isPointInCluster(adjacentSection.getPoint(), cluster))
-                                .count()));
+                        .filter(section -> !getEndPoint().equals(section.getPoint()))
+                        .max(Comparator.comparing(section -> (long) getAdjacentSections(section.getPoint(), grid)
+                                .size()));
             }
             return adjacentSections.stream()
                     .filter(section -> !currentPoint.equals(section.getPoint()))
                     .filter(section -> section.getStepsFromStart() == 0)
-                    .filter(section -> !cluster.getEndConnectionPoint().equals(section.getPoint()))
+                    .filter(section -> !getEndPoint().equals(section.getPoint()))
                     .findAny();
         } else {
             if (overridingReversedPath) {
                 if (pathToFinish == 0 && adjacentSections.stream()
-                        .anyMatch(section -> cluster.getEndConnectionPoint().equals(section.getPoint()))) {
+                        .anyMatch(section -> getEndPoint().equals(section.getPoint()))) {
                     log.info("Cluster end reached");
                     return Optional.empty();
                 }
@@ -149,24 +147,22 @@ public class WalkerBuilder {
                                 !currentPoint.equals(gridSection.getPoint()))
                         .findFirst();
             } else {
-                if (adjacentSections.stream().anyMatch(section -> cluster.getEndConnectionPoint().equals(section.getPoint()))) {
+                if (adjacentSections.stream().anyMatch(section -> getEndPoint().equals(section.getPoint()))) {
                     log.info("Cluster end reached");
                     return Optional.empty();
                 }
                 if (longestPathDefault) {
                     return adjacentSections.stream()
                             .filter(section -> section.getStepsFromStart() == 0)
-                            .filter(section -> !cluster.getStartConnectionPoint().equals(section.getPoint()))
-                            .max(Comparator.comparing(section -> getAdjacentSections(section.getPoint(), grid)
-                                    .stream()
-                                    .filter(adjacentSection -> !isPointInCluster(adjacentSection.getPoint(), cluster))
-                                    .count()));
+                            .filter(section -> !new Point(0, 0).equals(section.getPoint()))
+                            .max(Comparator.comparing(section -> (long) getAdjacentSections(section.getPoint(), grid)
+                                    .size()));
                 }
                 return adjacentSections.stream()
                         .filter(section -> section.getStepsFromStart() == 0)
-                        .filter(section -> !cluster.getStartConnectionPoint().equals(section.getPoint()))
+                        .filter(section -> !new Point(0, 0).equals(section.getPoint()))
                         .min(Comparator.comparing(gridSection ->
-                                getAdjacentSectionsInCluster(gridSection.getPoint(), grid, cluster)
+                                getAdjacentSections(gridSection.getPoint(), grid)
                                         .stream()
                                         .filter(section -> section.getStepsFromStart() > 0)
                                         .count()));
@@ -182,7 +178,7 @@ public class WalkerBuilder {
         if (obj == this) {
             return true;
         }
-        return this.id.equals(walkerBuilder.getId()) &&
+        return this.id == walkerBuilder.getId() &&
                 this.currentPoint.equals(walkerBuilder.getCurrentPoint()) &&
                 this.isReversed == walkerBuilder.isReversed() &&
                 this.overridingReversedPath == walkerBuilder.isOverridingReversedPath() &&
@@ -205,7 +201,11 @@ public class WalkerBuilder {
                 ", overridingReversedPath=" + overridingReversedPath +
                 ", longestPathDefault= " + longestPathDefault +
                 ", stopped=" + stopped +
-                ", pathFromStart=" + pathFromStart +
-                ", cluster" + cluster;
+                ", pathFromStart=" + pathFromStart;
+    }
+
+    private Point getEndPoint() {
+        return new Point(cluster.getEndConnectionPoint().getX() - cluster.getStartConnectionPoint().getX(),
+                cluster.getEndConnectionPoint().getY() - cluster.getStartConnectionPoint().getY());
     }
 }

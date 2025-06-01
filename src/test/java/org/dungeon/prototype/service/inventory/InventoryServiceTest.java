@@ -1,5 +1,6 @@
 package org.dungeon.prototype.service.inventory;
 
+import lombok.SneakyThrows;
 import lombok.val;
 import org.dungeon.prototype.model.document.player.InventoryDocument;
 import org.dungeon.prototype.model.inventory.Inventory;
@@ -21,7 +22,7 @@ import org.dungeon.prototype.model.room.Room;
 import org.dungeon.prototype.model.room.content.Merchant;
 import org.dungeon.prototype.model.weight.Weight;
 import org.dungeon.prototype.properties.CallbackType;
-import org.dungeon.prototype.repository.InventoryRepository;
+import org.dungeon.prototype.repository.mongo.InventoryRepository;
 import org.dungeon.prototype.service.BaseServiceUnitTest;
 import org.dungeon.prototype.service.PlayerService;
 import org.dungeon.prototype.service.effect.EffectService;
@@ -74,6 +75,7 @@ class InventoryServiceTest extends BaseServiceUnitTest {
     @Mock
     private InventoryRepository inventoryRepository;
 
+    @SneakyThrows
     @Test
     @DisplayName("Sets default inventory with items from repository and returns it")
     void getDefaultInventory() {
@@ -107,15 +109,10 @@ class InventoryServiceTest extends BaseServiceUnitTest {
         weapon.setEffects(new ArrayList<>());
         expectedInventory.setPrimaryWeapon(weapon);
         expectedInventory.setItems(new ArrayList<>());
-
         when(itemService.getMostLightweightWearable(CHAT_ID, WearableType.VEST)).thenReturn(vest);
         when(itemService.getMostLightWeightMainWeapon(CHAT_ID)).thenReturn(weapon);
-        ArgumentCaptor<InventoryDocument> inventoryDocumentArgumentCaptor = ArgumentCaptor.forClass(InventoryDocument.class);
-        when(inventoryRepository.save(inventoryDocumentArgumentCaptor.capture())).thenReturn(new InventoryDocument());
+        Inventory actualInventory = inventoryService.getDefaultInventory(CHAT_ID);
 
-        inventoryService.getDefaultInventory(CHAT_ID);
-
-        val actualInventory = inventoryDocumentArgumentCaptor.getValue();
 
         assertEquals(expectedInventory.getPrimaryWeapon().getId(), actualInventory.getPrimaryWeapon().getId());
         assertEquals(expectedInventory.getPrimaryWeapon().getAttack(), actualInventory.getPrimaryWeapon().getAttack());

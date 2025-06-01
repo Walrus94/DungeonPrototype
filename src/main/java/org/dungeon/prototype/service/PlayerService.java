@@ -2,16 +2,15 @@ package org.dungeon.prototype.service;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.dungeon.prototype.annotations.aspect.ChatStateUpdate;
 import org.dungeon.prototype.exception.EntityNotFoundException;
 import org.dungeon.prototype.model.inventory.Inventory;
 import org.dungeon.prototype.model.player.Player;
 import org.dungeon.prototype.model.player.PlayerAttribute;
 import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.properties.PlayerProperties;
-import org.dungeon.prototype.repository.PlayerRepository;
-import org.dungeon.prototype.repository.converters.mapstruct.PlayerMapper;
-import org.dungeon.prototype.repository.projections.NicknameProjection;
+import org.dungeon.prototype.repository.mongo.PlayerRepository;
+import org.dungeon.prototype.repository.mongo.converters.mapstruct.PlayerMapper;
+import org.dungeon.prototype.repository.mongo.projections.NicknameProjection;
 import org.dungeon.prototype.service.message.MessageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -21,8 +20,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.Objects.nonNull;
-import static org.dungeon.prototype.bot.state.ChatState.AWAITING_NICKNAME;
-import static org.dungeon.prototype.bot.state.ChatState.PRE_GAME_MENU;
 import static org.dungeon.prototype.util.PlayerUtil.getPrimaryAttack;
 import static org.dungeon.prototype.util.PlayerUtil.getSecondaryAttack;
 
@@ -73,7 +70,6 @@ public class PlayerService {
      * @param chatId current chat id
      * @param nickname new player's nickname
      */
-    @ChatStateUpdate(from = AWAITING_NICKNAME, to = PRE_GAME_MENU)
     public void registerPlayerAndSendStartMessage(Long chatId, String nickname) {
         val player = addNewPlayer(chatId, nickname);
         messageService.sendStartMessage(chatId, player.getNickname(), false);
@@ -97,7 +93,7 @@ public class PlayerService {
      * @return default max health points
      */
     public int getDefaultMaxHp(Player player) {
-        return 100 + player.getAttributes().get(PlayerAttribute.STAMINA);
+        return playerProperties.getBaseHp() + player.getAttributes().get(PlayerAttribute.STAMINA);
     }
 
     /**
@@ -173,5 +169,14 @@ public class PlayerService {
         log.info("Player default inventory initialized: {}", player);
         val playerDocument = PlayerMapper.INSTANCE.mapToDocument(player);
         playerRepository.save(playerDocument);
+    }
+
+    public void removePlayer(long chatId) {
+        if (playerRepository.existsByChatId(chatId)) {
+            playerRepository.deleteByChatId(chatId);
+            log.info("Player removed: {}", chatId);
+        } else {
+            log.warn("Player not found: {}", chatId);
+        }
     }
 }

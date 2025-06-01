@@ -1,10 +1,14 @@
 package org.dungeon.prototype.service.item.generation;
 
-import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.math3.util.Pair;
-import org.dungeon.prototype.model.inventory.Item;
+import org.dungeon.prototype.async.AsyncJobHandler;
+import org.dungeon.prototype.async.TaskType;
+import org.dungeon.prototype.exception.EntityNotFoundException;
+import org.dungeon.prototype.model.effect.AdditionEffect;
+import org.dungeon.prototype.model.effect.Effect;
+import org.dungeon.prototype.model.effect.MultiplicationEffect;
 import org.dungeon.prototype.model.inventory.attributes.MagicType;
 import org.dungeon.prototype.model.inventory.attributes.Quality;
 import org.dungeon.prototype.model.inventory.attributes.weapon.Handling;
@@ -19,33 +23,24 @@ import org.dungeon.prototype.model.inventory.attributes.wearable.WearableMateria
 import org.dungeon.prototype.model.inventory.attributes.wearable.WearableType;
 import org.dungeon.prototype.model.inventory.items.Weapon;
 import org.dungeon.prototype.model.inventory.items.Wearable;
-import org.dungeon.prototype.properties.GenerationProperties;
+import org.dungeon.prototype.properties.CallbackType;
+import org.dungeon.prototype.service.balancing.BalanceMatrixService;
 import org.dungeon.prototype.service.effect.ItemEffectsGenerator;
 import org.dungeon.prototype.service.item.ItemService;
 import org.dungeon.prototype.service.message.MessageService;
-import org.dungeon.prototype.util.RandomUtil;
+import org.dungeon.prototype.service.stats.GameResultService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CyclicBarrier;
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static org.dungeon.prototype.model.inventory.attributes.weapon.Handling.MAIN;
+import static org.dungeon.prototype.model.inventory.attributes.weapon.Handling.SECONDARY;
 import static org.dungeon.prototype.model.inventory.attributes.weapon.Handling.SINGLE_HANDED;
 import static org.dungeon.prototype.model.inventory.attributes.weapon.Handling.TWO_HANDED;
 import static org.dungeon.prototype.model.inventory.attributes.weapon.Size.LARGE;
@@ -73,15 +68,16 @@ import static org.dungeon.prototype.model.inventory.attributes.wearable.Wearable
 import static org.dungeon.prototype.model.inventory.attributes.wearable.WearableMaterial.STEEL;
 import static org.dungeon.prototype.model.inventory.attributes.wearable.WearableMaterial.WOOL;
 import static org.dungeon.prototype.util.GenerationUtil.applyAdjustment;
-import static org.dungeon.prototype.util.GenerationUtil.multiplyAllParametersBy;
-import static org.dungeon.prototype.util.RandomUtil.getRandomEnumValue;
 import static org.dungeon.prototype.util.RandomUtil.getRandomMagicType;
+import static org.dungeon.prototype.util.RandomUtil.getRandomWeightedEnumValue;
 
 @Slf4j
 @Service
 public class ItemGenerator {
     @Value("${generation.items.weapon.weapon-attributes-pool-size}")
     private Integer weaponAttributesPoolSize;
+    @Value("${generation.items.weapon.weapon-attribute-vector-size}")
+    private Integer weaponAttributeVectorSize;
     @Value("${generation.items.weapon.weapon-per-game}")
     private Integer weaponPerGame;
     @Value("${generation.items.wearables.wearable-attribute-pool-size}")
@@ -93,12 +89,15 @@ public class ItemGenerator {
     @Autowired
     private ItemService itemService;
     @Autowired
+    private AsyncJobHandler asyncJobHandler;
+    @Autowired
     private MessageService messageService;
     @Autowired
-    private ItemEffectsGenerator itemEffectsGenerator;
+    private BalanceMatrixService balanceMatrixService;
     @Autowired
-    private GenerationProperties generationProperties;
-    private final Map<Long, CyclicBarrier> barriersByChat = new ConcurrentHashMap<>();
+    private GameResultService gameResultService;
+    @Autowired
+    private ItemEffectsGenerator itemEffectsGenerator;
 
     /**
      * Generates items for game: runs two async generators
@@ -108,73 +107,114 @@ public class ItemGenerator {
      *
      * @param chatId id of chat where game runs
      */
-    @Transactional
-    public CompletableFuture<Void> generateItems(Long chatId) {
+    public void generateItems(Long chatId) {
         messageService.sendItemsGeneratingInfoMessage(chatId);
-        barriersByChat.put(chatId, new CyclicBarrier(2));
-        itemService.dropCollection(chatId);
 
-        CompletableFuture<Void> weaponsFuture = CompletableFuture.runAsync(() -> generateWeapons(chatId));
-        CompletableFuture<Void> wearablesFuture = CompletableFuture.runAsync(() -> generateWearables(chatId));
+        asyncJobHandler.submitItemGenerationTask(() -> generateWeapons(chatId), TaskType.WEAPON_GENERATION, chatId);
+        asyncJobHandler.submitItemGenerationTask(() -> generateWearables(chatId), TaskType.WEARABLE_GENERATION, chatId);
 
-        return CompletableFuture.allOf(weaponsFuture, wearablesFuture);
+        asyncJobHandler.submitEffectGenerationTask(() -> addEffects(chatId), TaskType.EFFECTS_GENERATION, chatId);
     }
 
     private void generateWeapons(Long chatId) {
+        log.info("Generation weapons for chatId:{}...", chatId);
+        val defaultAttributesMatrix = balanceMatrixService.getBalanceMatrix(chatId, "weapon_type_attr");
+        val weaponHandlingAdjustmentMatrix = balanceMatrixService.getBalanceMatrix(chatId, "weapon_handling_type_adjustment");
+        val weaponMaterialAdjustmentMatrix = balanceMatrixService.getBalanceMatrix(chatId, "weapon_material_adjustment");
+        val weaponHandlerMaterialAdjustmentMatrix = balanceMatrixService.getBalanceMatrix(chatId, "weapon_handler_material_adjustment");
+        val qualityAdjustmentMatrix = balanceMatrixService.getBalanceMatrix(chatId, "items_quality_adjustment");
+        val sizeAdjustmentMatrix = balanceMatrixService.getBalanceMatrix(chatId, "weapon_size_adjustment");
+        val weaponAttackTypeAdjustmentMatrix = balanceMatrixService.getBalanceMatrix(chatId, "weapon_attack_type_adjustment");
         Set<WeaponAttributes> generatedAttributesCombinations = new HashSet<>();
         while (generatedAttributesCombinations.size() < weaponAttributesPoolSize) {
-            val type = getRandomEnumValue(List.of(WeaponType.values()));
+            val type = getRandomWeightedEnumValue(generateAttributeMap(defaultAttributesMatrix, WeaponType.class));
             Handling handling;
             switch (type) {
-                case SWORD, AXE -> handling = getRandomEnumValue(List.of(SINGLE_HANDED, TWO_HANDED));
-                case DAGGER -> handling = SINGLE_HANDED;
-                default -> handling = getRandomEnumValue(List.of(Handling.values())); //TODO: consider more constraints
+                case SWORD, AXE ->
+                        handling = getRandomWeightedEnumValue(generateAttributeMap(weaponHandlingAdjustmentMatrix, SINGLE_HANDED, TWO_HANDED, MAIN));
+                case DAGGER ->
+                        handling = getRandomWeightedEnumValue(generateAttributeMap(weaponHandlingAdjustmentMatrix, SINGLE_HANDED, SECONDARY));
+                default ->
+                        handling = getRandomWeightedEnumValue(generateAttributeMap(weaponHandlingAdjustmentMatrix, Handling.class));
             }
             WeaponMaterial weaponMaterial;
             switch (type) {
-                case SWORD, AXE, DAGGER ->
-                        weaponMaterial = getRandomEnumValue(List.of(WeaponMaterial.IRON, WeaponMaterial.STEEL, PLATINUM, DIAMOND, WeaponMaterial.MITHRIL, DRAGON_BONE));
-                case CLUB -> weaponMaterial = getRandomEnumValue(List.of(WOOD, STONE, ENCHANTED_WOOD));
-                case MACE ->
-                        weaponMaterial = getRandomEnumValue(List.of(WeaponMaterial.STONE, WeaponMaterial.IRON, WeaponMaterial.STEEL, PLATINUM, DIAMOND, WeaponMaterial.MITHRIL, OBSIDIAN, DRAGON_BONE, ENCHANTED_WOOD));
-                case STAFF ->
-                        weaponMaterial = getRandomEnumValue(List.of(WOOD, STONE, OBSIDIAN, WeaponMaterial.MITHRIL, DRAGON_BONE, ENCHANTED_WOOD));
-                default -> weaponMaterial = getRandomEnumValue(List.of(WeaponMaterial.values()));
+                case SWORD, AXE, DAGGER -> weaponMaterial =
+                        getRandomWeightedEnumValue(generateAttributeMap(weaponMaterialAdjustmentMatrix,
+                                WeaponMaterial.IRON,
+                                WeaponMaterial.STEEL,
+                                PLATINUM,
+                                DIAMOND,
+                                WeaponMaterial.MITHRIL,
+                                DRAGON_BONE));
+                case CLUB -> weaponMaterial =
+                        getRandomWeightedEnumValue(generateAttributeMap(weaponMaterialAdjustmentMatrix, WOOD, STONE, ENCHANTED_WOOD));
+                case MACE -> weaponMaterial =
+                        getRandomWeightedEnumValue(generateAttributeMap(weaponMaterialAdjustmentMatrix,
+                                WeaponMaterial.STONE,
+                                WeaponMaterial.IRON,
+                                WeaponMaterial.STEEL,
+                                PLATINUM,
+                                DIAMOND,
+                                WeaponMaterial.MITHRIL,
+                                OBSIDIAN,
+                                DRAGON_BONE,
+                                ENCHANTED_WOOD));
+                case STAFF -> weaponMaterial =
+                        getRandomWeightedEnumValue(generateAttributeMap(weaponMaterialAdjustmentMatrix,
+                                WOOD,
+                                STONE,
+                                OBSIDIAN,
+                                WeaponMaterial.MITHRIL,
+                                DRAGON_BONE,
+                                ENCHANTED_WOOD));
+                default ->
+                        weaponMaterial = getRandomWeightedEnumValue(generateAttributeMap(weaponMaterialAdjustmentMatrix, WeaponMaterial.values()));
             }
             WeaponHandlerMaterial weaponHandlerMaterial;
             switch (weaponMaterial) {
-                case WOOD ->
-                        weaponHandlerMaterial = getRandomEnumValue(List.of(WeaponHandlerMaterial.WOOD, WeaponHandlerMaterial.LEATHER, TREATED_LEATHER));
-                case STONE ->
-                        weaponHandlerMaterial = getRandomEnumValue(List.of(WeaponHandlerMaterial.LEATHER, TREATED_LEATHER));
-                case ENCHANTED_WOOD ->
-                        weaponHandlerMaterial = getRandomEnumValue(List.of(WeaponHandlerMaterial.WOOD, LEATHER, TREATED_LEATHER));
-                default -> weaponHandlerMaterial = getRandomEnumValue(List.of(WeaponHandlerMaterial.values()));
+                case WOOD -> weaponHandlerMaterial =
+                        getRandomWeightedEnumValue(generateAttributeMap(weaponHandlerMaterialAdjustmentMatrix,
+                                WeaponHandlerMaterial.WOOD,
+                                WeaponHandlerMaterial.LEATHER,
+                                TREATED_LEATHER));
+                case STONE -> weaponHandlerMaterial =
+                        getRandomWeightedEnumValue(generateAttributeMap(weaponHandlerMaterialAdjustmentMatrix,
+                                WeaponHandlerMaterial.LEATHER, TREATED_LEATHER));
+                case ENCHANTED_WOOD -> weaponHandlerMaterial =
+                        getRandomWeightedEnumValue(generateAttributeMap(weaponHandlerMaterialAdjustmentMatrix,
+                                WeaponHandlerMaterial.WOOD, LEATHER, TREATED_LEATHER));
+                default -> weaponHandlerMaterial =
+                        getRandomWeightedEnumValue(generateAttributeMap(weaponHandlerMaterialAdjustmentMatrix, WeaponHandlerMaterial.class));
             }
             Quality quality;
             if (DRAGON_BONE.equals(weaponMaterial) && WeaponHandlerMaterial.DRAGON_BONE.equals(weaponHandlerMaterial)) {
                 quality = Quality.MYTHIC;
             } else {
-                quality = getRandomEnumValue(List.of(Quality.values()));
+                quality = getRandomWeightedEnumValue(generateAttributeMap(qualityAdjustmentMatrix, Quality.class));
             }
             Size size;
             if (TWO_HANDED.equals(handling)) {
                 size = LARGE;
             } else {
                 if (DAGGER.equals(type)) {
-                    size = getRandomEnumValue(List.of(SMALL, MEDIUM));
+                    size = getRandomWeightedEnumValue(generateAttributeMap(sizeAdjustmentMatrix, SMALL, MEDIUM));
                 } else {
-                    size = getRandomEnumValue(List.of(Size.values()));
+                    size = getRandomWeightedEnumValue(generateAttributeMap(sizeAdjustmentMatrix, Size.class));
                 }
             }
             WeaponAttackType weaponAttackType;
             switch (type) {
-                case SWORD -> weaponAttackType = getRandomEnumValue(List.of(STAB, SLASH));
+                case SWORD -> weaponAttackType =
+                        getRandomWeightedEnumValue(generateAttributeMap(weaponAttackTypeAdjustmentMatrix, STAB, SLASH));
                 case AXE -> weaponAttackType = SLASH;
                 case DAGGER, SPEAR -> weaponAttackType = STAB;
                 case CLUB -> weaponAttackType = BLUNT;
-                case MACE -> weaponAttackType = getRandomEnumValue(List.of(SLASH, BLUNT));
-                default -> weaponAttackType = STRIKE;
+                case MACE -> weaponAttackType =
+                        getRandomWeightedEnumValue(generateAttributeMap(weaponAttackTypeAdjustmentMatrix, SLASH, BLUNT));
+                case STAFF -> weaponAttackType = STRIKE;
+                default -> weaponAttackType =
+                        getRandomWeightedEnumValue(generateAttributeMap(weaponAttackTypeAdjustmentMatrix, WeaponAttackType.class));
             }
             val attributes = new WeaponAttributes();
             attributes.setWeaponType(type);
@@ -193,60 +233,40 @@ public class ItemGenerator {
         }
 
         val vanillaWeapons = generatedAttributesCombinations.stream()
-                .flatMap(attributes -> Stream.of(generateVanillaWeapon(attributes, chatId)))
-                .limit(weaponPerGame)
+                .map(attributes -> generateVanillaWeapon(attributes, chatId))
                 .collect(Collectors.toList());
         val savedItems = itemService.saveItems(vanillaWeapons);
-
         log.info("{} weapons without effects generated.", savedItems.size());
-        awaitBarrier(chatId);
-
-        log.info("Adding effects to weapons...");
-        addEffects(chatId, savedItems, weaponPerGame);
     }
 
 
     private void generateWearables(Long chatId) {
+        log.info("Generation wearables for chatId:{}...", chatId);
         Set<WearableAttributes> attributesCombinations = new HashSet<>();
         Map<WearableType, Integer> typesCount = new HashMap<>();
+        Map<WearableMaterial, Double> wearableMaterialAdjustmentVector = getWearableMaterialAdjustmentVector(chatId);
+        val qualityAdjustmentMatrix = balanceMatrixService.getBalanceMatrix(chatId, "items_quality_adjustment");
         while (attributesCombinations.size() < wearableAttributesPoolSize) {
-            var type = getRandomEnumValue(List.of(WearableType.values()));
+            var type = getRandomWeightedEnumValue(normalizeMap(
+                    Arrays.stream(WearableType.values())
+                            .collect(Collectors.toMap(Function.identity(),
+                                    v -> 1.0 / (typesCount.getOrDefault(v, 1))))));
             WearableMaterial material = null;
             switch (type) {
-                case VEST -> {
-                    material = RandomUtil.getRandomEnumValue(List.of(WearableMaterial.values()));
-                    if (typesCount.containsKey(WearableType.VEST)) {
-                        typesCount.put(WearableType.VEST, typesCount.get(WearableType.VEST) + 1);
-                    } else {
-                        typesCount.put(WearableType.VEST, 1);
-                    }
-                }
-                case HELMET -> {
-                    material = getRandomEnumValue(List.of(IRON, STEEL, MITHRIL));
-                    if (typesCount.containsKey(WearableType.HELMET)) {
-                        typesCount.put(WearableType.HELMET, typesCount.get(WearableType.HELMET) + 1);
-                    } else {
-                        typesCount.put(WearableType.HELMET, 1);
-                    }
-                }
-                case GLOVES -> {
-                    material = getRandomEnumValue(List.of(WearableMaterial.values()));
-                    if (typesCount.containsKey(WearableType.GLOVES)) {
-                        typesCount.put(WearableType.GLOVES, typesCount.get(WearableType.GLOVES) + 1);
-                    } else {
-                        typesCount.put(WearableType.GLOVES, 1);
-                    }
-                }
-                case BOOTS -> {
-                    material = RandomUtil.getRandomEnumValue(List.of(WearableMaterial.values()), List.of(CLOTH, ELVEN_SILK, WOOL));
-                    if (typesCount.containsKey(WearableType.BOOTS)) {
-                        typesCount.put(WearableType.BOOTS, typesCount.get(WearableType.BOOTS) + 1);
-                    } else {
-                        typesCount.put(WearableType.BOOTS, 1);
-                    }
-                }
+                case VEST, GLOVES -> material =
+                        getRandomWeightedEnumValue(wearableMaterialAdjustmentVector);
+                case HELMET -> material =
+                        getRandomWeightedEnumValue(wearableMaterialAdjustmentVector.entrySet()
+                                .stream()
+                                .filter(entry -> !List.of(IRON, STEEL, MITHRIL).contains(entry.getKey()))
+                                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+                case BOOTS -> material =
+                        getRandomWeightedEnumValue(wearableMaterialAdjustmentVector.entrySet()
+                                .stream()
+                                .filter(entry -> !List.of(CLOTH, ELVEN_SILK, WOOL).contains(entry.getKey()))
+                                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
             }
-            val quality = getRandomEnumValue(List.of(Quality.values()));
+            val quality = getRandomWeightedEnumValue(generateAttributeMap(qualityAdjustmentMatrix, Quality.class));
             val wearableAttributes = new WearableAttributes();
             wearableAttributes.setWearableType(type);
             wearableAttributes.setQuality(quality);
@@ -257,67 +277,139 @@ public class ItemGenerator {
                 continue;
             }
             attributesCombinations.add(wearableAttributes);
+            if (typesCount.containsKey(type)) {
+                typesCount.put(type, typesCount.get(type) + 1);
+            } else {
+                typesCount.put(type, 1);
+            }
         }
         val vanillaWearables = attributesCombinations.stream()
-                .flatMap(attributes -> Stream.of(generateVanillaWearable(attributes, chatId)))
+                .map(attributes -> generateVanillaWearable(attributes, chatId))
                 .collect(Collectors.toList());
         val savedItems = itemService.saveItems(vanillaWearables);
         log.info("{} wearables without effects generated.", savedItems.size());
-        awaitBarrier(chatId);
-
-        log.info("Adding effects to wearables...");
-        addEffects(chatId, savedItems, wearablesPerGame);
     }
 
-    private void addEffects(Long chatId, Set<Item> savedItems, Integer limit) {
-        val weightScale = savedItems.stream()
-                .map(item -> Pair.create(item.getId(), item.getWeight().toVector().getNorm()))
-                .sorted(Comparator.comparing(Pair::getValue))
-                .collect(Collectors.toCollection(ArrayList::new));
-        log.info("Adding effects to generated items, amount: {}", savedItems.size());
-        double largestSegment = 0.0;
-        int startSegmentIndex = 0;
-        val vanillaItemsIds = weightScale.stream().map(Pair::getKey).toList();
-        while (weightScale.size() < limit) {
-            for (int i = 1; i < weightScale.size(); i++) {
-                //TODO: add loop and proceed further in selected direction by scale to next itemId
-                double segment = weightScale.get(i).getValue() - weightScale.get(i - 1).getValue();
-                if (segment > largestSegment) {
-                    largestSegment = segment;
-                    startSegmentIndex = i;
+    private Map<WearableMaterial, Double> getWearableMaterialAdjustmentVector(long chatId) {
+        val armorBonus = balanceMatrixService.getBalanceVector(chatId, "wearable_armor_bonus", 0);
+        val chanceToDodgeAdjustment = balanceMatrixService.getBalanceVector(chatId, "wearable_chance_to_dodge_adjustment", 0);
+
+        return normalizeMap(Arrays.stream(WearableMaterial.values()).collect(Collectors.toMap(Function.identity(), v -> 1 / (defaultArmor + armorBonus[v.ordinal()] + chanceToDodgeAdjustment[v.ordinal()]))));
+    }
+
+    private void addEffects(Long chatId) {
+        val weightScale = itemService.findAllItemsWeightsByChatId(chatId).entrySet().stream()
+                .collect(Collectors.groupingBy(
+                        Map.Entry::getValue,
+                        TreeMap::new,
+                        Collectors.mapping(Map.Entry::getKey, Collectors.toCollection(LinkedList::new))
+                ));
+        gameResultService.addGeneratedVanillaItems(chatId, weightScale.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().size()
+                )));
+        log.info("Adding effects to generated items, amount: {}", weightScale.size());
+        double startSegmentWeight = 0.0;
+        int weaponCount = 0;
+        int wearableCount = 0;
+        val vanillaItemsIds = weightScale.values().stream().flatMap(Collection::stream).toList();
+        while (weaponCount < weaponPerGame || wearableCount < wearablesPerGame) {
+            val multipleItemsWeight = weightScale.entrySet().stream().filter(e -> e.getValue().size() > 1).toList();
+            double largestSegment = 0.0;
+            for (Map.Entry<Double, LinkedList<String>> entry : multipleItemsWeight.size() > 0 ? multipleItemsWeight : weightScale.entrySet()) {
+                if (entry.getKey() - weightScale.lowerKey(entry.getKey()) > weightScale.higherKey(entry.getKey()) - entry.getKey()) {
+                    double segment = entry.getKey() - weightScale.lowerKey(entry.getKey());
+                    if (segment > largestSegment) {
+                        largestSegment = segment;
+                        startSegmentWeight = weightScale.lowerKey(entry.getKey());
+                    }
+                } else {
+                    double segment = weightScale.higherKey(entry.getKey()) - entry.getKey();
+                    if (segment > largestSegment) {
+                        largestSegment = segment;
+                        startSegmentWeight = entry.getKey();
+                    }
                 }
             }
-            val expectedWeightChange = startSegmentIndex > weightScale.size() / 2 ?
-                    largestSegment / 4 :
-                    -largestSegment / 4;
-            val point = expectedWeightChange > 0 ? startSegmentIndex : startSegmentIndex + 1;
-            val itemId = weightScale.get(point).getKey();
+            double initialWeight;
+            double expectedWeightChange;
+            if (weightScale.get(startSegmentWeight).size() >= weightScale.higherEntry(startSegmentWeight).getValue().size() ||
+                    getNegativeEffectCandidate(chatId, weightScale.get(weightScale.higherKey(startSegmentWeight))).isEmpty()
+            ) {
+                initialWeight = startSegmentWeight;
+                expectedWeightChange = (initialWeight * weightScale.get(startSegmentWeight).size()) / (largestSegment * largestSegment);
+            } else {
+                initialWeight = weightScale.higherKey(startSegmentWeight);
+                expectedWeightChange = -(initialWeight * weightScale.get(initialWeight).size()) / (largestSegment * largestSegment);
+            }
+            String itemId;
+            if (expectedWeightChange < 0.0) {
+                itemId = getNegativeEffectCandidate(chatId, weightScale.get(initialWeight)).orElseThrow(() -> new EntityNotFoundException(chatId, "item", CallbackType.MENU_BACK));
+            } else {
+                itemId = weightScale.get(initialWeight).get(0);
+            }
             if (vanillaItemsIds.contains(itemId)) {
-                val newItemData = itemEffectsGenerator.copyItemAndAddEffect(chatId, weightScale.get(point).getKey(), expectedWeightChange);
+                val newItemData = itemEffectsGenerator.copyItemAndAddEffect(chatId, itemId, expectedWeightChange);
                 if (nonNull(newItemData)) {
                     insertNewItem(newItemData, weightScale);
                 }
             } else {
-                val updatedWeight = itemEffectsGenerator.addItemEffect(chatId, weightScale.get(point).getKey(), expectedWeightChange);
+                val updatedWeight = itemEffectsGenerator.addItemEffect(chatId, itemId, expectedWeightChange);
                 if (updatedWeight.isPresent()) {
-                    val oldValue = weightScale.get(point);
-                    weightScale.remove(point);
-                    insertNewItem(Pair.create(oldValue.getKey(), updatedWeight.get()), weightScale);
-                } else {
-
+                    val oldValueList = weightScale.get(initialWeight);
+                    if (oldValueList.size() == 1) {
+                        weightScale.remove(initialWeight);
+                    } else {
+                        oldValueList.remove(itemId);
+                        weightScale.put(initialWeight, oldValueList);
+                    }
+                    insertNewItem(Pair.create(itemId, updatedWeight.get()), weightScale);
+                    switch (itemService.findItem(chatId, itemId).getItemType()) {
+                        case WEAPON:
+                            weaponCount++;
+                        case WEARABLE:
+                            wearableCount++;
+                    }
                 }
             }
+
         }
     }
 
-    private void insertNewItem(Pair<String, Double> newItemData, List<Pair<String, Double>> weightScale) {
-        int insertPosition = Collections.binarySearch(weightScale, newItemData, Comparator.comparing(Pair::getValue));
-        if (insertPosition < 0) {
-            insertPosition = -insertPosition - 1;
+    private Optional<String> getNegativeEffectCandidate(long chatId, List<String> itemIds) {
+        return itemIds.stream()
+                .filter(itemId -> {
+                    val item = itemService.findItem(chatId, itemId);
+                    if (nonNull(item)) {
+                        return item.getEffects().stream()
+                                .map(effect -> isNegative(effect) ? -effect.getWeight().toVector().getNorm() : effect.getWeight().toVector().getNorm())
+                                .reduce(0.0, Double::sum) > 0.0;
+                    }
+                    return false;
+                })
+                .findFirst();
+    }
+
+    private boolean isNegative(Effect effect) {
+        if (effect instanceof AdditionEffect additionEffect) {
+            return additionEffect.getAmount() < 0;
+        } else if (effect instanceof MultiplicationEffect multiplicationEffect) {
+            return multiplicationEffect.getMultiplier() < 1.0;
         }
 
-        // Insert the element at the correct position to maintain sorted order
-        weightScale.add(insertPosition, newItemData);
+        return false;
+    }
+
+
+    private void insertNewItem(Pair<String, Double> newItemData, Map<Double, LinkedList<String>> weightScale) {
+        val newItemId = newItemData.getFirst();
+        val newItemWeight = newItemData.getSecond();
+        weightScale.computeIfPresent(newItemWeight, (k, v) -> {
+            v.add(newItemId);
+            return v;
+        });
+        weightScale.putIfAbsent(newItemWeight, new LinkedList<>(List.of(newItemId)));
     }
 
     private Weapon generateVanillaWeapon(WeaponAttributes weaponAttributes, Long chatId) {
@@ -326,29 +418,30 @@ public class ItemGenerator {
         weapon.setAttributes(weaponAttributes);
         weapon.setChatId(chatId);
         weapon.setEffects(Collections.emptyList());
-        return calculateParameters(weapon);
+        return calculateParameters(chatId, weapon);
     }
 
-    private Weapon calculateParameters(Weapon weapon) {
+    private Weapon calculateParameters(long chatId, Weapon weapon) {
         log.info("Calculating weapon params...");
-        val properties = generationProperties.getItems().getWeapon();
-        val defaultAttributesMap = properties.getDefaultAttributes();
-        val defaultAttributes = defaultAttributesMap.get(weapon.getAttributes().getWeaponType());
-        weapon.setAttack(defaultAttributes.getAttack());
-        weapon.setCriticalHitChance(defaultAttributes.getCriticalHitChance());
-        weapon.setCriticalHitMultiplier(defaultAttributes.getCriticalHitMultiplier());
-        weapon.setChanceToMiss(defaultAttributes.getChanceToMiss());
-        weapon.setChanceToKnockOut(defaultAttributes.getChanceToKnockOut());
+        val defaultAttributes = balanceMatrixService.getBalanceVector(chatId, "weapon_type_attr", weapon.getAttributes().getWeaponType().ordinal());
+        log.debug("Default attributes: {}", defaultAttributes);
+        weapon.setAttack((int) defaultAttributes[0]);
+        weapon.setCriticalHitChance(defaultAttributes[1]);
+        weapon.setCriticalHitMultiplier(defaultAttributes[2]);
+        weapon.setChanceToMiss(defaultAttributes[3]);
+        weapon.setChanceToKnockOut(defaultAttributes[4]);
         if (STAFF.equals(weapon.getAttributes().getWeaponType())) {
             weapon.setMagicType(getRandomMagicType());
         }
 
-        val handlingAdjustmentAttributes = properties.getHandlingAdjustmentAttributes().get(weapon.getAttributes().getHandling());
+        val handlingAdjustmentAttributes = balanceMatrixService.getBalanceVector(chatId, "weapon_handling_type_adjustment", weapon.getAttributes().getHandling().ordinal());
+        log.debug("Handling adjustment attributes: {}", handlingAdjustmentAttributes);
         applyAdjustment(weapon, handlingAdjustmentAttributes);
 
-        val weaponMaterialAdjustmentAttributes = properties.getWeaponMaterialAdjustmentAttributes().get(weapon.getAttributes().getWeaponMaterial());
+        val weaponMaterialAdjustmentAttributes = balanceMatrixService.getBalanceVector(chatId, "weapon_material_adjustment", weapon.getAttributes().getWeaponMaterial().ordinal());
+        log.debug("Weapon material adjustment attributes: {}", weaponMaterialAdjustmentAttributes);
         applyAdjustment(weapon, weaponMaterialAdjustmentAttributes);
-        if (ENCHANTED_WOOD.equals(weapon.getAttributes().getWeaponMaterial())) {
+        if (ENCHANTED_WOOD.equals(weapon.getAttributes().getWeaponMaterial()) && isNull(weapon.getMagicType())) {
             weapon.setMagicType(getRandomMagicType());
         }
         if (DRAGON_BONE.equals(weapon.getAttributes().getWeaponMaterial()) && WeaponHandlerMaterial.DRAGON_BONE.equals(weapon.getAttributes().getWeaponHandlerMaterial())) {
@@ -359,48 +452,57 @@ public class ItemGenerator {
             weapon.setIsCompleteDragonBone(false);
         }
 
-        val completeMaterialAdjustmentAttributes = properties.getCompleteMaterialAdjustmentAttributes();
         val handlerMaterial = getEqualWeaponHandlerMaterial(weapon);
-        if (handlerMaterial.isPresent() && completeMaterialAdjustmentAttributes.containsKey(handlerMaterial.get())) {
+        if (handlerMaterial.isPresent()) {
             log.info("Weapon and handler materials matched, {}", handlerMaterial.get());
-            val completeMaterialAdjustment = completeMaterialAdjustmentAttributes.get(handlerMaterial.get());
+            val completeMaterialAdjustment =
+                    switch (handlerMaterial.get()) {
+                        case WOOD ->
+                                balanceMatrixService.getBalanceVector(chatId, "weapon_complete_wood_adjustment", 0);
+                        case STEEL ->
+                                balanceMatrixService.getBalanceVector(chatId, "weapon_complete_steel_adjustment", 0);
+                        case DRAGON_BONE ->
+                                balanceMatrixService.getBalanceVector(chatId, "weapon_complete_dragon_bone_adjustment", 0);
+                        default -> throw new IllegalStateException("Unexpected value: " + handlerMaterial.get());
+                    };
+            log.debug("Complete material adjustment attributes: {}", completeMaterialAdjustment);
             applyAdjustment(weapon, completeMaterialAdjustment);
-        } else {
-            log.info("Weapon and handler materials differs!");
-            val weaponHandlerAdjustment = properties.getWeaponHandlerMaterialAdjustmentAttributes().get(weapon.getAttributes().getWeaponHandlerMaterial());
-            applyAdjustment(weapon, weaponHandlerAdjustment);
         }
-        val sizeAdjustment = properties.getSizeAdjustmentAttributes().get(weapon.getAttributes().getSize());
-        weapon.setAttack((int) (weapon.getAttack() * sizeAdjustment.getAttackRatio()));
-        weapon.setChanceToMiss(weapon.getChanceToMiss() * sizeAdjustment.getChanceToMissRatio());
 
-        val attackTypeAdjustment = properties.getAttackTypeAdjustmentAttributes().get(weapon.getAttributes().getWeaponAttackType());
+        val weaponHandlerAdjustment =
+                balanceMatrixService.getBalanceVector(chatId, "weapon_handler_material_adjustment", weapon.getAttributes().getWeaponHandlerMaterial().ordinal());
+        log.debug("Weapon handler adjustment attributes: {}", weaponHandlerAdjustment);
+        applyAdjustment(weapon, weaponHandlerAdjustment);
+
+        val sizeAdjustment = balanceMatrixService.getBalanceVector(chatId, "weapon_size_adjustment", weapon.getAttributes().getSize().ordinal());
+        log.debug("Size adjustment attributes: {}", sizeAdjustment);
+        applyAdjustment(weapon, sizeAdjustment);
+
+        val attackTypeAdjustment =
+                balanceMatrixService.getBalanceVector(chatId, "weapon_attack_type_adjustment", weapon.getAttributes().getWeaponAttackType().ordinal());
+        log.debug("Attack type adjustment attributes: {}", attackTypeAdjustment);
         applyAdjustment(weapon, attackTypeAdjustment);
-        if (STRIKE.equals(weapon.getAttributes().getWeaponAttackType())) {
-            weapon.setMagicType(getRandomMagicType());
-        }
-        val qualityAdjustmentRatio = properties.getQualityAdjustmentRatio().get(weapon.getAttributes().getQuality());
-        multiplyAllParametersBy(weapon, qualityAdjustmentRatio);
+        val qualityAdjustmentRatio =
+                balanceMatrixService.getBalanceVector(chatId, "items_quality_adjustment", weapon.getAttributes().getQuality().ordinal());
+        log.debug("Quality adjustment ratio: {}", qualityAdjustmentRatio);
+        applyAdjustment(weapon, qualityAdjustmentRatio);
         if (isNull(weapon.getMagicType())) {
             weapon.setMagicType(MagicType.of(0.0, 0.0));
         }
         return weapon;
     }
 
-    @NotNull
     private static Optional<WeaponHandlerMaterial> getEqualWeaponHandlerMaterial(Weapon weapon) {
         try {
             val weaponHandlerMaterial = WeaponHandlerMaterial.valueOf(weapon.getAttributes().getWeaponMaterial().toString());
             return Optional.of(weaponHandlerMaterial);
-
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             log.debug("Handler material doesn't match! Exception thrown: {}", e.getMessage());
             return Optional.empty();
         }
     }
 
     private Wearable generateVanillaWearable(WearableAttributes wearableAttributes, Long chatId) {
-        log.info("Generating wearable...");
         val wearable = new Wearable();
         wearable.setAttributes(wearableAttributes);
         wearable.setChatId(chatId);
@@ -409,7 +511,6 @@ public class ItemGenerator {
     }
 
     private Wearable calculateParameters(Wearable wearable) {
-        log.info("Calculating wearable params...");
         if (wearable.getAttributes().getWearableMaterial().equals(WearableMaterial.ENCHANTED_LEATHER)) {
             wearable.setMagicType(getRandomMagicType());
         } else {
@@ -417,12 +518,11 @@ public class ItemGenerator {
         }
         var armor = defaultArmor;
         var chanceToDodge = 0.0;
-        val wearablesProperties = generationProperties.getItems().getWearables();
         if (WearableType.BOOTS.equals(wearable.getAttributes().getWearableType())) {
-            chanceToDodge = wearablesProperties.getChanceToDodgeRatio().get(wearable.getAttributes().getWearableMaterial());
+            chanceToDodge = balanceMatrixService.getBalanceMatrixValue(wearable.getChatId(), "wearable_chance_to_dodge_adjustment", 0, wearable.getAttributes().getWearableMaterial().ordinal());
         }
-        armor += wearablesProperties.getArmorBonus().get(wearable.getAttributes().getWearableMaterial());
-        val qualityRatio = wearablesProperties.getQualityAdjustmentRatio().get(wearable.getAttributes().getQuality());
+        armor += (int) balanceMatrixService.getBalanceMatrixValue(wearable.getChatId(), "wearable_material_adjustment", 0, wearable.getAttributes().getWearableMaterial().ordinal());
+        val qualityRatio = balanceMatrixService.getBalanceMatrixValue(wearable.getChatId(), "items_quality_adjustment", 0, wearable.getAttributes().getQuality().ordinal());
         armor = (int) (armor * qualityRatio);
         chanceToDodge *= qualityRatio;
         wearable.setArmor(armor);
@@ -430,12 +530,42 @@ public class ItemGenerator {
         return wearable;
     }
 
-    private void awaitBarrier(Long chatId) {
-        try {
-            barriersByChat.get(chatId).await();  // Wait for both threads to complete generating vanilla items
-        } catch (Exception e) {
-            Thread.currentThread().interrupt();
-            log.error("Error while waiting at barrier: {}", e.getMessage());
-        }
+    private <T extends Enum> Map<T, Double> generateAttributeMap(double[][] defaultAttributesMatrix, Class<T> attribute) {
+        return normalizeMap(Arrays.stream(attribute.getEnumConstants())
+                .collect(Collectors.toMap(
+                        e -> e,
+                        e -> {
+                            int index = e.ordinal();
+                            double sum = 0.0;
+                            for (int i = 0; i < weaponAttributeVectorSize; i++) {
+                                sum += 1 / defaultAttributesMatrix[i][index];
+                            }
+                            return sum;
+                        }
+                )));
+    }
+
+    private <T extends Enum> Map<T, Double> generateAttributeMap(double[][] defaultAttributesMatrix, T... attributes) {
+        return normalizeMap(Arrays.stream(attributes)
+                .collect(Collectors.toMap(
+                        e -> e,
+                        e -> {
+                            int index = e.ordinal();
+                            double sum = 0.0;
+                            for (int i = 0; i < weaponAttributeVectorSize; i++) {
+                                sum += defaultAttributesMatrix[i][index];
+                            }
+                            return sum;
+                        }
+                )));
+    }
+
+    private <T> Map<T, Double> normalizeMap(Map<T, Double> map) {
+        double sum = map.values().stream().mapToDouble(Double::doubleValue).sum();
+        return map.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue() / sum
+                ));
     }
 }

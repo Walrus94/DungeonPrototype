@@ -1,0 +1,32 @@
+<configuration>
+    <!-- Bridge Log4j to Logback -->
+    <contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator">
+        <resetJUL>true</resetJUL>
+    </contextListener>
+
+    <!-- Load Spring profile dynamically -->
+    <property name="ENV" value="${spring.profiles.active}" />
+
+    <!-- Define Loki Appender -->
+    <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
+        <url>http://loki:3100/loki/api/v1/push</url>
+        <batchSize>10</batchSize>
+        <staticLabels>
+            <label name="app" value="DungeonPrototypeApplication"/>
+            <label name="env" value="${ENV}"/>
+            <label name="job" value="java-app-logs"/>
+        </staticLabels>
+        <dynamicLabels>
+            <label name="level" pattern="%level"/>
+            <label name="thread" pattern="%thread"/>
+        </dynamicLabels>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd'T'HH:mm:ss.SSS'Z'} [%thread] %-5level %logger - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Root Logger -->
+    <root level="info">
+        <appender-ref ref="LOKI"/>
+    </root>
+</configuration>
