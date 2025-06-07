@@ -97,7 +97,7 @@ public class LevelGenerationService {
         } catch (InterruptedException | ExecutionException e) {
             throw new DungeonPrototypeException(e.getMessage());
         } finally {
-            asyncJobHandler.clearLatch(chatId);
+            asyncJobHandler.removeChatState(chatId);
         }
     }
 
