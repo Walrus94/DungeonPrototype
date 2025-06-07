@@ -39,6 +39,10 @@ public class TaskMetrics {
         return meterRegistry.counter("game_task_failed", "taskType", taskType);
     }
 
+    public MeterRegistry getMeterRegistry() {
+        return meterRegistry;
+    }
+
     // Track active tasks per chatId
     public void addActiveTask(TaskContextData context) {
         activeTasks.add(context);
