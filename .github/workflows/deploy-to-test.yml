@@ -16,6 +16,7 @@ on:
         - master
         - room-content-population
         - secure-test-environment
+        - update-branch-list-15508306120
         - update-branch-list-12292818677
         - upgrade-gradle-dependencies
           # END BRANCH LIST

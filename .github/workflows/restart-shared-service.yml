@@ -10,11 +10,14 @@ on:
         options:
           # BEGIN BRANCH LIST
         - async-task-execution
+        - codex/introduce-single-consumer-for-asynctaskcompletionservice
         - develop
         - item-generation-refactoring
         - master
         - room-content-population
         - secure-test-environment
+        - update-branch-list-15508306120
+        - update-branch-list-12292818677
         - upgrade-gradle-dependencies
           # END BRANCH LIST
       service:
