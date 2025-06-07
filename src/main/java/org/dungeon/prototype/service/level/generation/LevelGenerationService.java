@@ -25,6 +25,8 @@ import org.dungeon.prototype.properties.GenerationProperties;
 import org.dungeon.prototype.service.PlayerService;
 import org.dungeon.prototype.service.room.generation.room.content.RoomContentGenerationService;
 import org.dungeon.prototype.service.weight.WeightCalculationService;
+import org.dungeon.prototype.async.scoped.ChatTaskManager;
+import java.util.concurrent.StructuredTaskScope;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -78,6 +80,8 @@ public class LevelGenerationService {
     private PlayerService playerService;
     @Autowired
     private GenerationProperties generationProperties;
+    @Autowired
+    private ChatTaskManager chatTaskManager;
 
     private static final long LEVEL_GENERATION_TIMEOUT_MINUTES = 1L;
 
@@ -138,28 +142,32 @@ public class LevelGenerationService {
         initConnectionSections(grid, clusterConnectionPoints);
         level.setClusterConnectionPoints(clusterConnectionPoints);
 
-        clusters.values().forEach(
-                cluster -> asyncJobHandler.executeMapGenerationTask(() ->
-                                generateGridSection(cluster, walkersMap.get(cluster)), TaskType.LEVEL_GENERATION, chatId, cluster.getId())
-        );
+        var scope = chatTaskManager.openScope(chatId);
+        Map<Long, StructuredTaskScope.Subtask<GeneratedCluster>> tasks = new HashMap<>();
+        clusters.values().forEach(cluster ->
+                tasks.put(cluster.getId(), scope.forkTask(
+                        TaskType.LEVEL_GENERATION,
+                        cluster.getId(),
+                        () -> new GeneratedCluster(chatId, cluster.getId(),
+                                generateGridSection(cluster, walkersMap.get(cluster))))));
 
-        AtomicInteger counter = new AtomicInteger(clusters.size());
-
-        while (counter.get() > 0) {
-            try {
-                val completedCluster = asyncJobHandler.retrieveMapGenerationResults(chatId).get();
-                if (nonNull(completedCluster)) {
-                    val clusterData = clusters.get(completedCluster.clusterId());
-                    copyGridSection(grid, clusterData.getStartConnectionPoint(), clusterData.getEndConnectionPoint(), completedCluster.clusterGrid());
-                    log.info("Cluster copied successfully, remaining clusters: {}", counter.getAndDecrement());
-                } else {
-                    // Brief sleep prevents CPU intensive spinning when no results are available
-                    Thread.sleep(100);
-                }
-            } catch (InterruptedException | ExecutionException e) {
-                log.warn("Error while retrieving cluster generation results: ", e);
-            }
+        try {
+            scope.join();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Cluster generation interrupted for chatId: {}", chatId);
         }
+
+        tasks.values().forEach(subtask -> {
+            try {
+                var result = scope.getResult(subtask);
+                var clusterData = clusters.get(result.clusterId());
+                copyGridSection(grid, clusterData.getStartConnectionPoint(), clusterData.getEndConnectionPoint(), result.clusterGrid());
+            } catch (Exception e) {
+                log.warn("Error while generating cluster result: {}", e.getMessage());
+            }
+        });
+        chatTaskManager.cancelScope(chatId);
 
         log.info("All clusters generated, current grid state:\n{}", printMapGridToLogs(grid));
 
