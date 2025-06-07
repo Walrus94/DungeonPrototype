@@ -11,15 +11,16 @@ on:
           # BEGIN BRANCH LIST
         - async-task-execution
         - codex/convert-game-results-to-balance-matrix
+        - codex/group-threads-by-task-type-and-chatid
         - codex/introduce-single-consumer-for-asynctaskcompletionservice
         - develop
         - item-generation-refactoring
         - master
         - room-content-population
         - secure-test-environment
-        - update-branch-list-15508564411
-        - update-branch-list-15508564618
-        - update-branch-list-15508564792
+        - update-branch-list-15511882215
+        - update-branch-list-15511882423
+        - update-branch-list-15511882592
         - update-branch-list-12292818677
         - upgrade-gradle-dependencies
           # END BRANCH LIST
