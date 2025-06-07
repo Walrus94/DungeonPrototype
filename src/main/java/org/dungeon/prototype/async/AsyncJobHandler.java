@@ -12,7 +12,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.Scheduled;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -25,7 +26,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -38,6 +38,8 @@ public class AsyncJobHandler {
     private final CompletionService<GeneratedCluster> asyncTaskCompletionService;
     private final Map<Long, ChatConcurrentState> chatConcurrentStateMap;
     private final TaskMetrics taskMetrics;
+    private Thread completionConsumerThread;
+    private volatile boolean consumerRunning;
 
     public AsyncJobHandler(@Qualifier(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME)
                            AsyncTaskExecutor asyncTaskExecutor, TaskMetrics taskMetrics) {
@@ -45,6 +47,20 @@ public class AsyncJobHandler {
         this.asyncTaskCompletionService = new ExecutorCompletionService<>(asyncTaskExecutor);
         this.chatConcurrentStateMap = new ConcurrentHashMap<>();
         this.taskMetrics = taskMetrics;
+    }
+
+    @PostConstruct
+    private void startCompletionConsumer() {
+        consumerRunning = true;
+        completionConsumerThread = Thread.ofVirtual().name("map-generation-consumer").start(this::consumeCompletionResults);
+    }
+
+    @PreDestroy
+    private void stopCompletionConsumer() {
+        consumerRunning = false;
+        if (completionConsumerThread != null) {
+            completionConsumerThread.interrupt();
+        }
     }
 
     @Async
@@ -96,20 +112,18 @@ public class AsyncJobHandler {
         asyncTaskCompletionService.submit(() -> new GeneratedCluster(chatId, clusterId, job.call()));
     }
 
-    @Scheduled(fixedRate = 1000)
-    public void updateMapGenerationResults() {
-        updateMapGenerationResultsAsync();
-    }
-
-    @Async
-    public void updateMapGenerationResultsAsync() {
-        try {
-            val result = asyncTaskCompletionService.take().get(10, TimeUnit.SECONDS);
-            if (chatConcurrentStateMap.containsKey(result.chatId())) {
-                chatConcurrentStateMap.get(result.chatId()).offerGridSection(result);
+    private void consumeCompletionResults() {
+        while (consumerRunning && !Thread.currentThread().isInterrupted()) {
+            try {
+                val result = asyncTaskCompletionService.take().get();
+                if (chatConcurrentStateMap.containsKey(result.chatId())) {
+                    chatConcurrentStateMap.get(result.chatId()).offerGridSection(result);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } catch (ExecutionException e) {
+                log.warn("Error while waiting for map generation: {}", e.getMessage());
             }
-        } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            log.warn("Error while waiting for map generation: {}", e.getMessage());
         }
     }
 
