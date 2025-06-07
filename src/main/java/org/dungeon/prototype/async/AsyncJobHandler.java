@@ -68,7 +68,7 @@ public class AsyncJobHandler {
         log.debug("Submitting item generation {} task for chatId: {}", taskType, chatId);
         asyncTaskExecutor.submit(() -> {
             chatConcurrentStateMap.computeIfAbsent(chatId,
-                    k -> new ChatConcurrentState(chatId, new CountDownLatch(ItemType.values().length - 1)));
+                    k -> new ChatConcurrentState(chatId, new CountDownLatch(ItemType.values().length)));
             try {
                 job.run();
                 log.info("Counting down ({}) latch for chatId: {}", chatConcurrentStateMap.get(chatId).getLatch().getCount(), chatId);
@@ -90,11 +90,6 @@ public class AsyncJobHandler {
                 }
                 while (chatConcurrentStateMap.get(chatId).getLatch().getCount() > 1) {
                     log.info("Waiting for vanilla items to generate for chatId: {}", chatId);
-                    try {
-                        chatConcurrentStateMap.get(chatId).getLatch().await();
-                    } catch (InterruptedException e) {
-                        throw new DungeonPrototypeException(e.getMessage());
-                    }
                     log.info("Counting down ({}) latch for chatId: {}", chatConcurrentStateMap.get(chatId).getLatch().getCount(), chatId);
                     chatConcurrentStateMap.get(chatId).getLatch().countDown();
                 }
@@ -150,9 +145,7 @@ public class AsyncJobHandler {
                     log.info("Waiting for latch to be created for chatId: {}", chatId);
                     Thread.sleep(1000);
                 }
-                while (chatConcurrentStateMap.get(chatId).getLatch().getCount() > 0) {
-                    chatConcurrentStateMap.get(chatId).getLatch().await();
-                }
+                chatConcurrentStateMap.get(chatId).getLatch().await();
                 return job.call();
             } catch (InterruptedException e) {
                 throw new DungeonPrototypeException(e.getMessage());
@@ -169,9 +162,7 @@ public class AsyncJobHandler {
                     log.info("Waiting for latch to be created for chatId: {}", chatId);
                     Thread.sleep(1000);
                 }
-                while (chatConcurrentStateMap.get(chatId).getLatch().getCount() > 0) {
-                    chatConcurrentStateMap.get(chatId).getLatch().await();
-                }
+                chatConcurrentStateMap.get(chatId).getLatch().await();
                 job.run();
             } catch (InterruptedException e) {
                 throw new DungeonPrototypeException(e.getMessage());
