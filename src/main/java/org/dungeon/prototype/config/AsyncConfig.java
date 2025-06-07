@@ -66,9 +66,15 @@ public class AsyncConfig {
 
     @Bean
     public Gauge activeVirtualThreadsGauge(MeterRegistry registry) {
-        AtomicInteger activeThreads = new AtomicInteger(Thread.activeCount());
-        return Gauge.builder("jfr_virtual_threads", activeThreads, AtomicInteger::get)
+        return Gauge.builder("jfr_virtual_threads", this::countVirtualThreads)
                 .description("The number of virtual threads in the JVM")
+                .baseUnit("threads")
                 .register(registry);
+    }
+
+    private long countVirtualThreads() {
+        return Thread.getAllStackTraces().keySet().stream()
+                .filter(Thread::isVirtual)
+                .count();
     }
 }

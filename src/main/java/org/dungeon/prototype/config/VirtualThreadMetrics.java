@@ -11,16 +11,19 @@ public class VirtualThreadMetrics {
         // Register a gauge to track total number of threads
         Gauge.builder("jvm.threads.total", Thread::activeCount)
                 .description("Total number of active threads, including virtual threads")
+                .baseUnit("threads")
                 .register(meterRegistry);
 
         // Register a gauge to track the number of virtual threads
         Gauge.builder("jvm.threads.virtual", this::countVirtualThreads)
                 .description("Total number of active virtual threads")
+                .baseUnit("threads")
                 .register(meterRegistry);
 
         // Gauge for carrier threads
         Gauge.builder("jvm.threads.carrier", this::countCarrierThreads)
                 .description("The number of carrier threads used by virtual threads")
+                .baseUnit("threads")
                 .register(meterRegistry);
     }
 
