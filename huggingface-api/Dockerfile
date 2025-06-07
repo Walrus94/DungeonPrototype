@@ -7,9 +7,9 @@ WORKDIR /app
 COPY . /app
 
 # Install any needed packages
-RUN pip install --no-cache-dir huggingface-hub confluent-kafka pymongo
+RUN pip install --prefer-binary --no-cache-dir huggingface-hub confluent-kafka pymongo
 
-RUN pip install llama-cpp-python \
+RUN pip install --prefer-binary llama-cpp-python \
     --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --verbose
 
 # Run the application

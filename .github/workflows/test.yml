@@ -23,6 +23,14 @@ jobs:
           persist-credentials: false
           clean: false
 
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
       - name: Create coverage directory
         run: mkdir -p $(pwd)/coverage
 
@@ -42,7 +50,7 @@ jobs:
           fail_ci_if_error: true
 
       - name: Cleanup Docker Data
-        run: docker system prune -af &&
+        run: docker system prune -f &&
           docker volume prune -f
       - name: Verify Cleanup
         run: docker system df

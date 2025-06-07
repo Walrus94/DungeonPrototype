@@ -76,7 +76,7 @@ jobs:
           docker-compose -p test --env-file .env down --remove-orphans || true
           docker network rm test_net || true
           docker volume prune -f || true
-          docker system prune -af || true
+          docker system prune -f || true
 
       - name: Create shared network
         run: |
@@ -102,7 +102,7 @@ jobs:
       - name: Clean up environment file
         run: rm -f .env
       - name: Cleanup Docker Data
-        run: docker system prune -af &&
+        run: docker system prune -f &&
           docker volume prune -f
       - name: Verify Cleanup
         run: docker system df
