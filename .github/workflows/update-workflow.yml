@@ -4,9 +4,9 @@ on:
   create:
     branches:
       - '**'
-  delete:
-    branches:
-      - '**'
+#  delete:
+#    branches:
+#      - '**'
 
 jobs:
   update-workflow:
