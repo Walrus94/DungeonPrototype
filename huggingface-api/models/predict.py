@@ -3,6 +3,7 @@ from stable_baselines3 import PPO
 from models.rl_env import BalanceAdjustmentEnv
 from db.mongo import load_template_matrix, load_game_results
 from models.model_manager import ModelManager
+from rag.vector_store import get_weight_vectors
 import numpy as np
 import logging
 
@@ -11,6 +12,15 @@ async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
     # Load the template matrix and game results
     template_matrix = await load_template_matrix(matrix_name)
     game_results = await load_game_results(chat_id)
+
+    # Include historical weight vectors from the RAG store
+    rag_vectors = get_weight_vectors(chat_id, limit=200)
+    if rag_vectors:
+        weight_scale = {}
+        for vec in rag_vectors:
+            norm = float(np.linalg.norm(vec))
+            weight_scale[norm] = weight_scale.get(norm, 0) + 1
+        game_results.append({"weightScale": weight_scale})
 
     # Generate a new matrix of the specified size
     generated_matrix = np.zeros((rows, columns))

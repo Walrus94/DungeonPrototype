@@ -4,6 +4,7 @@ from config.settings import MONGO_DATABASE_NAME, MONGO_DATABASE_PASSWORD, MONGO_
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from typing import Dict, Any, Optional
+from rag.vector_store import update_store_with_game_result
 
 mongo_client = MongoClient("mongodb://" + MONGO_DATABASE_USER + ":" + MONGO_DATABASE_PASSWORD +
                            "@" +
@@ -53,6 +54,8 @@ async def load_game_results(chat_id):
 async def save_game_result(game_result: Dict[str, Any]) -> None:
     """Save game result to MongoDB"""
     await game_results_collection.insert_one(game_result)
+    # Update RAG vector store with final player weight
+    update_store_with_game_result(game_result)
 
 async def load_template_matrix(matrix_name: str) -> Optional[np.ndarray]:
     """Loads predefined template matrix from MongoDB."""
