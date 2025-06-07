@@ -18,7 +18,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -84,16 +83,17 @@ public class AsyncJobHandler {
         log.debug("Submitting effect generation {} task for chatId: {}", taskType, chatId);
         asyncTaskExecutor.submit(() -> {
             try {
-                while (!chatConcurrentStateMap.containsKey(chatId) || isNull(chatConcurrentStateMap.get(chatId).getLatch())) {
+                while (!chatConcurrentStateMap.containsKey(chatId) ||
+                        isNull(chatConcurrentStateMap.get(chatId).getLatch())) {
                     log.info("Waiting for latch to be created for chatId: {}", chatId);
                     Thread.sleep(1000);
                 }
                 while (chatConcurrentStateMap.get(chatId).getLatch().getCount() > 1) {
                     log.info("Waiting for vanilla items to generate for chatId: {}", chatId);
-                    log.info("Counting down ({}) latch for chatId: {}", chatConcurrentStateMap.get(chatId).getLatch().getCount(), chatId);
-                    chatConcurrentStateMap.get(chatId).getLatch().countDown();
+                    Thread.sleep(1000);
                 }
                 job.run();
+                chatConcurrentStateMap.get(chatId).getLatch().countDown();
             } catch (Exception e) {
                 throw new DungeonPrototypeException(e.getMessage());
             }
@@ -121,27 +121,13 @@ public class AsyncJobHandler {
         }
     }
 
-
-    @Async
-    public CompletableFuture<GeneratedCluster> retrieveMapGenerationResults(long chatId) {
-        if (chatConcurrentStateMap.containsKey(chatId) && nonNull(chatConcurrentStateMap.get(chatId).getGridSectionsQueue()) &&
-        !chatConcurrentStateMap.get(chatId).getGridSectionsQueue().isEmpty()) {
-            val queue = chatConcurrentStateMap.get(chatId).getGridSectionsQueue();
-            try {
-                return CompletableFuture.completedFuture(queue.poll(10, TimeUnit.SECONDS));
-            } catch (InterruptedException e) {
-                log.warn("Unable while retrieving map generation results for chatId: {}: {} ", chatId, e.getMessage());
-            }
-        }
-        return CompletableFuture.completedFuture(null);
-    }
-
     @Async
     public Future<Level> submitMapPopulationTask(Callable<Level> job, TaskType taskType, long chatId) {
         log.debug("Submitting task of type {} for chatId: {}", taskType, chatId);
         return asyncTaskExecutor.submit(() -> {
             try {
-                while (!chatConcurrentStateMap.containsKey(chatId)) {
+                while (!chatConcurrentStateMap.containsKey(chatId) ||
+                        isNull(chatConcurrentStateMap.get(chatId).getLatch())) {
                     log.info("Waiting for latch to be created for chatId: {}", chatId);
                     Thread.sleep(1000);
                 }
@@ -158,7 +144,8 @@ public class AsyncJobHandler {
         log.debug("Submitting task of type {} for chatId: {}", taskType, chatId);
         asyncTaskExecutor.submit(() -> {
             try {
-                while (!chatConcurrentStateMap.containsKey(chatId)) {
+                while (!chatConcurrentStateMap.containsKey(chatId) ||
+                        isNull(chatConcurrentStateMap.get(chatId).getLatch())) {
                     log.info("Waiting for latch to be created for chatId: {}", chatId);
                     Thread.sleep(1000);
                 }

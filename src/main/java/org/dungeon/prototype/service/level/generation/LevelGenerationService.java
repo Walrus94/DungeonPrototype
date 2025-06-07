@@ -568,7 +568,6 @@ public class LevelGenerationService {
     }
 
     private void processNegativeSections(GridSection[][] grid, LevelGridCluster cluster, GridSection currentSection) {
-        log.info("Processing section {} of cluster {}", currentSection, cluster);
         val adjacentSections = getAdjacentSections(currentSection.getPoint(), grid);
         var stepsFromStart = currentSection.getStepsFromStart();
         val negativeAdjacentSections = adjacentSections.stream()
