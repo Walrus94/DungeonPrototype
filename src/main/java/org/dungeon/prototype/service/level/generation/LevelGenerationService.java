@@ -79,26 +79,25 @@ public class LevelGenerationService {
     @Autowired
     private GenerationProperties generationProperties;
 
+    private static final long LEVEL_GENERATION_TIMEOUT_MINUTES = 1L;
+
     public Level generateAndPopulateLevel(Long chatId, Integer levelNumber) {
         var levelMap = generateLevelMap(chatId, levelNumber);
         log.debug("Generated level map\n{}", printMapGridToLogs(levelMap.getGrid()));
         val futureLevel = asyncJobHandler.submitMapPopulationTask(() ->
                 populateLevel(chatId, levelNumber, levelMap), TaskType.LEVEL_GENERATION, chatId);
-        while (!futureLevel.isDone()) {
-            try {
-                return futureLevel.get(1, TimeUnit.MINUTES);
-            } catch (InterruptedException | ExecutionException e) {
-                throw new DungeonPrototypeException(e.getMessage());
-            } catch (TimeoutException e) {
-                log.info("Waiting for level generation...");
-            }
-        }
         try {
-            val level = futureLevel.get();
-            asyncJobHandler.clearLatch(chatId);
-            return level;
+            while (true) {
+                try {
+                    return futureLevel.get(LEVEL_GENERATION_TIMEOUT_MINUTES, TimeUnit.MINUTES);
+                } catch (TimeoutException e) {
+                    log.info("Level generation timed out, retrying...");
+                }
+            }
         } catch (InterruptedException | ExecutionException e) {
             throw new DungeonPrototypeException(e.getMessage());
+        } finally {
+            asyncJobHandler.removeChatState(chatId);
         }
     }
 
@@ -153,6 +152,9 @@ public class LevelGenerationService {
                     val clusterData = clusters.get(completedCluster.clusterId());
                     copyGridSection(grid, clusterData.getStartConnectionPoint(), clusterData.getEndConnectionPoint(), completedCluster.clusterGrid());
                     log.info("Cluster copied successfully, remaining clusters: {}", counter.getAndDecrement());
+                } else {
+                    // Brief sleep prevents CPU intensive spinning when no results are available
+                    Thread.sleep(100);
                 }
             } catch (InterruptedException | ExecutionException e) {
                 log.warn("Error while retrieving cluster generation results: ", e);
@@ -194,7 +196,7 @@ public class LevelGenerationService {
         return clusterGrid;
     }
 
-    private GridSection[][] copyGridSection(GridSection[][] grid, Point startConnectionPoint, Point endConnectionPoint, GridSection[][] gridSection) {
+    private void copyGridSection(GridSection[][] grid, Point startConnectionPoint, Point endConnectionPoint, GridSection[][] gridSection) {
         log.info("Copying grid section from {} to {}",
                 startConnectionPoint, endConnectionPoint);
         log.debug("Grid section\n{}", printMapGridToLogs(gridSection));
@@ -208,7 +210,6 @@ public class LevelGenerationService {
                             }
                         }));
         log.debug("Grid after copying\n{}", printMapGridToLogs(grid));
-        return grid;
     }
 
     /**
