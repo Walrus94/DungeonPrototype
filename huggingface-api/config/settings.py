@@ -16,3 +16,6 @@ KAFKA_BOOTSTRAP_SERVER = os.getenv("KAFKA_BOOTSTRAP_SERVERS")
 KAFKA_BALANCE_MATRIX_TOPIC = os.getenv("KAFKA_BALANCE_MATRIX_TOPIC")
 KAFKA_TOPIC_ITEM_NAMING = os.getenv("KAFKA_ITEM_NAMING_TOPIC")
 KAFKA_GAME_RESULTS_TOPIC = os.getenv("KAFKA_GAME_RESULTS_TOPIC")
+
+# Directory to store weight vectors for Retrieval-Augmented Generation
+RAG_STORE_PATH = os.path.join(HF_MODEL_FILE, "rag_store")
