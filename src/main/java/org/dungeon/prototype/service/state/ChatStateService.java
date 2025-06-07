@@ -157,6 +157,7 @@ public class ChatStateService {
                 }
             }
             asyncJobHandler.clearLatch(chatId);
+            asyncJobHandler.removeChatState(chatId);
             chatState.setChatState(IDLE);
             chatState.setLastActiveTime(new AtomicLong(System.currentTimeMillis()));
             chatStateByIdMap.put(chatId, chatState);

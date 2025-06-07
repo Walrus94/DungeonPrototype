@@ -179,9 +179,18 @@ public class AsyncJobHandler {
         });
     }
 
-    @Async
     public void clearLatch(long chatId) {
         log.info("Clearing latch for chatId: {}", chatId);
         chatConcurrentStateMap.get(chatId).setLatch(null);
+    }
+
+    public void removeChatState(long chatId) {
+        log.info("Removing chat state for chatId: {}", chatId);
+        if (chatConcurrentStateMap.containsKey(chatId)) {
+            val state = chatConcurrentStateMap.remove(chatId);
+            if (nonNull(state.getGridSectionsQueue())) {
+                state.getGridSectionsQueue().clear();
+            }
+        }
     }
 }
