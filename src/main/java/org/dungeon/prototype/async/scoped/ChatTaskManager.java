@@ -53,6 +53,14 @@ public class ChatTaskManager {
     }
 
     /**
+     * Removes scope from internal storage without closing it.
+     * Should be used when the scope lifecycle is managed externally.
+     */
+    public void removeScope(long chatId) {
+        scopes.remove(chatId);
+    }
+
+    /**
      * StructuredTaskScope wrapper storing task information.
      */
     public static class ChatTaskScope extends StructuredTaskScope<Object> {

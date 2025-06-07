@@ -142,32 +142,34 @@ public class LevelGenerationService {
         initConnectionSections(grid, clusterConnectionPoints);
         level.setClusterConnectionPoints(clusterConnectionPoints);
 
-        var scope = chatTaskManager.openScope(chatId);
-        Map<Long, StructuredTaskScope.Subtask<GeneratedCluster>> tasks = new HashMap<>();
-        clusters.values().forEach(cluster ->
-                tasks.put(cluster.getId(), scope.forkTask(
-                        TaskType.LEVEL_GENERATION,
-                        cluster.getId(),
-                        () -> new GeneratedCluster(chatId, cluster.getId(),
-                                generateGridSection(cluster, walkersMap.get(cluster))))));
+        try (var scope = chatTaskManager.openScope(chatId)) {
+            Map<Long, StructuredTaskScope.Subtask<GeneratedCluster>> tasks = new HashMap<>();
+            clusters.values().forEach(cluster ->
+                    tasks.put(cluster.getId(), scope.forkTask(
+                            TaskType.LEVEL_GENERATION,
+                            cluster.getId(),
+                            () -> new GeneratedCluster(chatId, cluster.getId(),
+                                    generateGridSection(cluster, walkersMap.get(cluster))))));
 
-        try {
-            scope.join();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.warn("Cluster generation interrupted for chatId: {}", chatId);
-        }
-
-        tasks.values().forEach(subtask -> {
             try {
-                var result = scope.getResult(subtask);
-                var clusterData = clusters.get(result.clusterId());
-                copyGridSection(grid, clusterData.getStartConnectionPoint(), clusterData.getEndConnectionPoint(), result.clusterGrid());
-            } catch (Exception e) {
-                log.warn("Error while generating cluster result: {}", e.getMessage());
+                scope.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("Cluster generation interrupted for chatId: {}", chatId);
             }
-        });
-        chatTaskManager.cancelScope(chatId);
+
+            tasks.values().forEach(subtask -> {
+                try {
+                    var result = scope.getResult(subtask);
+                    var clusterData = clusters.get(result.clusterId());
+                    copyGridSection(grid, clusterData.getStartConnectionPoint(), clusterData.getEndConnectionPoint(), result.clusterGrid());
+                } catch (Exception e) {
+                    log.warn("Error while generating cluster result: {}", e.getMessage());
+                }
+            });
+        } finally {
+            chatTaskManager.removeScope(chatId);
+        }
 
         log.info("All clusters generated, current grid state:\n{}", printMapGridToLogs(grid));
 
