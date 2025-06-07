@@ -152,6 +152,9 @@ public class LevelGenerationService {
                     val clusterData = clusters.get(completedCluster.clusterId());
                     copyGridSection(grid, clusterData.getStartConnectionPoint(), clusterData.getEndConnectionPoint(), completedCluster.clusterGrid());
                     log.info("Cluster copied successfully, remaining clusters: {}", counter.getAndDecrement());
+                } else {
+                    // Brief sleep prevents CPU intensive spinning when no results are available
+                    Thread.sleep(100);
                 }
             } catch (InterruptedException | ExecutionException e) {
                 log.warn("Error while retrieving cluster generation results: ", e);
