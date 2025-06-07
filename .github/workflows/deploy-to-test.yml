@@ -10,6 +10,7 @@ on:
         options:
           # BEGIN BRANCH LIST
         - async-task-execution
+        - codex/introduce-single-consumer-for-asynctaskcompletionservice
         - develop
         - item-generation-refactoring
         - master
