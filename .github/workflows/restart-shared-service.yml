@@ -11,6 +11,7 @@ on:
           # BEGIN BRANCH LIST
         - async-task-execution
         - codex/convert-game-results-to-balance-matrix
+        - codex/ensure-virtual-thread-metrics-display
         - codex/introduce-single-consumer-for-asynctaskcompletionservice
         - develop
         - item-generation-refactoring
