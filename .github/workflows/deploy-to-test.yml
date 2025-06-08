@@ -13,6 +13,7 @@ on:
         - codex/convert-game-results-to-balance-matrix
         - codex/ensure-virtual-thread-metrics-display
         - codex/fix--chattaskscope--warning-and-cluster-generation-error
+        - codex/fix-error-in-cluster-result-generation
         - codex/improve-workflow-performance-with-docker
         - codex/introduce-single-consumer-for-asynctaskcompletionservice
         - develop
