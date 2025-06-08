@@ -237,7 +237,6 @@ public class MessageService {
                 keyboardService.getDeathMessageInlineKeyboardMarkup());
     }
 
-    @ClearChatContext
     public void sendStopMessage(long chatId) {
         messageSender.sendInfoMessage(chatId, "Bot stopped. to continue game, please send */start* command");
     }
