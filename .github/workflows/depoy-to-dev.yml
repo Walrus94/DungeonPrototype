@@ -71,7 +71,7 @@ jobs:
       - name: Clean up environment file
         run: rm -f .env
       - name: Cleanup Docker Data
-        run: docker system prune -af &&
+        run: docker system prune -f &&
           docker volume prune -f
       - name: Verify Cleanup
         run: docker system df
