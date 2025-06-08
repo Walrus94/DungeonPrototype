@@ -32,8 +32,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -135,8 +133,6 @@ public class LevelGenerationService {
                         .get(clusterConnectionPoints.indexOf(point) - 1), point))
                 .collect(Collectors.toMap(LevelGridCluster::getId, Function.identity()));
 
-        val walkersMap = initializeWalkers(clusters.values());
-
         //empty level grid will be filled with rooms during generation
         GridSection[][] grid = generateEmptyMapGrid(gridSize);
         initConnectionSections(grid, clusterConnectionPoints);
@@ -149,7 +145,7 @@ public class LevelGenerationService {
                         TaskType.LEVEL_GENERATION,
                         cluster.getId(),
                         () -> new GeneratedCluster(chatId, cluster.getId(),
-                                generateGridSection(cluster, walkersMap.get(cluster))))));
+                                generateGridSectionWithRetries(cluster)))));
 
         try {
             scope.join();
@@ -178,11 +174,31 @@ public class LevelGenerationService {
         return level;
     }
 
-    private GridSection[][] generateGridSection(LevelGridCluster cluster, List<WalkerBuilder> walkerBuilders) {
+    private GridSection[][] generateGridSectionWithRetries(LevelGridCluster cluster) {
+        int attempts = 0;
+        int maxAttempts = generationProperties.getLevel().getClusterGenerationRetries();
+        while (true) {
+            try {
+                cluster.reset();
+                cluster.initializeWalkers();
+                return generateGridSection(cluster);
+            } catch (Exception e) {
+                attempts++;
+                if (attempts >= maxAttempts) {
+                    log.warn("Cluster {} generation failed after {} attempts: {}", cluster.getId(), attempts, e.getMessage());
+                    throw e;
+                }
+                log.warn("Cluster {} generation attempt {} failed: {}. Retrying...", cluster.getId(), attempts, e.getMessage());
+            }
+        }
+    }
+
+    private GridSection[][] generateGridSection(LevelGridCluster cluster) {
         log.info("Generating cluster {} with start point {} and end point {}",
                 cluster.getId(), cluster.getStartConnectionPoint(), cluster.getEndConnectionPoint());
         GridSection[][] clusterGrid = generateEmptyMapGrid(cluster.getStartConnectionPoint(), cluster.getEndConnectionPoint());
         log.debug("Empty cluster grid:\n {}", printMapGridToLogs(clusterGrid));
+        List<WalkerBuilder> walkerBuilders = cluster.getWalkers();
         while (!walkerBuilders.isEmpty()) {
             for (WalkerBuilder walker : walkerBuilders) {
                 log.debug("Current walker: {}", walker);
@@ -627,74 +643,6 @@ public class LevelGenerationService {
         }
     }
 
-    private Map<LevelGridCluster, List<WalkerBuilder>> initializeWalkers(Collection<LevelGridCluster> clusters) {
-        log.info("Initializing walkers for clusters: {}", clusters);
-        return clusters.stream().collect(Collectors.toMap(Function.identity(), cluster -> {
-            log.info("Processing cluster: {}", cluster);
-            if (cluster.isSmallCluster()) {
-                log.info("Small cluster, adding two border walkers to start cluster...");
-                return Arrays.asList(WalkerBuilder.builder()
-                                .pathFromStart(0)
-                                .isReversed(false)
-                                .cluster(cluster)
-                                .longestPathDefault(true)
-                                .currentPoint(new Point(0, 0))
-                                .build(),
-                        WalkerBuilder.builder()
-                                .pathFromStart(0)
-                                .isReversed(false)
-                                .longestPathDefault(true)
-                                .cluster(cluster)
-                                .currentPoint(new Point(0, 0))
-                                .build());
-            } else if (cluster.hasSmallSide()) {
-                log.info("Small sided cluster...");
-                return Arrays.asList(WalkerBuilder.builder()
-                                .pathFromStart(0)
-                                .isReversed(false)
-                                .cluster(cluster)
-                                .longestPathDefault(false)
-                                .currentPoint(new Point(0, 0))
-                                .build(),
-                        WalkerBuilder.builder()
-                                .isReversed(true)
-                                .longestPathDefault(true)
-                                .pathFromStart(0)
-                                .cluster(cluster)
-                                .currentPoint(new Point(cluster.getEndConnectionPoint().getX() - cluster.getStartConnectionPoint().getX(),
-                                        cluster.getEndConnectionPoint().getY() - cluster.getStartConnectionPoint().getY()))
-                                .build());
-            }
-            int fromStartWalkersNumber = getRandomInt(1, 2);
-            int fromEndWalkersNumber = getRandomInt(1, 3 - fromStartWalkersNumber);
-
-            List<WalkerBuilder> walkers = new ArrayList<>();
-
-            log.info("Adding {} walkers to start of cluster, {} walkers to end of cluster",
-                    fromStartWalkersNumber, fromEndWalkersNumber);
-            IntStream.range(0, fromStartWalkersNumber + fromEndWalkersNumber).forEach(i -> {
-                if (i < fromStartWalkersNumber) {
-                    walkers.add(WalkerBuilder.builder()
-                            .pathFromStart(0)
-                            .isReversed(false)
-                            .longestPathDefault(fromStartWalkersNumber == 2 && i == 0)
-                            .cluster(cluster)
-                            .currentPoint(new Point(0, 0))
-                            .build());
-                } else {
-                    walkers.add(WalkerBuilder.builder()
-                            .isReversed(true)
-                            .pathFromStart(0)
-                            .longestPathDefault(fromEndWalkersNumber == 1 || i == 2)
-                            .cluster(cluster)
-                            .currentPoint(new Point(cluster.getEndConnectionPoint().getX() - cluster.getStartConnectionPoint().getX(),
-                                    cluster.getEndConnectionPoint().getY() - cluster.getStartConnectionPoint().getY()))
-                            .build());
-                }
-            });
-            return walkers;
-        }));
-    }
 
     private LinkedList<Point> generateClusterConnectionPoints(Point start, Point end) {
         log.info("Generating cluster connection points...");
