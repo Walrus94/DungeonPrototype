@@ -599,7 +599,7 @@ public class LevelGenerationService {
                     .filter(section -> !currentSection.getPoint().equals(section.getPoint()))
                     .findFirst()
                     .ifPresent(section ->
-                            processNegativeSections(grid, cluster, currentSection));
+                            processNegativeSections(grid, cluster, section));
         }
         log.debug("Current grid state\n{}", printMapGridToLogs(grid));
     }
@@ -627,7 +627,7 @@ public class LevelGenerationService {
         cluster.addDeadEnd(negativeDeadEnd);
         currentSection = Optional.of(negativeDeadEnd);
         while (currentSection.isPresent()) {
-            currentSection.get().setStepsFromStart(counter);
+            currentSection.get().setStepsFromStart(stepsFromStart + counter + 1);
             Optional<GridSection> nextSection = Optional.empty();
             for (GridSection adjacentSection : getAdjacentSectionsInCluster(currentSection.get().getPoint(), grid, cluster)) {
                 if (adjacentSection.getStepsFromStart() < 0) {
