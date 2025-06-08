@@ -28,5 +28,6 @@ public class GenerationProperties {
         private int levelOneGridSize;
         private int gridSizeIncrement;
         private int incrementStep;
+        private int clusterGenerationRetries = 1;
     }
 }
