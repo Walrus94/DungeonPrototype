@@ -70,10 +70,11 @@ public class AsyncJobHandler {
                     k -> new ChatConcurrentState(chatId, new CountDownLatch(ItemType.values().length)));
             try {
                 job.run();
+            } catch (Exception e) {
+                log.warn("Item generation task {} failed for chatId {}: {}", taskType, chatId, e.getMessage());
+            } finally {
                 log.info("Counting down ({}) latch for chatId: {}", chatConcurrentStateMap.get(chatId).getLatch().getCount(), chatId);
                 chatConcurrentStateMap.get(chatId).getLatch().countDown();
-            } catch (Exception e) {
-                throw new DungeonPrototypeException(e.getMessage());
             }
         });
     }
@@ -93,9 +94,10 @@ public class AsyncJobHandler {
                     Thread.sleep(1000);
                 }
                 job.run();
-                chatConcurrentStateMap.get(chatId).getLatch().countDown();
             } catch (Exception e) {
-                throw new DungeonPrototypeException(e.getMessage());
+                log.warn("Effect generation task {} failed for chatId {}: {}", taskType, chatId, e.getMessage());
+            } finally {
+                chatConcurrentStateMap.get(chatId).getLatch().countDown();
             }
         });
     }
