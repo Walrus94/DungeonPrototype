@@ -291,8 +291,8 @@ public class ItemGenerator {
     }
 
     private Map<WearableMaterial, Double> getWearableMaterialAdjustmentVector(long chatId) {
-        val armorBonus = balanceMatrixService.getBalanceVector(chatId, "wearable_armor_bonus", 0);
-        val chanceToDodgeAdjustment = balanceMatrixService.getBalanceVector(chatId, "wearable_chance_to_dodge_adjustment", 0);
+        val armorBonus = balanceMatrixService.getBalanceMatrixColumn(chatId, "wearable_armor_bonus", 0);
+        val chanceToDodgeAdjustment = balanceMatrixService.getBalanceMatrixColumn(chatId, "wearable_chance_to_dodge_adjustment", 0);
 
         return normalizeMap(Arrays.stream(WearableMaterial.values()).collect(Collectors.toMap(Function.identity(), v -> 1 / (defaultArmor + armorBonus[v.ordinal()] + chanceToDodgeAdjustment[v.ordinal()]))));
     }
@@ -423,7 +423,7 @@ public class ItemGenerator {
 
     private Weapon calculateParameters(long chatId, Weapon weapon) {
         log.info("Calculating weapon params...");
-        val defaultAttributes = balanceMatrixService.getBalanceVector(chatId, "weapon_type_attr", weapon.getAttributes().getWeaponType().ordinal());
+        val defaultAttributes = balanceMatrixService.getBalanceMatrixColumn(chatId, "weapon_type_attr", weapon.getAttributes().getWeaponType().ordinal());
         log.debug("Default attributes: {}", defaultAttributes);
         weapon.setAttack((int) defaultAttributes[0]);
         weapon.setCriticalHitChance(defaultAttributes[1]);
@@ -434,11 +434,11 @@ public class ItemGenerator {
             weapon.setMagicType(getRandomMagicType());
         }
 
-        val handlingAdjustmentAttributes = balanceMatrixService.getBalanceVector(chatId, "weapon_handling_type_adjustment", weapon.getAttributes().getHandling().ordinal());
+        val handlingAdjustmentAttributes = balanceMatrixService.getBalanceMatrixColumn(chatId, "weapon_handling_type_adjustment", weapon.getAttributes().getHandling().ordinal());
         log.debug("Handling adjustment attributes: {}", handlingAdjustmentAttributes);
         applyAdjustment(weapon, handlingAdjustmentAttributes);
 
-        val weaponMaterialAdjustmentAttributes = balanceMatrixService.getBalanceVector(chatId, "weapon_material_adjustment", weapon.getAttributes().getWeaponMaterial().ordinal());
+        val weaponMaterialAdjustmentAttributes = balanceMatrixService.getBalanceMatrixColumn(chatId, "weapon_material_adjustment", weapon.getAttributes().getWeaponMaterial().ordinal());
         log.debug("Weapon material adjustment attributes: {}", weaponMaterialAdjustmentAttributes);
         applyAdjustment(weapon, weaponMaterialAdjustmentAttributes);
         if (ENCHANTED_WOOD.equals(weapon.getAttributes().getWeaponMaterial()) && isNull(weapon.getMagicType())) {
@@ -458,11 +458,11 @@ public class ItemGenerator {
             val completeMaterialAdjustment =
                     switch (handlerMaterial.get()) {
                         case WOOD ->
-                                balanceMatrixService.getBalanceVector(chatId, "weapon_complete_wood_adjustment", 0);
+                                balanceMatrixService.getBalanceMatrixColumn(chatId, "weapon_complete_wood_adjustment", 0);
                         case STEEL ->
-                                balanceMatrixService.getBalanceVector(chatId, "weapon_complete_steel_adjustment", 0);
+                                balanceMatrixService.getBalanceMatrixColumn(chatId, "weapon_complete_steel_adjustment", 0);
                         case DRAGON_BONE ->
-                                balanceMatrixService.getBalanceVector(chatId, "weapon_complete_dragon_bone_adjustment", 0);
+                                balanceMatrixService.getBalanceMatrixColumn(chatId, "weapon_complete_dragon_bone_adjustment", 0);
                         default -> throw new IllegalStateException("Unexpected value: " + handlerMaterial.get());
                     };
             log.debug("Complete material adjustment attributes: {}", completeMaterialAdjustment);
@@ -470,20 +470,20 @@ public class ItemGenerator {
         }
 
         val weaponHandlerAdjustment =
-                balanceMatrixService.getBalanceVector(chatId, "weapon_handler_material_adjustment", weapon.getAttributes().getWeaponHandlerMaterial().ordinal());
+                balanceMatrixService.getBalanceMatrixColumn(chatId, "weapon_handler_material_adjustment", weapon.getAttributes().getWeaponHandlerMaterial().ordinal());
         log.debug("Weapon handler adjustment attributes: {}", weaponHandlerAdjustment);
         applyAdjustment(weapon, weaponHandlerAdjustment);
 
-        val sizeAdjustment = balanceMatrixService.getBalanceVector(chatId, "weapon_size_adjustment", weapon.getAttributes().getSize().ordinal());
+        val sizeAdjustment = balanceMatrixService.getBalanceMatrixColumn(chatId, "weapon_size_adjustment", weapon.getAttributes().getSize().ordinal());
         log.debug("Size adjustment attributes: {}", sizeAdjustment);
         applyAdjustment(weapon, sizeAdjustment);
 
         val attackTypeAdjustment =
-                balanceMatrixService.getBalanceVector(chatId, "weapon_attack_type_adjustment", weapon.getAttributes().getWeaponAttackType().ordinal());
+                balanceMatrixService.getBalanceMatrixRow(chatId, "weapon_attack_type_adjustment", weapon.getAttributes().getWeaponAttackType().ordinal());
         log.debug("Attack type adjustment attributes: {}", attackTypeAdjustment);
         applyAdjustment(weapon, attackTypeAdjustment);
         val qualityAdjustmentRatio =
-                balanceMatrixService.getBalanceVector(chatId, "items_quality_adjustment", weapon.getAttributes().getQuality().ordinal());
+                balanceMatrixService.getBalanceMatrixRow(chatId, "items_quality_adjustment", weapon.getAttributes().getQuality().ordinal());
         log.debug("Quality adjustment ratio: {}", qualityAdjustmentRatio);
         applyAdjustment(weapon, qualityAdjustmentRatio);
         if (isNull(weapon.getMagicType())) {
