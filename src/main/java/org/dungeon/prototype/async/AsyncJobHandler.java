@@ -33,6 +33,8 @@ import static java.util.Objects.nonNull;
 @Slf4j
 public class AsyncJobHandler {
 
+    private static final int ITEM_GENERATION_RETRIES = 3;
+
     private final AsyncTaskExecutor asyncTaskExecutor;
     private final CompletionService<GeneratedCluster> asyncTaskCompletionService;
     private final Map<Long, ChatConcurrentState> chatConcurrentStateMap;
@@ -68,14 +70,26 @@ public class AsyncJobHandler {
         asyncTaskExecutor.submit(() -> {
             chatConcurrentStateMap.computeIfAbsent(chatId,
                     k -> new ChatConcurrentState(chatId, new CountDownLatch(ItemType.values().length)));
-            try {
-                job.run();
-            } catch (Exception e) {
-                log.warn("Item generation task {} failed for chatId {}: {}", taskType, chatId, e.getMessage());
-            } finally {
-                log.info("Counting down ({}) latch for chatId: {}", chatConcurrentStateMap.get(chatId).getLatch().getCount(), chatId);
-                chatConcurrentStateMap.get(chatId).getLatch().countDown();
+            int attempt = 1;
+            while (attempt <= ITEM_GENERATION_RETRIES) {
+                try {
+                    job.run();
+                    break;
+                } catch (Exception e) {
+                    if (attempt < ITEM_GENERATION_RETRIES) {
+                        log.warn(
+                                "Item generation task {} failed for chatId {}, retrying ({} / {})",
+                                taskType, chatId, attempt, ITEM_GENERATION_RETRIES);
+                    } else {
+                        log.error(
+                                "Item generation task {} failed for chatId {} after {} attempts: {}",
+                                taskType, chatId, ITEM_GENERATION_RETRIES, e.getMessage());
+                    }
+                    attempt++;
+                }
             }
+            log.info("Counting down ({}) latch for chatId: {}", chatConcurrentStateMap.get(chatId).getLatch().getCount(), chatId);
+            chatConcurrentStateMap.get(chatId).getLatch().countDown();
         });
     }
 
