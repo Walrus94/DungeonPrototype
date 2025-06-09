@@ -10,7 +10,6 @@ import org.dungeon.prototype.model.level.Level;
 import org.dungeon.prototype.model.level.generation.GeneratedCluster;
 import org.dungeon.prototype.model.level.ui.GridSection;
 import org.dungeon.prototype.properties.CallbackType;
-import org.dungeon.prototype.service.message.MessageService;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration;
 import org.springframework.core.task.AsyncTaskExecutor;
@@ -42,19 +41,16 @@ public class AsyncJobHandler {
     private final CompletionService<GeneratedCluster> asyncTaskCompletionService;
     private final Map<Long, ChatConcurrentState> chatConcurrentStateMap;
     private final TaskMetrics taskMetrics;
-    private final MessageService messageService;
     private Thread completionConsumerThread;
     private volatile boolean consumerRunning;
 
     public AsyncJobHandler(@Qualifier(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME)
                            AsyncTaskExecutor asyncTaskExecutor,
-                           TaskMetrics taskMetrics,
-                           MessageService messageService) {
+                           TaskMetrics taskMetrics) {
         this.asyncTaskExecutor = asyncTaskExecutor;
         this.asyncTaskCompletionService = new ExecutorCompletionService<>(asyncTaskExecutor);
         this.chatConcurrentStateMap = new ConcurrentHashMap<>();
         this.taskMetrics = taskMetrics;
-        this.messageService = messageService;
     }
 
     @PostConstruct
@@ -100,8 +96,6 @@ public class AsyncJobHandler {
                     attempt++;
                 }
             }
-            messageService.sendErrorMessage(
-                    new ItemGenerationException(chatId, lastException.getMessage(), CallbackType.START_GAME));
             throw new ItemGenerationException(chatId, lastException.getMessage(), CallbackType.START_GAME);
         });
     }
