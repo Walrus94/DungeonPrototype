@@ -14,7 +14,6 @@ on:
         - codex/ensure-virtual-thread-metrics-display
         - codex/improve-workflow-performance-with-docker
         - codex/introduce-single-consumer-for-asynctaskcompletionservice
-        - codex/investigate-concurrency-issues-during-cluster-copy
         - codex/reset-async-state-on-/stop-command
         - develop
         - item-generation-refactoring
