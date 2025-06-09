@@ -4,10 +4,13 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.async.metrics.TaskMetrics;
 import org.dungeon.prototype.exception.DungeonPrototypeException;
+import org.dungeon.prototype.exception.ItemGenerationException;
 import org.dungeon.prototype.model.document.item.ItemType;
 import org.dungeon.prototype.model.level.Level;
 import org.dungeon.prototype.model.level.generation.GeneratedCluster;
 import org.dungeon.prototype.model.level.ui.GridSection;
+import org.dungeon.prototype.properties.CallbackType;
+import org.dungeon.prototype.service.message.MessageService;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration;
 import org.springframework.core.task.AsyncTaskExecutor;
@@ -39,15 +42,19 @@ public class AsyncJobHandler {
     private final CompletionService<GeneratedCluster> asyncTaskCompletionService;
     private final Map<Long, ChatConcurrentState> chatConcurrentStateMap;
     private final TaskMetrics taskMetrics;
+    private final MessageService messageService;
     private Thread completionConsumerThread;
     private volatile boolean consumerRunning;
 
     public AsyncJobHandler(@Qualifier(TaskExecutionAutoConfiguration.APPLICATION_TASK_EXECUTOR_BEAN_NAME)
-                           AsyncTaskExecutor asyncTaskExecutor, TaskMetrics taskMetrics) {
+                           AsyncTaskExecutor asyncTaskExecutor,
+                           TaskMetrics taskMetrics,
+                           MessageService messageService) {
         this.asyncTaskExecutor = asyncTaskExecutor;
         this.asyncTaskCompletionService = new ExecutorCompletionService<>(asyncTaskExecutor);
         this.chatConcurrentStateMap = new ConcurrentHashMap<>();
         this.taskMetrics = taskMetrics;
+        this.messageService = messageService;
     }
 
     @PostConstruct
@@ -71,11 +78,16 @@ public class AsyncJobHandler {
             chatConcurrentStateMap.computeIfAbsent(chatId,
                     k -> new ChatConcurrentState(chatId, new CountDownLatch(ItemType.values().length)));
             int attempt = 1;
+            Exception lastException = null;
             while (attempt <= ITEM_GENERATION_RETRIES) {
                 try {
                     job.run();
-                    break;
+                    log.info("Counting down ({}) latch for chatId: {}",
+                            chatConcurrentStateMap.get(chatId).getLatch().getCount(), chatId);
+                    chatConcurrentStateMap.get(chatId).getLatch().countDown();
+                    return;
                 } catch (Exception e) {
+                    lastException = e;
                     if (attempt < ITEM_GENERATION_RETRIES) {
                         log.warn(
                                 "Item generation task {} failed for chatId {}, retrying ({} / {})",
@@ -88,8 +100,9 @@ public class AsyncJobHandler {
                     attempt++;
                 }
             }
-            log.info("Counting down ({}) latch for chatId: {}", chatConcurrentStateMap.get(chatId).getLatch().getCount(), chatId);
-            chatConcurrentStateMap.get(chatId).getLatch().countDown();
+            messageService.sendErrorMessage(
+                    new ItemGenerationException(chatId, lastException.getMessage(), CallbackType.START_GAME));
+            throw new ItemGenerationException(chatId, lastException.getMessage(), CallbackType.START_GAME);
         });
     }
 
