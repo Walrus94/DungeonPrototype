@@ -26,7 +26,6 @@ import org.dungeon.prototype.properties.GenerationProperties;
 import org.dungeon.prototype.service.PlayerService;
 import org.dungeon.prototype.service.room.generation.room.content.RoomContentGenerationService;
 import org.dungeon.prototype.service.weight.WeightCalculationService;
-import org.dungeon.prototype.service.level.generation.ClusterGenerationTaskProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -77,8 +76,6 @@ public class LevelGenerationService {
     private PlayerService playerService;
     @Autowired
     private GenerationProperties generationProperties;
-    @Autowired
-    private ClusterGenerationTaskProcessor clusterGenerationTaskProcessor;
 
     private static final long LEVEL_GENERATION_TIMEOUT_MINUTES = 1L;
 
@@ -137,16 +134,26 @@ public class LevelGenerationService {
         initConnectionSections(grid, clusterConnectionPoints);
         level.setClusterConnectionPoints(clusterConnectionPoints);
 
-        Map<Long, GeneratedCluster> clusterResults =
-                clusterGenerationTaskProcessor.process(chatId, clusters,
-                        cluster -> new GeneratedCluster(chatId, cluster.getId(),
-                                generateGridSectionWithRetries(cluster)));
+        clusters.values().forEach(cluster ->
+                asyncJobHandler.executeMapGenerationTask(
+                        () -> generateGridSectionWithRetries(cluster),
+                        TaskType.LEVEL_GENERATION,
+                        chatId,
+                        cluster.getId()));
 
-        clusterResults.forEach((id, result) -> {
-            var clusterData = clusters.get(id);
-            copyGridSection(grid, clusterData.getStartConnectionPoint(),
-                    clusterData.getEndConnectionPoint(), result.clusterGrid());
-        });
+        for (int i = 0; i < clusters.size(); i++) {
+            try {
+                var result = asyncJobHandler.takeGeneratedCluster(chatId);
+                var clusterData = clusters.get(result.clusterId());
+                copyGridSection(grid,
+                        clusterData.getStartConnectionPoint(),
+                        clusterData.getEndConnectionPoint(),
+                        result.clusterGrid());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("Cluster generation interrupted for chatId: {}", chatId);
+            }
+        }
 
         log.info("All clusters generated, current grid state:\n{}", printMapGridToLogs(grid));
 

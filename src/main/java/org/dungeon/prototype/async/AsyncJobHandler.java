@@ -126,7 +126,15 @@ public class AsyncJobHandler {
     @Async
     public void executeMapGenerationTask(Callable<GridSection[][]> job, TaskType taskType, long chatId, long clusterId) {
         log.debug("Submitting map generation task of type {} for chatId: {}", taskType, chatId);
+        chatConcurrentStateMap.computeIfAbsent(chatId, id -> new ChatConcurrentState(chatId, null));
         asyncTaskCompletionService.submit(() -> new GeneratedCluster(chatId, clusterId, job.call()));
+    }
+
+    public GeneratedCluster takeGeneratedCluster(long chatId) throws InterruptedException {
+        while (!chatConcurrentStateMap.containsKey(chatId)) {
+            Thread.sleep(100);
+        }
+        return chatConcurrentStateMap.get(chatId).takeGridSection();
     }
 
     private void consumeCompletionResults() {
