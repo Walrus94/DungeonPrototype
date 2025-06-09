@@ -110,7 +110,6 @@ public class LevelGenerationService {
      */
     public Level generateLevelMap(long chatId, int levelNumber) {
         log.info("Generating level {}", levelNumber);
-        //initializing level and calculating basic attributes
         int gridSize = calculateGridSize(levelNumber);
         var level = new Level();
         level.setChatId(chatId);
@@ -129,7 +128,6 @@ public class LevelGenerationService {
                         .get(clusterConnectionPoints.indexOf(point) - 1), point))
                 .collect(Collectors.toMap(LevelGridCluster::getId, Function.identity()));
 
-        //empty level grid will be filled with rooms during generation
         GridSection[][] grid = generateEmptyMapGrid(gridSize);
         initConnectionSections(grid, clusterConnectionPoints);
         level.setClusterConnectionPoints(clusterConnectionPoints);
