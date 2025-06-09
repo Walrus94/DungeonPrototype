@@ -96,7 +96,7 @@ public class AsyncJobHandler {
                     attempt++;
                 }
             }
-            throw new ItemGenerationException(chatId, lastException.getMessage(), CallbackType.START_GAME);
+            throw new ItemGenerationException(chatId, lastException.getMessage(), CallbackType.MENU_BACK);
         });
     }
 
