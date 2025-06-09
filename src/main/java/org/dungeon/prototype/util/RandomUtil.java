@@ -40,27 +40,37 @@ import static org.dungeon.prototype.util.RoomGenerationUtils.convertToMonsterCla
 @Slf4j
 @UtilityClass
 public class RandomUtil {
-    private static final RandomDataGenerator random = new RandomDataGenerator();
+    private static final ThreadLocal<RandomDataGenerator> RANDOM =
+            ThreadLocal.withInitial(RandomDataGenerator::new);
+
+    private static RandomDataGenerator random() {
+        return RANDOM.get();
+    }
 
     public static <T extends EnumAttribute> T getRandomWeightedEnumValue(Map<T, Double> values) {
-        return new EnumeratedDistribution<>(random.getRandomGenerator(), values.entrySet().stream().map(entry -> new Pair<>(entry.getKey(), entry.getValue())).toList()).sample();
+        return new EnumeratedDistribution<>(random().getRandomGenerator(),
+                values.entrySet().stream()
+                        .map(entry -> new Pair<>(entry.getKey(), entry.getValue()))
+                        .toList()).sample();
     }
 
     public static Boolean flipAdjustedCoin(Double trueProbability) {
         trueProbability = max(0.0, min(1.0, trueProbability));
-        return new EnumeratedDistribution<>(random.getRandomGenerator(), List.of(Pair.create(true, trueProbability), Pair.create(false, 1.0 - trueProbability))).sample();
+        return new EnumeratedDistribution<>(random().getRandomGenerator(),
+                List.of(Pair.create(true, trueProbability),
+                        Pair.create(false, 1.0 - trueProbability))).sample();
     }
 
     public static Integer getRandomInt(int from, int to) {
-        return random.nextInt(from, to);
+        return random().nextInt(from, to);
     }
 
     public static Double getNormalDistributionRandomDouble(double mean, double sd) {
-        return new NormalDistribution(random.getRandomGenerator(), mean, sd).sample();
+        return new NormalDistribution(random().getRandomGenerator(), mean, sd).sample();
     }
 
     public static MagicType getRandomMagicType() {
-        double angle = 2 * PI * random.nextUniform(0.0, 1.0);
+        double angle = 2 * PI * random().nextUniform(0.0, 1.0);
 
         val divine = sin(angle);
         val arcane = cos(angle);
