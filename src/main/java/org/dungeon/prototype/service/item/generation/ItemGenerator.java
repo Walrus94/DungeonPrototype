@@ -533,12 +533,15 @@ public class ItemGenerator {
     private <T extends Enum> Map<T, Double> generateAttributeMap(double[][] defaultAttributesMatrix, Class<T> attribute) {
         return normalizeMap(Arrays.stream(attribute.getEnumConstants())
                 .collect(Collectors.toMap(
-                        e -> e,
+                        Function.identity(),
                         e -> {
                             int index = e.ordinal();
                             double sum = 0.0;
                             for (int i = 0; i < weaponAttributeVectorSize; i++) {
-                                sum += 1 / defaultAttributesMatrix[i][index];
+                                double value = defaultAttributesMatrix[i][index];
+                                if (value != 0.0) {
+                                    sum += 1 / value;
+                                }
                             }
                             return sum;
                         }
@@ -548,7 +551,7 @@ public class ItemGenerator {
     private <T extends Enum> Map<T, Double> generateAttributeMap(double[][] defaultAttributesMatrix, T... attributes) {
         return normalizeMap(Arrays.stream(attributes)
                 .collect(Collectors.toMap(
-                        e -> e,
+                        Function.identity(),
                         e -> {
                             int index = e.ordinal();
                             double sum = 0.0;
@@ -562,6 +565,11 @@ public class ItemGenerator {
 
     private <T> Map<T, Double> normalizeMap(Map<T, Double> map) {
         double sum = map.values().stream().mapToDouble(Double::doubleValue).sum();
+        if (sum == 0.0) {
+            double uniform = 1.0 / map.size();
+            return map.keySet().stream()
+                    .collect(Collectors.toMap(Function.identity(), k -> uniform));
+        }
         return map.entrySet().stream()
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
