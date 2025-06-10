@@ -115,10 +115,9 @@ public class AsyncJobHandler {
                     Thread.sleep(1000);
                 }
                 job.run();
+                chatConcurrentStateMap.get(chatId).getLatch().countDown();
             } catch (Exception e) {
                 log.warn("Effect generation task {} failed for chatId {}: {}", taskType, chatId, e.getMessage());
-            } finally {
-                chatConcurrentStateMap.get(chatId).getLatch().countDown();
             }
         });
     }
@@ -141,9 +140,11 @@ public class AsyncJobHandler {
         while (consumerRunning && !Thread.currentThread().isInterrupted()) {
             try {
                 val result = asyncTaskCompletionService.take().get();
-                if (chatConcurrentStateMap.containsKey(result.chatId())) {
-                    chatConcurrentStateMap.get(result.chatId()).offerGridSection(result);
+                while (!chatConcurrentStateMap.containsKey(result.chatId())) {
+                    log.info("Waiting for chat state to be created for chatId: {}", result.chatId());
+                    Thread.sleep(1000);
                 }
+                chatConcurrentStateMap.get(result.chatId()).offerGridSection(result);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             } catch (ExecutionException e) {
