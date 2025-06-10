@@ -549,6 +549,8 @@ public class ItemGenerator {
     }
 
     private <T extends Enum> Map<T, Double> generateAttributeMap(double[][] defaultAttributesMatrix, T... attributes) {
+        log.debug("Generating attribute map for attributes: {}", Arrays.toString(attributes));
+        log.debug("Default attributes matrix: {}", Arrays.deepToString(defaultAttributesMatrix));
         return normalizeMap(Arrays.stream(attributes)
                 .collect(Collectors.toMap(
                         Function.identity(),
@@ -564,7 +566,9 @@ public class ItemGenerator {
     }
 
     private <T> Map<T, Double> normalizeMap(Map<T, Double> map) {
+        log.debug("Normalizing map: {}", map);
         double sum = map.values().stream().mapToDouble(Double::doubleValue).sum();
+        log.debug("Sum of values: {}", sum);
         if (sum == 0.0) {
             double uniform = 1.0 / map.size();
             return map.keySet().stream()
