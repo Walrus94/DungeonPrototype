@@ -549,12 +549,11 @@ public class ItemGenerator {
     private <T extends Enum> Map<T, Double> generateAttributeMap(double[][] defaultAttributesMatrix, T... attributes) {
         log.debug("Generating attribute map for attributes: {}", Arrays.toString(attributes));
         log.debug("Default attributes matrix: {}", Arrays.deepToString(defaultAttributesMatrix));
-        List<T> attributesList = Arrays.asList(attributes);
         return normalizeMap(Arrays.stream(attributes)
                 .collect(Collectors.toMap(
                         Function.identity(),
                         e -> {
-                            int index = attributesList.indexOf(e);
+                            int index = e.ordinal();
                             double sum = 0.0;
                             for (double[] attributesVector : defaultAttributesMatrix) {
                                 sum += attributesVector[index];
