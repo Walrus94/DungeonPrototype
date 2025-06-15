@@ -8,7 +8,6 @@ import org.dungeon.prototype.exception.DungeonPrototypeException;
 import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.level.Level;
 import org.dungeon.prototype.model.Point;
-import org.dungeon.prototype.model.level.generation.GeneratedCluster;
 import org.dungeon.prototype.model.level.generation.LevelGridCluster;
 import org.dungeon.prototype.model.level.generation.NextRoomDto;
 import org.dungeon.prototype.model.level.ui.LevelMap;
@@ -40,7 +39,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -77,21 +75,13 @@ public class LevelGenerationService {
     @Autowired
     private GenerationProperties generationProperties;
 
-    private static final long LEVEL_GENERATION_TIMEOUT_MINUTES = 1L;
-
     public Level generateAndPopulateLevel(Long chatId, Integer levelNumber) {
         var levelMap = generateLevelMap(chatId, levelNumber);
         log.debug("Generated level map\n{}", printMapGridToLogs(levelMap.getGrid()));
         val futureLevel = asyncJobHandler.submitMapPopulationTask(() ->
                 populateLevel(chatId, levelNumber, levelMap), TaskType.LEVEL_GENERATION, chatId);
         try {
-            while (true) {
-                try {
-                    return futureLevel.get(LEVEL_GENERATION_TIMEOUT_MINUTES, TimeUnit.MINUTES);
-                } catch (TimeoutException e) {
-                    log.info("Level generation timed out, retrying...");
-                }
-            }
+            return futureLevel.get();
         } catch (InterruptedException | ExecutionException e) {
             throw new DungeonPrototypeException(e.getMessage());
         } finally {
