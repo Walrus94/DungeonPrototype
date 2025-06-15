@@ -80,14 +80,10 @@ public class BalanceMatrixService {
                 .getData());
     }
 
-    public double[] getBalanceMatrixColumn(long chatId, String name, int col) {
+    public double[] getBalanceMatrixVector(long chatId, String name, int col) {
         return Arrays.stream(getBalanceMatrix(chatId, name))
                 .mapToDouble(row -> row[col])
                 .toArray();
-    }
-
-    public double[] getBalanceMatrixRow(long chatId, String name, int row) {
-        return getBalanceMatrix(chatId, name)[row];
     }
 
     private void initializeBalanceMatrix(long chatId, List<BalanceMatrixGenerationRequest> requests) {
