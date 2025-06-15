@@ -519,10 +519,10 @@ public class ItemGenerator {
         var armor = defaultArmor;
         var chanceToDodge = 0.0;
         if (WearableType.BOOTS.equals(wearable.getAttributes().getWearableType())) {
-            chanceToDodge = balanceMatrixService.getBalanceMatrixValue(wearable.getChatId(), "wearable_chance_to_dodge_adjustment", 0, wearable.getAttributes().getWearableMaterial().ordinal());
+            chanceToDodge = balanceMatrixService.getBalanceMatrixValue(wearable.getChatId(), "wearable_chance_to_dodge_adjustment", wearable.getAttributes().getWearableMaterial().ordinal(), 0);
         }
-        armor += (int) balanceMatrixService.getBalanceMatrixValue(wearable.getChatId(), "wearable_material_adjustment", 0, wearable.getAttributes().getWearableMaterial().ordinal());
-        val qualityRatio = balanceMatrixService.getBalanceMatrixValue(wearable.getChatId(), "items_quality_adjustment", 0, wearable.getAttributes().getQuality().ordinal());
+        armor += (int) balanceMatrixService.getBalanceMatrixValue(wearable.getChatId(), "wearable_material_adjustment", wearable.getAttributes().getWearableMaterial().ordinal(), 0);
+        val qualityRatio = balanceMatrixService.getBalanceMatrixValue(wearable.getChatId(), "items_quality_adjustment", wearable.getAttributes().getQuality().ordinal(), 0);
         armor = (int) (armor * qualityRatio);
         chanceToDodge *= qualityRatio;
         wearable.setArmor(armor);
