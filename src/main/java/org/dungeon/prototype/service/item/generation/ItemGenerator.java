@@ -76,8 +76,6 @@ import static org.dungeon.prototype.util.RandomUtil.getRandomWeightedEnumValue;
 public class ItemGenerator {
     @Value("${generation.items.weapon.weapon-attributes-pool-size}")
     private Integer weaponAttributesPoolSize;
-    @Value("${generation.items.weapon.weapon-attribute-vector-size}")
-    private Integer weaponAttributeVectorSize;
     @Value("${generation.items.weapon.weapon-per-game}")
     private Integer weaponPerGame;
     @Value("${generation.items.wearables.wearable-attribute-pool-size}")
@@ -191,7 +189,7 @@ public class ItemGenerator {
             if (DRAGON_BONE.equals(weaponMaterial) && WeaponHandlerMaterial.DRAGON_BONE.equals(weaponHandlerMaterial)) {
                 quality = Quality.MYTHIC;
             } else {
-                quality = getRandomWeightedEnumValue(generateAttributeMap(qualityAdjustmentMatrix, Quality.class));
+                quality = getRandomWeightedEnumValue(generateQualityMap(qualityAdjustmentMatrix));
             }
             Size size;
             if (TWO_HANDED.equals(handling)) {
@@ -266,7 +264,7 @@ public class ItemGenerator {
                                 .filter(entry -> !List.of(CLOTH, ELVEN_SILK, WOOL).contains(entry.getKey()))
                                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
             }
-            val quality = getRandomWeightedEnumValue(generateAttributeMap(qualityAdjustmentMatrix, Quality.class));
+            val quality = getRandomWeightedEnumValue(generateQualityMap(qualityAdjustmentMatrix));
             val wearableAttributes = new WearableAttributes();
             wearableAttributes.setWearableType(type);
             wearableAttributes.setQuality(quality);
@@ -291,8 +289,8 @@ public class ItemGenerator {
     }
 
     private Map<WearableMaterial, Double> getWearableMaterialAdjustmentVector(long chatId) {
-        val armorBonus = balanceMatrixService.getBalanceVector(chatId, "wearable_armor_bonus", 0);
-        val chanceToDodgeAdjustment = balanceMatrixService.getBalanceVector(chatId, "wearable_chance_to_dodge_adjustment", 0);
+        val armorBonus = balanceMatrixService.getBalanceMatrixVector(chatId, "wearable_armor_bonus", 0);
+        val chanceToDodgeAdjustment = balanceMatrixService.getBalanceMatrixVector(chatId, "wearable_chance_to_dodge_adjustment", 0);
 
         return normalizeMap(Arrays.stream(WearableMaterial.values()).collect(Collectors.toMap(Function.identity(), v -> 1 / (defaultArmor + armorBonus[v.ordinal()] + chanceToDodgeAdjustment[v.ordinal()]))));
     }
@@ -423,7 +421,7 @@ public class ItemGenerator {
 
     private Weapon calculateParameters(long chatId, Weapon weapon) {
         log.info("Calculating weapon params...");
-        val defaultAttributes = balanceMatrixService.getBalanceVector(chatId, "weapon_type_attr", weapon.getAttributes().getWeaponType().ordinal());
+        val defaultAttributes = balanceMatrixService.getBalanceMatrixVector(chatId, "weapon_type_attr", weapon.getAttributes().getWeaponType().ordinal());
         log.debug("Default attributes: {}", defaultAttributes);
         weapon.setAttack((int) defaultAttributes[0]);
         weapon.setCriticalHitChance(defaultAttributes[1]);
@@ -434,11 +432,11 @@ public class ItemGenerator {
             weapon.setMagicType(getRandomMagicType());
         }
 
-        val handlingAdjustmentAttributes = balanceMatrixService.getBalanceVector(chatId, "weapon_handling_type_adjustment", weapon.getAttributes().getHandling().ordinal());
+        val handlingAdjustmentAttributes = balanceMatrixService.getBalanceMatrixVector(chatId, "weapon_handling_type_adjustment", weapon.getAttributes().getHandling().ordinal());
         log.debug("Handling adjustment attributes: {}", handlingAdjustmentAttributes);
         applyAdjustment(weapon, handlingAdjustmentAttributes);
 
-        val weaponMaterialAdjustmentAttributes = balanceMatrixService.getBalanceVector(chatId, "weapon_material_adjustment", weapon.getAttributes().getWeaponMaterial().ordinal());
+        val weaponMaterialAdjustmentAttributes = balanceMatrixService.getBalanceMatrixVector(chatId, "weapon_material_adjustment", weapon.getAttributes().getWeaponMaterial().ordinal());
         log.debug("Weapon material adjustment attributes: {}", weaponMaterialAdjustmentAttributes);
         applyAdjustment(weapon, weaponMaterialAdjustmentAttributes);
         if (ENCHANTED_WOOD.equals(weapon.getAttributes().getWeaponMaterial()) && isNull(weapon.getMagicType())) {
@@ -458,11 +456,11 @@ public class ItemGenerator {
             val completeMaterialAdjustment =
                     switch (handlerMaterial.get()) {
                         case WOOD ->
-                                balanceMatrixService.getBalanceVector(chatId, "weapon_complete_wood_adjustment", 0);
+                                balanceMatrixService.getBalanceMatrixVector(chatId, "weapon_complete_wood_adjustment", 0);
                         case STEEL ->
-                                balanceMatrixService.getBalanceVector(chatId, "weapon_complete_steel_adjustment", 0);
+                                balanceMatrixService.getBalanceMatrixVector(chatId, "weapon_complete_steel_adjustment", 0);
                         case DRAGON_BONE ->
-                                balanceMatrixService.getBalanceVector(chatId, "weapon_complete_dragon_bone_adjustment", 0);
+                                balanceMatrixService.getBalanceMatrixVector(chatId, "weapon_complete_dragon_bone_adjustment", 0);
                         default -> throw new IllegalStateException("Unexpected value: " + handlerMaterial.get());
                     };
             log.debug("Complete material adjustment attributes: {}", completeMaterialAdjustment);
@@ -470,20 +468,20 @@ public class ItemGenerator {
         }
 
         val weaponHandlerAdjustment =
-                balanceMatrixService.getBalanceVector(chatId, "weapon_handler_material_adjustment", weapon.getAttributes().getWeaponHandlerMaterial().ordinal());
+                balanceMatrixService.getBalanceMatrixVector(chatId, "weapon_handler_material_adjustment", weapon.getAttributes().getWeaponHandlerMaterial().ordinal());
         log.debug("Weapon handler adjustment attributes: {}", weaponHandlerAdjustment);
         applyAdjustment(weapon, weaponHandlerAdjustment);
 
-        val sizeAdjustment = balanceMatrixService.getBalanceVector(chatId, "weapon_size_adjustment", weapon.getAttributes().getSize().ordinal());
+        val sizeAdjustment = balanceMatrixService.getBalanceMatrixVector(chatId, "weapon_size_adjustment", weapon.getAttributes().getSize().ordinal());
         log.debug("Size adjustment attributes: {}", sizeAdjustment);
         applyAdjustment(weapon, sizeAdjustment);
 
         val attackTypeAdjustment =
-                balanceMatrixService.getBalanceVector(chatId, "weapon_attack_type_adjustment", weapon.getAttributes().getWeaponAttackType().ordinal());
+                balanceMatrixService.getBalanceMatrixVector(chatId, "weapon_attack_type_adjustment", weapon.getAttributes().getWeaponAttackType().ordinal());
         log.debug("Attack type adjustment attributes: {}", attackTypeAdjustment);
         applyAdjustment(weapon, attackTypeAdjustment);
         val qualityAdjustmentRatio =
-                balanceMatrixService.getBalanceVector(chatId, "items_quality_adjustment", weapon.getAttributes().getQuality().ordinal());
+                balanceMatrixService.getBalanceMatrixVector(chatId, "items_quality_adjustment", weapon.getAttributes().getQuality().ordinal());
         log.debug("Quality adjustment ratio: {}", qualityAdjustmentRatio);
         applyAdjustment(weapon, qualityAdjustmentRatio);
         if (isNull(weapon.getMagicType())) {
@@ -519,10 +517,10 @@ public class ItemGenerator {
         var armor = defaultArmor;
         var chanceToDodge = 0.0;
         if (WearableType.BOOTS.equals(wearable.getAttributes().getWearableType())) {
-            chanceToDodge = balanceMatrixService.getBalanceMatrixValue(wearable.getChatId(), "wearable_chance_to_dodge_adjustment", 0, wearable.getAttributes().getWearableMaterial().ordinal());
+            chanceToDodge = balanceMatrixService.getBalanceMatrixValue(wearable.getChatId(), "wearable_chance_to_dodge_adjustment", wearable.getAttributes().getWearableMaterial().ordinal(), 0);
         }
-        armor += (int) balanceMatrixService.getBalanceMatrixValue(wearable.getChatId(), "wearable_material_adjustment", 0, wearable.getAttributes().getWearableMaterial().ordinal());
-        val qualityRatio = balanceMatrixService.getBalanceMatrixValue(wearable.getChatId(), "items_quality_adjustment", 0, wearable.getAttributes().getQuality().ordinal());
+        armor += (int) balanceMatrixService.getBalanceMatrixValue(wearable.getChatId(), "wearable_armor_bonus", wearable.getAttributes().getWearableMaterial().ordinal(), 0);
+        val qualityRatio = balanceMatrixService.getBalanceMatrixValue(wearable.getChatId(), "items_quality_adjustment", wearable.getAttributes().getQuality().ordinal(), 0);
         armor = (int) (armor * qualityRatio);
         chanceToDodge *= qualityRatio;
         wearable.setArmor(armor);
@@ -533,12 +531,15 @@ public class ItemGenerator {
     private <T extends Enum> Map<T, Double> generateAttributeMap(double[][] defaultAttributesMatrix, Class<T> attribute) {
         return normalizeMap(Arrays.stream(attribute.getEnumConstants())
                 .collect(Collectors.toMap(
-                        e -> e,
+                        Function.identity(),
                         e -> {
                             int index = e.ordinal();
                             double sum = 0.0;
-                            for (int i = 0; i < weaponAttributeVectorSize; i++) {
-                                sum += 1 / defaultAttributesMatrix[i][index];
+                            for (double[] attributesVector : defaultAttributesMatrix) {
+                                double value = attributesVector[index];
+                                if (value != 0.0) {
+                                    sum += 1 / value;
+                                }
                             }
                             return sum;
                         }
@@ -546,22 +547,39 @@ public class ItemGenerator {
     }
 
     private <T extends Enum> Map<T, Double> generateAttributeMap(double[][] defaultAttributesMatrix, T... attributes) {
+        log.debug("Generating attribute map for attributes: {}", Arrays.toString(attributes));
+        log.debug("Default attributes matrix: {}", Arrays.deepToString(defaultAttributesMatrix));
         return normalizeMap(Arrays.stream(attributes)
                 .collect(Collectors.toMap(
-                        e -> e,
+                        Function.identity(),
                         e -> {
                             int index = e.ordinal();
                             double sum = 0.0;
-                            for (int i = 0; i < weaponAttributeVectorSize; i++) {
-                                sum += defaultAttributesMatrix[i][index];
+                            for (double[] attributesVector : defaultAttributesMatrix) {
+                                sum += attributesVector[index];
                             }
                             return sum;
                         }
                 )));
     }
 
+    private Map<Quality, Double> generateQualityMap(double[][] qualityMatrix) {
+        return normalizeMap(Arrays.stream(Quality.values())
+                .collect(Collectors.toMap(
+                        Function.identity(),
+                        q -> qualityMatrix[q.ordinal()][0]
+                )));
+    }
+
     private <T> Map<T, Double> normalizeMap(Map<T, Double> map) {
+        log.debug("Normalizing map: {}", map);
         double sum = map.values().stream().mapToDouble(Double::doubleValue).sum();
+        log.debug("Sum of values: {}", sum);
+        if (sum == 0.0) {
+            double uniform = 1.0 / map.size();
+            return map.keySet().stream()
+                    .collect(Collectors.toMap(Function.identity(), k -> uniform));
+        }
         return map.entrySet().stream()
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,

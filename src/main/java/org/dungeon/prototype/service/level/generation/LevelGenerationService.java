@@ -8,7 +8,6 @@ import org.dungeon.prototype.exception.DungeonPrototypeException;
 import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.level.Level;
 import org.dungeon.prototype.model.Point;
-import org.dungeon.prototype.model.level.generation.GeneratedCluster;
 import org.dungeon.prototype.model.level.generation.LevelGridCluster;
 import org.dungeon.prototype.model.level.generation.NextRoomDto;
 import org.dungeon.prototype.model.level.ui.LevelMap;
@@ -26,7 +25,6 @@ import org.dungeon.prototype.properties.GenerationProperties;
 import org.dungeon.prototype.service.PlayerService;
 import org.dungeon.prototype.service.room.generation.room.content.RoomContentGenerationService;
 import org.dungeon.prototype.service.weight.WeightCalculationService;
-import org.dungeon.prototype.service.level.generation.ClusterGenerationTaskProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -41,7 +39,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -77,10 +74,6 @@ public class LevelGenerationService {
     private PlayerService playerService;
     @Autowired
     private GenerationProperties generationProperties;
-    @Autowired
-    private ClusterGenerationTaskProcessor clusterGenerationTaskProcessor;
-
-    private static final long LEVEL_GENERATION_TIMEOUT_MINUTES = 1L;
 
     public Level generateAndPopulateLevel(Long chatId, Integer levelNumber) {
         var levelMap = generateLevelMap(chatId, levelNumber);
@@ -88,13 +81,7 @@ public class LevelGenerationService {
         val futureLevel = asyncJobHandler.submitMapPopulationTask(() ->
                 populateLevel(chatId, levelNumber, levelMap), TaskType.LEVEL_GENERATION, chatId);
         try {
-            while (true) {
-                try {
-                    return futureLevel.get(LEVEL_GENERATION_TIMEOUT_MINUTES, TimeUnit.MINUTES);
-                } catch (TimeoutException e) {
-                    log.info("Level generation timed out, retrying...");
-                }
-            }
+            return futureLevel.get();
         } catch (InterruptedException | ExecutionException e) {
             throw new DungeonPrototypeException(e.getMessage());
         } finally {
@@ -137,16 +124,28 @@ public class LevelGenerationService {
         initConnectionSections(grid, clusterConnectionPoints);
         level.setClusterConnectionPoints(clusterConnectionPoints);
 
-        Map<Long, GeneratedCluster> clusterResults =
-                clusterGenerationTaskProcessor.process(chatId, clusters,
-                        cluster -> new GeneratedCluster(chatId, cluster.getId(),
-                                generateGridSectionWithRetries(cluster)));
+        clusters.values().forEach(cluster ->
+                asyncJobHandler.executeMapGenerationTask(
+                        () -> generateGridSectionWithRetries(cluster),
+                        TaskType.LEVEL_GENERATION,
+                        chatId,
+                        cluster.getId()));
 
-        clusterResults.forEach((id, result) -> {
-            var clusterData = clusters.get(id);
-            copyGridSection(grid, clusterData.getStartConnectionPoint(),
-                    clusterData.getEndConnectionPoint(), result.clusterGrid());
-        });
+        for (int i = 0; i < clusters.size(); i++) {
+            try {
+                var result = asyncJobHandler.takeGeneratedCluster(chatId);
+                log.debug("Received generated cluster: chatId: {}, clusterId: {}, grid: {}",
+                        result.chatId(), result.clusterId(), printMapGridToLogs(result.clusterGrid()));
+                var clusterData = clusters.get(result.clusterId());
+                copyGridSection(grid,
+                        clusterData.getStartConnectionPoint(),
+                        clusterData.getEndConnectionPoint(),
+                        result.clusterGrid());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("Cluster generation interrupted for chatId: {}", chatId);
+            }
+        }
 
         log.info("All clusters generated, current grid state:\n{}", printMapGridToLogs(grid));
 

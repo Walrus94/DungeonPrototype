@@ -24,4 +24,11 @@ public class ChatConcurrentState {
         }
         gridSectionsQueue.offer(gridSection);
     }
+
+    public GeneratedCluster takeGridSection() throws InterruptedException {
+        if (gridSectionsQueue == null) {
+            gridSectionsQueue = new LinkedBlockingQueue<>();
+        }
+        return gridSectionsQueue.take();
+    }
 }
