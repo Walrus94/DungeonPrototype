@@ -134,6 +134,8 @@ public class LevelGenerationService {
         for (int i = 0; i < clusters.size(); i++) {
             try {
                 var result = asyncJobHandler.takeGeneratedCluster(chatId);
+                log.debug("Received generated cluster: chatId: {}, clusterId: {}, grid: {}",
+                        result.chatId(), result.clusterId(), printMapGridToLogs(result.clusterGrid()));
                 var clusterData = clusters.get(result.clusterId());
                 copyGridSection(grid,
                         clusterData.getStartConnectionPoint(),

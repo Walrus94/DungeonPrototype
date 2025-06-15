@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static org.dungeon.prototype.util.LevelUtil.printMapGridToLogs;
 
 @Service
 @Slf4j
@@ -125,7 +126,6 @@ public class AsyncJobHandler {
     @Async
     public void executeMapGenerationTask(Callable<GridSection[][]> job, TaskType taskType, long chatId, long clusterId) {
         log.debug("Submitting map generation task of type {} for chatId: {}", taskType, chatId);
-        chatConcurrentStateMap.computeIfAbsent(chatId, id -> new ChatConcurrentState(chatId, null));
         asyncTaskCompletionService.submit(() -> new GeneratedCluster(chatId, clusterId, job.call()));
     }
 
@@ -144,6 +144,8 @@ public class AsyncJobHandler {
                     log.info("Waiting for chat state to be created for chatId: {}", result.chatId());
                     Thread.sleep(1000);
                 }
+                log.debug("Received map generation result for chatId: {}, clusterId: {}, generated rid section: {}",
+                        result.chatId(), result.clusterId(), printMapGridToLogs(result.clusterGrid()));
                 chatConcurrentStateMap.get(result.chatId()).offerGridSection(result);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();

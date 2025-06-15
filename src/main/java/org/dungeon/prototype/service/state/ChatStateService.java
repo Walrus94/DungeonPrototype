@@ -157,6 +157,7 @@ public class ChatStateService {
                 case GENERATING_LEVEL -> {
                     itemService.dropCollection(chatId);
                     levelService.remove(chatId);
+                    balanceMatrixService.clearMatrices(chatId);
                 }
             }
             asyncJobHandler.removeChatState(chatId);
