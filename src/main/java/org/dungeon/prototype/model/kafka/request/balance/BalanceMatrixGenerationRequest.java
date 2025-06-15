@@ -9,8 +9,8 @@ import lombok.Data;
 public class BalanceMatrixGenerationRequest {
     @JsonProperty("name")
     private String name;
-    @JsonProperty("cols")
-    private int cols;
     @JsonProperty("rows")
     private int rows;
+    @JsonProperty("cols")
+    private int cols;
 }
