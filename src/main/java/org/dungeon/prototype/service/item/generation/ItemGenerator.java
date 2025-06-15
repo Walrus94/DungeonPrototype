@@ -189,7 +189,7 @@ public class ItemGenerator {
             if (DRAGON_BONE.equals(weaponMaterial) && WeaponHandlerMaterial.DRAGON_BONE.equals(weaponHandlerMaterial)) {
                 quality = Quality.MYTHIC;
             } else {
-                quality = getRandomWeightedEnumValue(generateAttributeMap(qualityAdjustmentMatrix, Quality.class));
+                quality = getRandomWeightedEnumValue(generateQualityMap(qualityAdjustmentMatrix));
             }
             Size size;
             if (TWO_HANDED.equals(handling)) {
@@ -264,7 +264,7 @@ public class ItemGenerator {
                                 .filter(entry -> !List.of(CLOTH, ELVEN_SILK, WOOL).contains(entry.getKey()))
                                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
             }
-            val quality = getRandomWeightedEnumValue(generateAttributeMap(qualityAdjustmentMatrix, Quality.class));
+            val quality = getRandomWeightedEnumValue(generateQualityMap(qualityAdjustmentMatrix));
             val wearableAttributes = new WearableAttributes();
             wearableAttributes.setWearableType(type);
             wearableAttributes.setQuality(quality);
@@ -560,6 +560,14 @@ public class ItemGenerator {
                             }
                             return sum;
                         }
+                )));
+    }
+
+    private Map<Quality, Double> generateQualityMap(double[][] qualityMatrix) {
+        return normalizeMap(Arrays.stream(Quality.values())
+                .collect(Collectors.toMap(
+                        Function.identity(),
+                        q -> qualityMatrix[q.ordinal()][0]
                 )));
     }
 
