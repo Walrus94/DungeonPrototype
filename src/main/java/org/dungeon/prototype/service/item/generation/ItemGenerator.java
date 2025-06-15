@@ -76,8 +76,6 @@ import static org.dungeon.prototype.util.RandomUtil.getRandomWeightedEnumValue;
 public class ItemGenerator {
     @Value("${generation.items.weapon.weapon-attributes-pool-size}")
     private Integer weaponAttributesPoolSize;
-    @Value("${generation.items.weapon.weapon-attribute-vector-size}")
-    private Integer weaponAttributeVectorSize;
     @Value("${generation.items.weapon.weapon-per-game}")
     private Integer weaponPerGame;
     @Value("${generation.items.wearables.wearable-attribute-pool-size}")
@@ -537,8 +535,8 @@ public class ItemGenerator {
                         e -> {
                             int index = e.ordinal();
                             double sum = 0.0;
-                            for (int i = 0; i < weaponAttributeVectorSize; i++) {
-                                double value = defaultAttributesMatrix[i][index];
+                            for (double[] attributesVector : defaultAttributesMatrix) {
+                                double value = attributesVector[index];
                                 if (value != 0.0) {
                                     sum += 1 / value;
                                 }
@@ -557,8 +555,8 @@ public class ItemGenerator {
                         e -> {
                             int index = e.ordinal();
                             double sum = 0.0;
-                            for (int i = 0; i < weaponAttributeVectorSize; i++) {
-                                sum += defaultAttributesMatrix[i][index];
+                            for (double[] attributesVector : defaultAttributesMatrix) {
+                                sum += attributesVector[index];
                             }
                             return sum;
                         }

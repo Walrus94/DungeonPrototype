@@ -232,7 +232,6 @@ generation:
     selling-price-ratio: 0.9
     buying-price-ratio: 1.2
     weapon:
-      weapon-attribute-vector-size: 5
       weapon-attributes-pool-size: 500
       weapon-per-game: 200
 
