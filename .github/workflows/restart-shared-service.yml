@@ -15,6 +15,7 @@ on:
         - codex/improve-workflow-performance-with-docker
         - codex/introduce-single-consumer-for-asynctaskcompletionservice
         - codex/investigate-itemgenerator-class-failure
+        - codex/investigate-weapon-generation-failure
         - codex/reset-async-state-on-/stop-command
         - develop
         - item-generation-refactoring
