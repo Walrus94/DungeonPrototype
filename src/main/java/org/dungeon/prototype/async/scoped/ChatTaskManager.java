@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.dungeon.prototype.async.TaskType;
 import org.dungeon.prototype.async.metrics.TaskContext;
 import org.dungeon.prototype.async.metrics.TaskContextData;
+import org.dungeon.prototype.async.metrics.BasicTaskContextData;
+import org.dungeon.prototype.async.metrics.ClusterTaskContextData;
 import org.dungeon.prototype.async.metrics.TaskMetrics;
 
 import java.util.ArrayList;
@@ -99,11 +101,18 @@ public class ChatTaskManager {
          * Forks a task and registers it under provided task type.
          */
         public <T> Subtask<T> forkTask(TaskType type, Callable<T> callable) {
-            return forkTask(type, -1, callable);
+            var context = new BasicTaskContextData(chatId, type);
+            metrics.addActiveTask(context);
+            var sample = Timer.start(metrics.getMeterRegistry());
+            var subtask = super.fork(() ->
+                    ScopedValue.where(TaskContext.CONTEXT, context).call(callable));
+            tasks.computeIfAbsent(type, k -> new ArrayList<>()).add(subtask);
+            metadata.put(subtask, new SubtaskMeta(context, sample));
+            return subtask;
         }
 
         public <T> Subtask<T> forkTask(TaskType type, long clusterId, Callable<T> callable) {
-            var context = new TaskContextData(chatId, clusterId, type);
+            var context = new ClusterTaskContextData(chatId, clusterId, type);
             metrics.addActiveTask(context);
             var sample = Timer.start(metrics.getMeterRegistry());
             var subtask = super.fork(() ->

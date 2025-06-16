@@ -84,9 +84,6 @@ public class AsyncJobHandler {
                     attempt++;
                 }
             }
-            log.info("Counting down ({}) latch for chatId: {}",
-                    chatConcurrentStateMap.get(chatId).getLatch().getCount(), chatId);
-            chatConcurrentStateMap.get(chatId).getLatch().countDown();
             throw new ItemGenerationException(chatId, lastException.getMessage(), CallbackType.MENU_BACK);
         });
     }
