@@ -84,6 +84,9 @@ public class AsyncJobHandler {
                     attempt++;
                 }
             }
+            log.info("Counting down ({}) latch for chatId: {}",
+                    chatConcurrentStateMap.get(chatId).getLatch().getCount(), chatId);
+            chatConcurrentStateMap.get(chatId).getLatch().countDown();
             throw new ItemGenerationException(chatId, lastException.getMessage(), CallbackType.MENU_BACK);
         });
     }
@@ -127,7 +130,7 @@ public class AsyncJobHandler {
     public Future<Level> submitMapPopulationTask(Callable<Level> job, TaskType taskType, long chatId) {
         log.debug("Submitting task of type {} for chatId: {}", taskType, chatId);
         return asyncTaskExecutor.submit(() -> {
-            var scope = chatTaskManager.openScope(chatId).openSubScope();
+            var scope = chatTaskManager.openScope(chatId);
             var subtask = scope.forkTask(taskType, () -> {
                 try {
                     while (!chatConcurrentStateMap.containsKey(chatId) ||
@@ -144,8 +147,9 @@ public class AsyncJobHandler {
             try {
                 scope.join();
                 return scope.getResult(subtask);
-            } finally {
-                scope.close();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new DungeonPrototypeException(e.getMessage());
             }
         });
     }
