@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.StructuredTaskScope;
 import java.lang.ScopedValue;
 
@@ -42,13 +43,13 @@ public class ChatTaskManager {
     public void cancelScope(long chatId) {
         var scope = scopes.remove(chatId);
         if (scope != null) {
-            scope.shutdown();
+            scope.shutdownRecursive();
             try {
-                scope.join();
+                scope.joinRecursive();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
-            scope.close();
+            scope.closeRecursive();
         }
     }
 
@@ -60,15 +61,47 @@ public class ChatTaskManager {
         private final TaskMetrics metrics;
         private final Map<TaskType, List<Subtask<?>>> tasks = new ConcurrentHashMap<>();
         private final Map<Subtask<?>, SubtaskMeta> metadata = new ConcurrentHashMap<>();
+        private final List<ChatTaskScope> childScopes = new CopyOnWriteArrayList<>();
 
         ChatTaskScope(long chatId, TaskMetrics metrics) {
             this.chatId = chatId;
             this.metrics = metrics;
         }
 
+        public long chatId() {
+            return chatId;
+        }
+
+        public ChatTaskScope openSubScope() {
+            var child = new ChatTaskScope(chatId, metrics);
+            childScopes.add(child);
+            return child;
+        }
+
+        public void shutdownRecursive() {
+            shutdown();
+            childScopes.forEach(ChatTaskScope::shutdownRecursive);
+        }
+
+        public void joinRecursive() throws InterruptedException {
+            join();
+            for (ChatTaskScope child : childScopes) {
+                child.joinRecursive();
+            }
+        }
+
+        public void closeRecursive() {
+            close();
+            childScopes.forEach(ChatTaskScope::closeRecursive);
+        }
+
         /**
          * Forks a task and registers it under provided task type.
          */
+        public <T> Subtask<T> forkTask(TaskType type, Callable<T> callable) {
+            return forkTask(type, -1, callable);
+        }
+
         public <T> Subtask<T> forkTask(TaskType type, long clusterId, Callable<T> callable) {
             var context = new TaskContextData(chatId, clusterId, type);
             metrics.addActiveTask(context);

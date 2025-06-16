@@ -124,25 +124,35 @@ public class LevelGenerationService {
         initConnectionSections(grid, clusterConnectionPoints);
         level.setClusterConnectionPoints(clusterConnectionPoints);
 
-        clusters.values().forEach(cluster ->
-                asyncJobHandler.executeMapGenerationTask(
-                        () -> generateGridSectionWithRetries(cluster),
-                        TaskType.LEVEL_GENERATION,
-                        chatId,
-                        cluster.getId()));
+        var clusterScope = asyncJobHandler.openClusterScope(chatId);
+        var tasks = clusters.values().stream()
+                .collect(Collectors.toMap(LevelGridCluster::getId,
+                        cluster -> asyncJobHandler.submitClusterGenerationTask(
+                                clusterScope,
+                                () -> generateGridSectionWithRetries(cluster),
+                                TaskType.LEVEL_GENERATION,
+                                chatId,
+                                cluster.getId())));
 
-        for (int i = 0; i < clusters.size(); i++) {
-            try {
-                var result = asyncJobHandler.takeGeneratedCluster(chatId);
-                var clusterData = clusters.get(result.clusterId());
-                copyGridSection(grid,
-                        clusterData.getStartConnectionPoint(),
-                        clusterData.getEndConnectionPoint(),
-                        result.clusterGrid());
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                log.warn("Cluster generation interrupted for chatId: {}", chatId);
-            }
+        try {
+            clusterScope.join();
+            tasks.forEach((id, subtask) -> {
+                try {
+                    var result = clusterScope.getResult(subtask);
+                    var clusterData = clusters.get(result.clusterId());
+                    copyGridSection(grid,
+                            clusterData.getStartConnectionPoint(),
+                            clusterData.getEndConnectionPoint(),
+                            result.clusterGrid());
+                } catch (Exception e) {
+                    log.warn("Cluster generation failed for chatId {}: {}", chatId, e.getMessage());
+                }
+            });
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Cluster generation interrupted for chatId: {}", chatId);
+        } finally {
+            clusterScope.close();
         }
 
         log.info("All clusters generated, current grid state:\n{}", printMapGridToLogs(grid));
