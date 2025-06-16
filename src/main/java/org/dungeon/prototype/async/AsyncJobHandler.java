@@ -126,18 +126,26 @@ public class AsyncJobHandler {
     @Async
     public Future<Level> submitMapPopulationTask(Callable<Level> job, TaskType taskType, long chatId) {
         log.debug("Submitting task of type {} for chatId: {}", taskType, chatId);
-        var scope = chatTaskManager.openScope(chatId);
-        return scope.forkTask(taskType, () -> {
-            try {
-                while (!chatConcurrentStateMap.containsKey(chatId) ||
-                        isNull(chatConcurrentStateMap.get(chatId).getLatch())) {
-                    log.info("Waiting for latch to be created for chatId: {}", chatId);
-                    Thread.sleep(1000);
+        return asyncTaskExecutor.submit(() -> {
+            var scope = chatTaskManager.openScope(chatId).openSubScope();
+            var subtask = scope.forkTask(taskType, () -> {
+                try {
+                    while (!chatConcurrentStateMap.containsKey(chatId) ||
+                            isNull(chatConcurrentStateMap.get(chatId).getLatch())) {
+                        log.info("Waiting for latch to be created for chatId: {}", chatId);
+                        Thread.sleep(1000);
+                    }
+                    chatConcurrentStateMap.get(chatId).getLatch().await();
+                    return job.call();
+                } catch (InterruptedException e) {
+                    throw new DungeonPrototypeException(e.getMessage());
                 }
-                chatConcurrentStateMap.get(chatId).getLatch().await();
-                return job.call();
-            } catch (InterruptedException e) {
-                throw new DungeonPrototypeException(e.getMessage());
+            });
+            try {
+                scope.join();
+                return scope.getResult(subtask);
+            } finally {
+                scope.close();
             }
         });
     }
