@@ -84,8 +84,6 @@ public class LevelGenerationService {
             return futureLevel.get();
         } catch (InterruptedException | ExecutionException e) {
             throw new DungeonPrototypeException(e.getMessage());
-        } finally {
-            asyncJobHandler.removeChatState(chatId);
         }
     }
 
@@ -124,17 +122,15 @@ public class LevelGenerationService {
         initConnectionSections(grid, clusterConnectionPoints);
         level.setClusterConnectionPoints(clusterConnectionPoints);
 
-        var clusterScope = asyncJobHandler.openClusterScope(chatId);
-        var tasks = clusters.values().stream()
-                .collect(Collectors.toMap(LevelGridCluster::getId,
-                        cluster -> asyncJobHandler.submitClusterGenerationTask(
-                                clusterScope,
-                                () -> generateGridSectionWithRetries(cluster),
-                                TaskType.LEVEL_GENERATION,
-                                chatId,
-                                cluster.getId())));
-
-        try {
+        try (var clusterScope = asyncJobHandler.openClusterScope(chatId)) {
+            var tasks = clusters.values().stream()
+                    .collect(Collectors.toMap(LevelGridCluster::getId,
+                            cluster -> asyncJobHandler.submitClusterGenerationTask(
+                                    clusterScope,
+                                    () -> generateGridSectionWithRetries(cluster),
+                                    TaskType.LEVEL_GENERATION,
+                                    chatId,
+                                    cluster.getId())));
             clusterScope.join();
             tasks.forEach((id, subtask) -> {
                 try {
@@ -151,8 +147,6 @@ public class LevelGenerationService {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.warn("Cluster generation interrupted for chatId: {}", chatId);
-        } finally {
-            clusterScope.close();
         }
 
         log.info("All clusters generated, current grid state:\n{}", printMapGridToLogs(grid));
