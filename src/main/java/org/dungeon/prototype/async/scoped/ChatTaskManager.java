@@ -102,31 +102,19 @@ public class ChatTaskManager {
          */
         public <T> Subtask<T> forkTask(TaskType type, Callable<T> callable) {
             var context = new BasicTaskContextData(chatId, type);
-            metrics.addActiveTask(context);
-            var sample = Timer.start(metrics.getMeterRegistry());
-            var subtask = super.fork(() ->
-                    ScopedValue.where(TaskContext.CONTEXT, context).call(callable));
-            tasks.computeIfAbsent(type, k -> new ArrayList<>()).add(subtask);
-            metadata.put(subtask, new SubtaskMeta(context, sample));
-            return subtask;
+            return forkSubTask(type, callable, context);
         }
 
         public <T> Subtask<T> forkTask(TaskType type, long clusterId, Callable<T> callable) {
             var context = new ClusterTaskContextData(chatId, clusterId, type);
-            metrics.addActiveTask(context);
-            var sample = Timer.start(metrics.getMeterRegistry());
-            var subtask = super.fork(() ->
-                    ScopedValue.where(TaskContext.CONTEXT, context).call(callable));
-            tasks.computeIfAbsent(type, k -> new ArrayList<>()).add(subtask);
-            metadata.put(subtask, new SubtaskMeta(context, sample));
-            return subtask;
+            return forkSubTask(type, callable, context);
         }
 
         public Map<TaskType, List<Subtask<?>>> tasks() {
             return tasks;
         }
 
-        public <T> T getResult(Subtask<T> subtask) throws Exception {
+        public <T> T getResult(Subtask<T> subtask){
             var meta = metadata.remove(subtask);
             try {
                 var result = subtask.get();
@@ -140,6 +128,16 @@ public class ChatTaskManager {
             } finally {
                 metrics.removeCompletedTask(meta.context());
             }
+        }
+
+        private <T> Subtask<T> forkSubTask(TaskType type, Callable<T> callable, TaskContextData context) {
+            metrics.addActiveTask(context);
+            var sample = Timer.start(metrics.getMeterRegistry());
+            var subtask = super.fork(() ->
+                    ScopedValue.where(TaskContext.CONTEXT, context).call(callable));
+            tasks.computeIfAbsent(type, k -> new ArrayList<>()).add(subtask);
+            metadata.put(subtask, new SubtaskMeta(context, sample));
+            return subtask;
         }
 
         private record SubtaskMeta(TaskContextData context, Timer.Sample sample) {}
