@@ -122,15 +122,17 @@ public class LevelGenerationService {
         initConnectionSections(grid, clusterConnectionPoints);
         level.setClusterConnectionPoints(clusterConnectionPoints);
 
-        try (var clusterScope = asyncJobHandler.openClusterScope(chatId)) {
-            var tasks = clusters.values().stream()
-                    .collect(Collectors.toMap(LevelGridCluster::getId,
-                            cluster -> asyncJobHandler.submitClusterGenerationTask(
-                                    clusterScope,
-                                    () -> generateGridSectionWithRetries(cluster),
-                                    TaskType.LEVEL_GENERATION,
-                                    chatId,
-                                    cluster.getId())));
+        var clusterScope = asyncJobHandler.openClusterScope(chatId);
+        var tasks = clusters.values().stream()
+                .collect(Collectors.toMap(LevelGridCluster::getId,
+                        cluster -> asyncJobHandler.submitClusterGenerationTask(
+                                clusterScope,
+                                () -> generateGridSectionWithRetries(cluster),
+                                TaskType.LEVEL_GENERATION,
+                                chatId,
+                                cluster.getId())));
+
+        try {
             clusterScope.join();
             tasks.forEach((id, subtask) -> {
                 try {

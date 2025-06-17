@@ -50,70 +50,66 @@ public class AsyncJobHandler {
     }
 
     public ChatTaskManager.ChatTaskScope openClusterScope(long chatId) {
-        try (var scope = chatTaskManager.openScope(chatId)) {
-            return scope.openSubScope();
-        }
+        return chatTaskManager.openScope(chatId).openSubScope();
     }
 
 
     @Async
     public void submitItemGenerationTask(Runnable job, TaskType taskType, long chatId) {
         log.debug("Submitting item generation {} task for chatId: {}", taskType, chatId);
-        try (var scope = chatTaskManager.openScope(chatId)) {
-            scope.forkTask(taskType, () -> {
-                chatConcurrentStateMap.computeIfAbsent(chatId,
-                        k -> new ChatConcurrentState(chatId, new CountDownLatch(ItemType.values().length)));
-                int attempt = 1;
-                Exception lastException = null;
-                while (attempt <= ITEM_GENERATION_RETRIES) {
-                    try {
-                        job.run();
-                        log.info("Counting down ({}) latch for chatId: {}",
-                                chatConcurrentStateMap.get(chatId).getLatch().getCount(), chatId);
-                        chatConcurrentStateMap.get(chatId).getLatch().countDown();
-                        return null;
-                    } catch (Exception e) {
-                        lastException = e;
-                        if (attempt < ITEM_GENERATION_RETRIES) {
-                            log.warn(
-                                    "Item generation task {} failed for chatId {}, retrying ({} / {})",
-                                    taskType, chatId, attempt, ITEM_GENERATION_RETRIES);
-                        } else {
-                            log.error(
-                                    "Item generation task {} failed for chatId {} after {} attempts: {}",
-                                    taskType, chatId, ITEM_GENERATION_RETRIES, e.getMessage());
-                        }
-                        attempt++;
+        var scope = chatTaskManager.openScope(chatId);
+        scope.forkTask(taskType, () -> {
+            chatConcurrentStateMap.computeIfAbsent(chatId,
+                    k -> new ChatConcurrentState(chatId, new CountDownLatch(ItemType.values().length)));
+            int attempt = 1;
+            Exception lastException = null;
+            while (attempt <= ITEM_GENERATION_RETRIES) {
+                try {
+                    job.run();
+                    log.info("Counting down ({}) latch for chatId: {}",
+                            chatConcurrentStateMap.get(chatId).getLatch().getCount(), chatId);
+                    chatConcurrentStateMap.get(chatId).getLatch().countDown();
+                    return null;
+                } catch (Exception e) {
+                    lastException = e;
+                    if (attempt < ITEM_GENERATION_RETRIES) {
+                        log.warn(
+                                "Item generation task {} failed for chatId {}, retrying ({} / {})",
+                                taskType, chatId, attempt, ITEM_GENERATION_RETRIES);
+                    } else {
+                        log.error(
+                                "Item generation task {} failed for chatId {} after {} attempts: {}",
+                                taskType, chatId, ITEM_GENERATION_RETRIES, e.getMessage());
                     }
+                    attempt++;
                 }
-                throw new ItemGenerationException(chatId, lastException.getMessage(), CallbackType.MENU_BACK);
-            });
-        }
+            }
+            throw new ItemGenerationException(chatId, lastException.getMessage(), CallbackType.MENU_BACK);
+        });
     }
 
     @Async
     public void submitEffectGenerationTask(Runnable job, TaskType taskType, long chatId) {
         log.debug("Submitting effect generation {} task for chatId: {}", taskType, chatId);
-        try (var scope = chatTaskManager.openScope(chatId)) {
-            scope.forkTask(taskType, () -> {
-                try {
-                    while (!chatConcurrentStateMap.containsKey(chatId) ||
-                            isNull(chatConcurrentStateMap.get(chatId).getLatch())) {
-                        log.info("Waiting for latch to be created for chatId: {}", chatId);
-                        Thread.sleep(1000);
-                    }
-                    while (chatConcurrentStateMap.get(chatId).getLatch().getCount() > 1) {
-                        log.info("Waiting for vanilla items to generate for chatId: {}", chatId);
-                        Thread.sleep(1000);
-                    }
-                    job.run();
-                    chatConcurrentStateMap.get(chatId).getLatch().countDown();
-                } catch (Exception e) {
-                    log.warn("Effect generation task {} failed for chatId {}: {}", taskType, chatId, e.getMessage());
+        var scope = chatTaskManager.openScope(chatId);
+        scope.forkTask(taskType, () -> {
+            try {
+                while (!chatConcurrentStateMap.containsKey(chatId) ||
+                        isNull(chatConcurrentStateMap.get(chatId).getLatch())) {
+                    log.info("Waiting for latch to be created for chatId: {}", chatId);
+                    Thread.sleep(1000);
                 }
-                return null;
-            });
-        }
+                while (chatConcurrentStateMap.get(chatId).getLatch().getCount() > 1) {
+                    log.info("Waiting for vanilla items to generate for chatId: {}", chatId);
+                    Thread.sleep(1000);
+                }
+                job.run();
+                chatConcurrentStateMap.get(chatId).getLatch().countDown();
+            } catch (Exception e) {
+                log.warn("Effect generation task {} failed for chatId {}: {}", taskType, chatId, e.getMessage());
+            }
+            return null;
+        });
     }
 
     public ChatTaskManager.ChatTaskScope.Subtask<GeneratedCluster> submitClusterGenerationTask(
@@ -131,36 +127,8 @@ public class AsyncJobHandler {
     public Future<Level> submitMapPopulationTask(Callable<Level> job, TaskType taskType, long chatId) {
         log.debug("Submitting task of type {} for chatId: {}", taskType, chatId);
         return asyncTaskExecutor.submit(() -> {
-            try (var scope = chatTaskManager.openScope(chatId)) {
-                var subtask = scope.forkTask(taskType, () -> {
-                    try {
-                        while (!chatConcurrentStateMap.containsKey(chatId) ||
-                                isNull(chatConcurrentStateMap.get(chatId).getLatch())) {
-                            log.info("Waiting for latch to be created for chatId: {}", chatId);
-                            Thread.sleep(1000);
-                        }
-                        chatConcurrentStateMap.get(chatId).getLatch().await();
-                        return job.call();
-                    } catch (InterruptedException e) {
-                        throw new DungeonPrototypeException(e.getMessage());
-                    }
-                });
-                try {
-                    scope.join();
-                    return scope.getResult(subtask);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new DungeonPrototypeException(e.getMessage());
-                }
-            }
-        });
-    }
-
-    @Async
-    public void submitTask(Runnable job, TaskType taskType, long chatId) {
-        log.debug("Submitting task of type {} for chatId: {}", taskType, chatId);
-        try (var scope = chatTaskManager.openScope(chatId)) {
-            scope.forkTask(taskType, () -> {
+            var scope = chatTaskManager.openScope(chatId);
+            var subtask = scope.forkTask(taskType, () -> {
                 try {
                     while (!chatConcurrentStateMap.containsKey(chatId) ||
                             isNull(chatConcurrentStateMap.get(chatId).getLatch())) {
@@ -168,13 +136,39 @@ public class AsyncJobHandler {
                         Thread.sleep(1000);
                     }
                     chatConcurrentStateMap.get(chatId).getLatch().await();
-                    job.run();
+                    return job.call();
                 } catch (InterruptedException e) {
                     throw new DungeonPrototypeException(e.getMessage());
                 }
-                return null;
             });
-        }
+            try {
+                scope.join();
+                return scope.getResult(subtask);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new DungeonPrototypeException(e.getMessage());
+            }
+        });
+    }
+
+    @Async
+    public void submitTask(Runnable job, TaskType taskType, long chatId) {
+        log.debug("Submitting task of type {} for chatId: {}", taskType, chatId);
+        var scope = chatTaskManager.openScope(chatId);
+        scope.forkTask(taskType, () -> {
+            try {
+                while (!chatConcurrentStateMap.containsKey(chatId) ||
+                        isNull(chatConcurrentStateMap.get(chatId).getLatch())) {
+                    log.info("Waiting for latch to be created for chatId: {}", chatId);
+                    Thread.sleep(1000);
+                }
+                chatConcurrentStateMap.get(chatId).getLatch().await();
+                job.run();
+            } catch (InterruptedException e) {
+                throw new DungeonPrototypeException(e.getMessage());
+            }
+            return null;
+        });
     }
 
     @Async
