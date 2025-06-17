@@ -50,7 +50,7 @@ public class LevelGridCluster {
 
     public boolean isSmallCluster() {
         return (abs(endConnectionPoint.getX() - startConnectionPoint.getX()) < 4) &&
-                (abs(endConnectionPoint.getY() - startConnectionPoint .getY()) < 4);
+                (abs(endConnectionPoint.getY() - startConnectionPoint.getY()) < 4);
     }
 
     public boolean hasNegativeRooms() {
@@ -86,39 +86,39 @@ public class LevelGridCluster {
         walkers = new ArrayList<>();
         if (isSmallCluster()) {
             log.info("Small cluster, adding two border walkers...");
-            walkers = Arrays.asList(WalkerBuilder.builder()
-                            .pathFromStart(0)
-                            .isReversed(false)
-                            .cluster(this)
-                            .longestPathDefault(true)
-                            .currentPoint(new Point(0, 0))
-                            .build(),
-                    WalkerBuilder.builder()
-                            .pathFromStart(0)
-                            .isReversed(false)
-                            .longestPathDefault(true)
-                            .cluster(this)
-                            .currentPoint(new Point(0, 0))
-                            .build());
+            walkers.add(WalkerBuilder.builder()
+                    .pathFromStart(0)
+                    .isReversed(false)
+                    .cluster(this)
+                    .longestPathDefault(true)
+                    .currentPoint(new Point(0, 0))
+                    .build());
+            walkers.add(WalkerBuilder.builder()
+                    .pathFromStart(0)
+                    .isReversed(false)
+                    .longestPathDefault(true)
+                    .cluster(this)
+                    .currentPoint(new Point(0, 0))
+                    .build());
             return;
         }
         if (hasSmallSide()) {
             log.info("Small sided cluster, adding start and end walkers...");
-            walkers = Arrays.asList(WalkerBuilder.builder()
-                            .pathFromStart(0)
-                            .isReversed(false)
-                            .cluster(this)
-                            .longestPathDefault(false)
-                            .currentPoint(new Point(0, 0))
-                            .build(),
-                    WalkerBuilder.builder()
-                            .isReversed(true)
-                            .longestPathDefault(true)
-                            .pathFromStart(0)
-                            .cluster(this)
-                            .currentPoint(new Point(endConnectionPoint.getX() - startConnectionPoint.getX(),
-                                    endConnectionPoint.getY() - startConnectionPoint.getY()))
-                            .build());
+            walkers.add(WalkerBuilder.builder()
+                    .pathFromStart(0)
+                    .isReversed(false)
+                    .cluster(this)
+                    .longestPathDefault(false)
+                    .currentPoint(new Point(0, 0))
+                    .build());
+            walkers.add(WalkerBuilder.builder()
+                    .isReversed(true)
+                    .longestPathDefault(true)
+                    .pathFromStart(0)
+                    .cluster(this)
+                    .currentPoint(new Point(endConnectionPoint.getX() - startConnectionPoint.getX(),
+                            endConnectionPoint.getY() - startConnectionPoint.getY()))
+                    .build());
             return;
         }
         int fromStartWalkersNumber = getRandomInt(1, 2);
