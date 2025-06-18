@@ -80,10 +80,36 @@ public class BalanceMatrixService {
                 .getData());
     }
 
-    public double[] getBalanceMatrixVector(long chatId, String name, int col) {
-        return Arrays.stream(getBalanceMatrix(chatId, name))
-                .mapToDouble(row -> row[col])
-                .toArray();
+    public double[] getBalanceMatrixColumnVector(long chatId, String name, int column) {
+        double[][] matrix = getBalanceMatrix(chatId, name);
+        if (matrix.length == 0) {
+            throw new DungeonPrototypeException("Empty balance matrix for " + name);
+        }
+        if (column < matrix[0].length) {
+            return Arrays.stream(matrix)
+                    .mapToDouble(row -> row[column])
+                    .toArray();
+        }
+        if (column < matrix.length) { // handle reversed orientation
+            return matrix[column];
+        }
+        throw new DungeonPrototypeException("Index out of bounds for balance matrix " + name + ": " + column);
+    }
+
+    public double[] getBalanceMatrixRowVector(long chatId, String name, int row) {
+        double[][] matrix = getBalanceMatrix(chatId, name);
+        if (matrix.length == 0) {
+            throw new DungeonPrototypeException("Empty balance matrix for " + name);
+        }
+        if (row < matrix.length) {
+            return matrix[row];
+        }
+        if (row < matrix[0].length) { // handle reversed orientation
+            return Arrays.stream(matrix)
+                    .mapToDouble(r -> r[row])
+                    .toArray();
+        }
+        throw new DungeonPrototypeException("Index out of bounds for balance matrix " + name + ": " + row);
     }
 
     private void initializeBalanceMatrix(long chatId, List<BalanceMatrixGenerationRequest> requests) {
