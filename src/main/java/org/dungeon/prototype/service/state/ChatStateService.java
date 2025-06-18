@@ -156,7 +156,6 @@ public class ChatStateService {
                     levelService.remove(chatId);
                 }
             }
-            chatTaskManager.removeChatState(chatId);
             chatTaskManager.cancelScope(chatId);
             chatState.setChatState(IDLE);
             chatState.setLastActiveTime(new AtomicLong(System.currentTimeMillis()));
