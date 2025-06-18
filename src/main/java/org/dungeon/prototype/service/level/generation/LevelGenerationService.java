@@ -8,6 +8,7 @@ import org.dungeon.prototype.exception.DungeonPrototypeException;
 import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.level.Level;
 import org.dungeon.prototype.model.Point;
+import org.dungeon.prototype.model.level.generation.GeneratedCluster;
 import org.dungeon.prototype.model.level.generation.LevelGridCluster;
 import org.dungeon.prototype.model.level.generation.NextRoomDto;
 import org.dungeon.prototype.model.level.ui.LevelMap;
@@ -143,7 +144,8 @@ public class LevelGenerationService {
                         cluster -> clusterScope.forkTask(
                                 TaskType.LEVEL_GENERATION,
                                 cluster.getId(),
-                                () -> generateGridSectionWithRetries(cluster)));
+                                () -> new GeneratedCluster(chatId, cluster.getId(),
+                                        generateGridSectionWithRetries(cluster)))));
 
         try {
             clusterScope.join();

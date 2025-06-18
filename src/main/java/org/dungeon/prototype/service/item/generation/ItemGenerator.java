@@ -6,6 +6,7 @@ import org.apache.commons.math3.util.Pair;
 import org.dungeon.prototype.async.scoped.ChatTaskManager;
 import org.dungeon.prototype.async.TaskType;
 import org.dungeon.prototype.exception.EntityNotFoundException;
+import org.dungeon.prototype.exception.ItemGenerationException;
 import org.dungeon.prototype.model.effect.AdditionEffect;
 import org.dungeon.prototype.model.effect.Effect;
 import org.dungeon.prototype.model.effect.MultiplicationEffect;
