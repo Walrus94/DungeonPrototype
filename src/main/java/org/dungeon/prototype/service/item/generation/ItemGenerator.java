@@ -348,8 +348,8 @@ public class ItemGenerator {
     }
 
     private Map<WearableMaterial, Double> getWearableMaterialAdjustmentVector(long chatId) {
-        val armorBonus = balanceMatrixService.getBalanceMatrixRowVector(chatId, "wearable_armor_bonus", 0);
-        val chanceToDodgeAdjustment = balanceMatrixService.getBalanceMatrixRowVector(chatId, "wearable_chance_to_dodge_adjustment", 0);
+        val armorBonus = balanceMatrixService.getBalanceMatrixColumnVector(chatId, "wearable_armor_bonus", 0);
+        val chanceToDodgeAdjustment = balanceMatrixService.getBalanceMatrixColumnVector(chatId, "wearable_chance_to_dodge_adjustment", 0);
 
         return normalizeMap(Arrays.stream(WearableMaterial.values()).collect(Collectors.toMap(Function.identity(), v -> 1 / (defaultArmor + armorBonus[v.ordinal()] + chanceToDodgeAdjustment[v.ordinal()]))));
     }
@@ -480,7 +480,7 @@ public class ItemGenerator {
 
     private Weapon calculateParameters(long chatId, Weapon weapon) {
         log.info("Calculating weapon params...");
-        val defaultAttributes = balanceMatrixService.getBalanceMatrixRowVector(chatId, "weapon_type_attr", weapon.getAttributes().getWeaponType().ordinal());
+        val defaultAttributes = balanceMatrixService.getBalanceMatrixColumnVector(chatId, "weapon_type_attr", weapon.getAttributes().getWeaponType().ordinal());
         log.debug("Default attributes: {}", defaultAttributes);
         weapon.setAttack((int) defaultAttributes[0]);
         weapon.setCriticalHitChance(defaultAttributes[1]);
@@ -491,11 +491,11 @@ public class ItemGenerator {
             weapon.setMagicType(getRandomMagicType());
         }
 
-        val handlingAdjustmentAttributes = balanceMatrixService.getBalanceMatrixRowVector(chatId, "weapon_handling_type_adjustment", weapon.getAttributes().getHandling().ordinal());
+        val handlingAdjustmentAttributes = balanceMatrixService.getBalanceMatrixColumnVector(chatId, "weapon_handling_type_adjustment", weapon.getAttributes().getHandling().ordinal());
         log.debug("Handling adjustment attributes: {}", handlingAdjustmentAttributes);
         applyAdjustment(weapon, handlingAdjustmentAttributes);
 
-        val weaponMaterialAdjustmentAttributes = balanceMatrixService.getBalanceMatrixRowVector(chatId, "weapon_material_adjustment", weapon.getAttributes().getWeaponMaterial().ordinal());
+        val weaponMaterialAdjustmentAttributes = balanceMatrixService.getBalanceMatrixColumnVector(chatId, "weapon_material_adjustment", weapon.getAttributes().getWeaponMaterial().ordinal());
         log.debug("Weapon material adjustment attributes: {}", weaponMaterialAdjustmentAttributes);
         applyAdjustment(weapon, weaponMaterialAdjustmentAttributes);
         if (ENCHANTED_WOOD.equals(weapon.getAttributes().getWeaponMaterial()) && isNull(weapon.getMagicType())) {
