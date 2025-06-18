@@ -3,7 +3,7 @@ package org.dungeon.prototype.service.item.generation;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.math3.util.Pair;
-import org.dungeon.prototype.async.AsyncJobHandler;
+import org.dungeon.prototype.async.scoped.ChatTaskManager;
 import org.dungeon.prototype.async.TaskType;
 import org.dungeon.prototype.exception.EntityNotFoundException;
 import org.dungeon.prototype.model.effect.AdditionEffect;
@@ -23,6 +23,7 @@ import org.dungeon.prototype.model.inventory.attributes.wearable.WearableMateria
 import org.dungeon.prototype.model.inventory.attributes.wearable.WearableType;
 import org.dungeon.prototype.model.inventory.items.Weapon;
 import org.dungeon.prototype.model.inventory.items.Wearable;
+import org.dungeon.prototype.model.document.item.ItemType;
 import org.dungeon.prototype.properties.CallbackType;
 import org.dungeon.prototype.service.balancing.BalanceMatrixService;
 import org.dungeon.prototype.service.effect.ItemEffectsGenerator;
@@ -87,7 +88,7 @@ public class ItemGenerator {
     @Autowired
     private ItemService itemService;
     @Autowired
-    private AsyncJobHandler asyncJobHandler;
+    private ChatTaskManager chatTaskManager;
     @Autowired
     private MessageService messageService;
     @Autowired
@@ -96,6 +97,8 @@ public class ItemGenerator {
     private GameResultService gameResultService;
     @Autowired
     private ItemEffectsGenerator itemEffectsGenerator;
+
+    private static final int ITEM_GENERATION_RETRIES = 3;
 
     /**
      * Generates items for game: runs two async generators
@@ -107,11 +110,66 @@ public class ItemGenerator {
      */
     public void generateItems(Long chatId) {
         messageService.sendItemsGeneratingInfoMessage(chatId);
+        var state = chatTaskManager.getOrCreateChatState(chatId, ItemType.values().length);
+        var scope = chatTaskManager.openScope(chatId);
 
-        asyncJobHandler.submitItemGenerationTask(() -> generateWeapons(chatId), TaskType.WEAPON_GENERATION, chatId);
-        asyncJobHandler.submitItemGenerationTask(() -> generateWearables(chatId), TaskType.WEARABLE_GENERATION, chatId);
+        scope.forkTask(TaskType.WEAPON_GENERATION, () -> {
+            int attempt = 1;
+            Exception lastException = null;
+            while (attempt <= ITEM_GENERATION_RETRIES) {
+                try {
+                    generateWeapons(chatId);
+                    log.info("Counting down ({}) latch for chatId: {}", state.getLatch().getCount(), chatId);
+                    state.getLatch().countDown();
+                    return null;
+                } catch (Exception e) {
+                    lastException = e;
+                    if (attempt < ITEM_GENERATION_RETRIES) {
+                        log.warn("Item generation task {} failed for chatId {}, retrying ({} / {})", TaskType.WEAPON_GENERATION, chatId, attempt, ITEM_GENERATION_RETRIES);
+                    } else {
+                        log.error("Item generation task {} failed for chatId {} after {} attempts: {}", TaskType.WEAPON_GENERATION, chatId, ITEM_GENERATION_RETRIES, e.getMessage());
+                    }
+                    attempt++;
+                }
+            }
+            throw new ItemGenerationException(chatId, lastException.getMessage(), CallbackType.MENU_BACK);
+        });
 
-        asyncJobHandler.submitEffectGenerationTask(() -> addEffects(chatId), TaskType.EFFECTS_GENERATION, chatId);
+        scope.forkTask(TaskType.WEARABLE_GENERATION, () -> {
+            int attempt = 1;
+            Exception lastException = null;
+            while (attempt <= ITEM_GENERATION_RETRIES) {
+                try {
+                    generateWearables(chatId);
+                    log.info("Counting down ({}) latch for chatId: {}", state.getLatch().getCount(), chatId);
+                    state.getLatch().countDown();
+                    return null;
+                } catch (Exception e) {
+                    lastException = e;
+                    if (attempt < ITEM_GENERATION_RETRIES) {
+                        log.warn("Item generation task {} failed for chatId {}, retrying ({} / {})", TaskType.WEARABLE_GENERATION, chatId, attempt, ITEM_GENERATION_RETRIES);
+                    } else {
+                        log.error("Item generation task {} failed for chatId {} after {} attempts: {}", TaskType.WEARABLE_GENERATION, chatId, ITEM_GENERATION_RETRIES, e.getMessage());
+                    }
+                    attempt++;
+                }
+            }
+            throw new ItemGenerationException(chatId, lastException.getMessage(), CallbackType.MENU_BACK);
+        });
+
+        scope.forkTask(TaskType.EFFECTS_GENERATION, () -> {
+            try {
+                while (state.getLatch().getCount() > 1) {
+                    log.info("Waiting for vanilla items to generate for chatId:{}", chatId);
+                    Thread.sleep(1000);
+                }
+                addEffects(chatId);
+                state.getLatch().countDown();
+            } catch (Exception e) {
+                log.warn("Effect generation task {} failed for chatId {}: {}", TaskType.EFFECTS_GENERATION, chatId, e.getMessage());
+            }
+            return null;
+        });
     }
 
     private void generateWeapons(Long chatId) {
