@@ -16,7 +16,9 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.StructuredTaskScope;
+import java.util.concurrent.CountDownLatch;
 import java.lang.ScopedValue;
+import org.dungeon.prototype.async.ChatConcurrentState;
 
 /**
  * Manages StructuredTaskScope instances per chat and
@@ -26,6 +28,7 @@ import java.lang.ScopedValue;
 public class ChatTaskManager {
 
     private final Map<Long, ChatTaskScope> scopes = new ConcurrentHashMap<>();
+    private final Map<Long, ChatConcurrentState> chatStates = new ConcurrentHashMap<>();
     private final TaskMetrics taskMetrics;
 
     public ChatTaskManager(TaskMetrics taskMetrics) {
@@ -52,6 +55,23 @@ public class ChatTaskManager {
                 Thread.currentThread().interrupt();
             }
             scope.closeRecursive();
+        }
+        removeChatState(chatId);
+    }
+
+    public ChatConcurrentState getOrCreateChatState(long chatId, int latchCount) {
+        return chatStates.computeIfAbsent(chatId,
+                id -> new ChatConcurrentState(chatId, new CountDownLatch(latchCount)));
+    }
+
+    public ChatConcurrentState getChatState(long chatId) {
+        return chatStates.get(chatId);
+    }
+
+    public void removeChatState(long chatId) {
+        var state = chatStates.remove(chatId);
+        if (state != null && state.getGridSectionsQueue() != null) {
+            state.getGridSectionsQueue().clear();
         }
     }
 
