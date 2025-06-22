@@ -84,6 +84,6 @@ jobs:
 
       - name: Remove unused containers and volumes
         run: |
-          docker system prune -af &&
+          docker system prune -f &&
           docker volume prune -f
 
