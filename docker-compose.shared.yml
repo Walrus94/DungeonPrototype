@@ -112,33 +112,12 @@ services:
     networks:
       - shared_net
 
-  zookeeper:
-    image: 'confluentinc/cp-zookeeper:latest'
-    container_name: zookeeper
-    restart: always
-    networks:
-      - shared_net
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    labels:
-      environment: shared
-      service: zookeeper
-    logging:
-      driver: "json-file"
-      options:
-        labels: environment,service
-    ports:
-      - '2181:2181'
-
   kafka:
     image: 'confluentinc/cp-kafka:latest'
     container_name: kafka
     restart: unless-stopped
     networks:
       - shared_net
-    depends_on:
-      - zookeeper
     ports:
       - ${KAFKA_PORT}:${KAFKA_PORT}
       - "9998:9998"
@@ -151,17 +130,20 @@ services:
       options:
         labels: environment,service
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:${KAFKA_PORT}
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'false'
+      KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:${KAFKA_PORT},CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:${KAFKA_PORT}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'false'
       KAFKA_DEFAULT_PARTITIONS: 3
       KAFKA_DEFAULT_REPLICATION_FACTOR: 1
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_LOG4J_LOGGERS: "kafka.consumer.logger=INFO"
+      CLUSTER_ID: b05H3-XLQJ6OHoE8Z3LNXg
 #      TODO: Uncomment the following lines to enable JMX monitoring
 #      KAFKA_JMX_PORT: 9998
 #      KAFKA_JMX_OPTS: >
