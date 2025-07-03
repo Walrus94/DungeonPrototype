@@ -143,7 +143,7 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_LOG4J_LOGGERS: "kafka.consumer.logger=INFO"
-      CLUSTER_ID: MkU3OEVBNTcwNTJDM0M5Qk
+      CLUSTER_ID: b05H3-XLQJ6OHoE8Z3LNXg
 #      TODO: Uncomment the following lines to enable JMX monitoring
 #      KAFKA_JMX_PORT: 9998
 #      KAFKA_JMX_OPTS: >
