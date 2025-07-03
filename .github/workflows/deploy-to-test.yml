@@ -16,7 +16,6 @@ on:
         - codex/introduce-single-consumer-for-asynctaskcompletionservice
         - codex/investigate-itemgenerator-class-failure
         - codex/investigate-weapon-generation-failure
-        - codex/migrate-to-kraft-mode-in-docker-setup
         - codex/refactor-code-to-use-structuredtaskscope
         - codex/reset-async-state-on-/stop-command
         - develop
