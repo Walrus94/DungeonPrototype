@@ -35,7 +35,6 @@ on:
           - prometheus
           - grafana
           - mongodb-exporter
-          - zookeeper
           - kafka
           - mongo
           - postgres
