@@ -57,8 +57,6 @@ def initialize_consumer() -> Consumer:
     )
     return kafka_consumer
 
-kafka_consumer = initialize_consumer()
-
 async def consume_messages():
     """Listens for balance matrix requests."""
     try:
@@ -89,4 +87,5 @@ async def consume_messages():
         logging.info("Kafka consumer closed.")
 
 if __name__ == '__main__':
+    kafka_consumer = initialize_consumer()
     asyncio.run(consume_messages())
