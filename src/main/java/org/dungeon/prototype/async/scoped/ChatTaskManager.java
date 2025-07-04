@@ -55,6 +55,19 @@ public class ChatTaskManager {
                 Thread.currentThread().interrupt();
             }
             scope.closeRecursive();
+
+            var state = chatStates.remove(chatId);
+            if (state != null) {
+                var latch = state.getLatch();
+                if (latch != null) {
+                    while (latch.getCount() > 0) {
+                        latch.countDown();
+                    }
+                }
+                if (state.getGridSectionsQueue() != null) {
+                    state.getGridSectionsQueue().clear();
+                }
+            }
         }
         removeChatState(chatId);
     }
