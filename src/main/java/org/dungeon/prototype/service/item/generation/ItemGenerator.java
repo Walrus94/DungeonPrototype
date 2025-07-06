@@ -111,10 +111,10 @@ public class ItemGenerator {
      */
     public void generateItems(Long chatId) {
         messageService.sendItemsGeneratingInfoMessage(chatId);
-        var state = chatTaskManager.getOrCreateChatState(chatId, ItemType.values().length);
         var scope = chatTaskManager.openScope(chatId);
 
         scope.forkTask(TaskType.WEAPON_GENERATION, () -> {
+            var state = chatTaskManager.getOrCreateChatState(chatId, ItemType.values().length);
             int attempt = 1;
             Exception lastException = null;
             while (attempt <= ITEM_GENERATION_RETRIES) {
@@ -137,6 +137,7 @@ public class ItemGenerator {
         });
 
         scope.forkTask(TaskType.WEARABLE_GENERATION, () -> {
+            var state = chatTaskManager.getOrCreateChatState(chatId, ItemType.values().length);
             int attempt = 1;
             Exception lastException = null;
             while (attempt <= ITEM_GENERATION_RETRIES) {
@@ -159,6 +160,7 @@ public class ItemGenerator {
         });
 
         scope.forkTask(TaskType.EFFECTS_GENERATION, () -> {
+            var state = chatTaskManager.getOrCreateChatState(chatId, ItemType.values().length);
             try {
                 while (state.getLatch().getCount() > 1) {
                     log.info("Waiting for vanilla items to generate for chatId:{}", chatId);
