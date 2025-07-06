@@ -1,5 +1,3 @@
 logging:
   level:
     root: debug
-    org.dungeon.prototype.service.level.generation.LevelGenerationService: info
-    org.dungeon.prototype.service.level.generation.WalkerBuilder: info
