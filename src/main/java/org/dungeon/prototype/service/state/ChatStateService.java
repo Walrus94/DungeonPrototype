@@ -2,7 +2,6 @@ package org.dungeon.prototype.service.state;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.dungeon.prototype.async.AsyncJobHandler;
 import org.dungeon.prototype.async.scoped.ChatTaskManager;
 import org.dungeon.prototype.bot.state.ChatContext;
 import org.dungeon.prototype.bot.state.ChatState;
@@ -48,8 +47,6 @@ public class ChatStateService {
     BalanceMatrixService balanceMatrixService;
     @Autowired
     MessageService messageService;
-    @Autowired
-    AsyncJobHandler asyncJobHandler;
     @Autowired
     ChatTaskManager chatTaskManager;
 
@@ -159,7 +156,6 @@ public class ChatStateService {
                     levelService.remove(chatId);
                 }
             }
-            asyncJobHandler.removeChatState(chatId);
             chatTaskManager.cancelScope(chatId);
             chatState.setChatState(IDLE);
             chatState.setLastActiveTime(new AtomicLong(System.currentTimeMillis()));

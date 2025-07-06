@@ -3,9 +3,10 @@ package org.dungeon.prototype.bot;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.dungeon.prototype.annotations.aspect.AnswerCallback;
-import org.dungeon.prototype.async.AsyncJobHandler;
+import org.dungeon.prototype.async.scoped.ChatTaskManager;
 import org.dungeon.prototype.async.TaskType;
 import org.dungeon.prototype.exception.CallbackParsingException;
+import org.dungeon.prototype.exception.DungeonPrototypeException;
 import org.dungeon.prototype.exception.RestrictedOperationException;
 import org.dungeon.prototype.model.player.PlayerAttribute;
 import org.dungeon.prototype.model.room.content.MonsterRoom;
@@ -46,7 +47,7 @@ public class CallbackHandler {
     @Autowired
     BotCommandHandler botCommandHandler;
     @Autowired
-    AsyncJobHandler asyncJobHandler;
+    ChatTaskManager chatTaskManager;
     @Autowired
     private PlayerService playerService;
     @Autowired
@@ -213,14 +214,29 @@ public class CallbackHandler {
     private void handleStartingNewGame(Long chatId) {
         balanceMatrixService.initializeBalanceMatrices(chatId);
         itemGenerator.generateItems(chatId);
-        asyncJobHandler.submitTask(() -> {
-            val defaultInventory = inventoryService.getDefaultInventory(chatId);
-            var player = playerService.getPlayerPreparedForNewGame(chatId, defaultInventory);
-            player = effectService.updatePlayerEffects(player);
-            player = effectService.updateArmorEffect(player);
-            inventoryService.saveOrUpdateInventory(defaultInventory);
-            playerService.updatePlayer(player);
-        }, TaskType.PREPARE_PLAYER, chatId);
+        var scope = chatTaskManager.openScope(chatId);
+        scope.forkTask(TaskType.PREPARE_PLAYER, () -> {
+            try {
+                while (true) {
+                    var state = chatTaskManager.getChatState(chatId);
+                    if (state != null && state.getLatch() != null) {
+                        state.getLatch().await();
+                        break;
+                    }
+                    log.info("Waiting for latch to be created for chatId: {}", chatId);
+                    Thread.sleep(1000);
+                }
+                val defaultInventory = inventoryService.getDefaultInventory(chatId);
+                var player = playerService.getPlayerPreparedForNewGame(chatId, defaultInventory);
+                player = effectService.updatePlayerEffects(player);
+                player = effectService.updateArmorEffect(player);
+                inventoryService.saveOrUpdateInventory(defaultInventory);
+                playerService.updatePlayer(player);
+            } catch (InterruptedException e) {
+                throw new DungeonPrototypeException(e.getMessage());
+            }
+            return null;
+        });
         levelService.startNewGame(chatId);
     }
 

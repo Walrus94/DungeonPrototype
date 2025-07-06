@@ -2,12 +2,13 @@ package org.dungeon.prototype.service.level.generation;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.dungeon.prototype.async.AsyncJobHandler;
+import org.dungeon.prototype.async.scoped.ChatTaskManager;
 import org.dungeon.prototype.async.TaskType;
 import org.dungeon.prototype.exception.DungeonPrototypeException;
 import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.level.Level;
 import org.dungeon.prototype.model.Point;
+import org.dungeon.prototype.model.level.generation.GeneratedCluster;
 import org.dungeon.prototype.model.level.generation.LevelGridCluster;
 import org.dungeon.prototype.model.level.generation.NextRoomDto;
 import org.dungeon.prototype.model.level.ui.LevelMap;
@@ -38,8 +39,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -69,7 +68,7 @@ public class LevelGenerationService {
     @Autowired
     private WeightCalculationService weightCalculationService;
     @Autowired
-    private AsyncJobHandler asyncJobHandler;
+    private ChatTaskManager chatTaskManager;
     @Autowired
     private PlayerService playerService;
     @Autowired
@@ -78,11 +77,28 @@ public class LevelGenerationService {
     public Level generateAndPopulateLevel(Long chatId, Integer levelNumber) {
         var levelMap = generateLevelMap(chatId, levelNumber);
         log.debug("Generated level map\n{}", printMapGridToLogs(levelMap.getGrid()));
-        val futureLevel = asyncJobHandler.submitMapPopulationTask(() ->
-                populateLevel(chatId, levelNumber, levelMap), TaskType.LEVEL_GENERATION, chatId);
+        var scope = chatTaskManager.openScope(chatId);
+        var subtask = scope.forkTask(TaskType.LEVEL_GENERATION, () -> {
+            try {
+                while (true) {
+                    var state = chatTaskManager.getChatState(chatId);
+                    if (state != null && state.getLatch() != null) {
+                        state.getLatch().await();
+                        break;
+                    }
+                    log.info("Waiting for latch to be created for chatId: {}", chatId);
+                    Thread.sleep(1000);
+                }
+                return populateLevel(chatId, levelNumber, levelMap);
+            } catch (InterruptedException e) {
+                throw new DungeonPrototypeException(e.getMessage());
+            }
+        });
         try {
-            return futureLevel.get();
-        } catch (InterruptedException | ExecutionException e) {
+            scope.join();
+            return scope.getResult(subtask);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             throw new DungeonPrototypeException(e.getMessage());
         }
     }
@@ -122,15 +138,14 @@ public class LevelGenerationService {
         initConnectionSections(grid, clusterConnectionPoints);
         level.setClusterConnectionPoints(clusterConnectionPoints);
 
-        var clusterScope = asyncJobHandler.openClusterScope(chatId);
+        var clusterScope = chatTaskManager.openScope(chatId).openSubScope();
         var tasks = clusters.values().stream()
                 .collect(Collectors.toMap(LevelGridCluster::getId,
-                        cluster -> asyncJobHandler.submitClusterGenerationTask(
-                                clusterScope,
-                                () -> generateGridSectionWithRetries(cluster),
+                        cluster -> clusterScope.forkTask(
                                 TaskType.LEVEL_GENERATION,
-                                chatId,
-                                cluster.getId())));
+                                cluster.getId(),
+                                () -> new GeneratedCluster(chatId, cluster.getId(),
+                                        generateGridSectionWithRetries(cluster)))));
 
         try {
             clusterScope.join();

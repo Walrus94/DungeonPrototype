@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from kafka.consumer import consume_messages
+from kafka.consumer import consume_messages, initialize_consumer
 from db.mongo import init_balance_matrices_index
 
 logging.basicConfig(level=logging.DEBUG)
@@ -18,4 +18,5 @@ def init_app():
 if __name__ == '__main__':
     init_app()
     logging.info("Starting Kafka consumer")
-    asyncio.run(consume_messages())
+    kafka_consumer = initialize_consumer()
+    asyncio.run(consume_messages(kafka_consumer))
