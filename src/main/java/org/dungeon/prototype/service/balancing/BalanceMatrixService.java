@@ -39,7 +39,7 @@ public class BalanceMatrixService {
                 new BalanceMatrixGenerationRequest("weapon_complete_wood_adjustment", weaponAttributeVectorSize, 1),
                 new BalanceMatrixGenerationRequest("weapon_complete_steel_adjustment", weaponAttributeVectorSize, 1),
                 new BalanceMatrixGenerationRequest("weapon_complete_dragon_bone_adjustment", weaponAttributeVectorSize, 1),
-                new BalanceMatrixGenerationRequest("weapon_size_adjustment", weaponAttributeVectorSize, Size.values().length),
+                new BalanceMatrixGenerationRequest("items_size_adjustment", weaponAttributeVectorSize, Size.values().length),
                 new BalanceMatrixGenerationRequest("weapon_attack_type_adjustment", weaponAttributeVectorSize, WeaponAttackType.values().length),
                 new BalanceMatrixGenerationRequest("items_quality_adjustment", Quality.values().length, 1),
                 new BalanceMatrixGenerationRequest("wearable_armor_bonus", WearableMaterial.values().length, 1),
