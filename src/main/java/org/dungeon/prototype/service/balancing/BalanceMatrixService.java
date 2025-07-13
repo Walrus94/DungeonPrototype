@@ -85,15 +85,13 @@ public class BalanceMatrixService {
         if (matrix.length == 0) {
             throw new DungeonPrototypeException("Empty balance matrix for " + name);
         }
-        if (column < matrix[0].length) {
-            return Arrays.stream(matrix)
-                    .mapToDouble(row -> row[column])
-                    .toArray();
+        if (column >= matrix[0].length) {
+            throw new DungeonPrototypeException("Index out of bounds for balance matrix " + name + ": " + column);
         }
-        if (column < matrix.length) { // handle reversed orientation
-            return matrix[column];
-        }
-        throw new DungeonPrototypeException("Index out of bounds for balance matrix " + name + ": " + column);
+
+        return Arrays.stream(matrix)
+                .mapToDouble(row -> row[column])
+                .toArray();
     }
 
     public double[] getBalanceMatrixRowVector(long chatId, String name, int row) {
