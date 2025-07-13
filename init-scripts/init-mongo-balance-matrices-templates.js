@@ -82,15 +82,6 @@ db.matrices.insertMany([
         ]
     },
     {
-        name: "weapon_size_adjustment", data: [
-            [0.9, 1.0, 1.2],
-            [1.0, 1.0, 1.0],
-            [1.0, 1.0, 1.0],
-            [0.8, 0.9, 1.15],
-            [1.0, 1.0, 1.0]
-        ]
-    },
-    {
         name: "weapon_attack_type_adjustment", data: [
             [0.0, 1.2, 0.0, 1.0],
             [1.3, 0.0, 0.0, 1.0],

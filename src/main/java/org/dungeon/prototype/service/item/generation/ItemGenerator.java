@@ -182,7 +182,7 @@ public class ItemGenerator {
         val weaponMaterialAdjustmentMatrix = balanceMatrixService.getBalanceMatrix(chatId, "weapon_material_adjustment");
         val weaponHandlerMaterialAdjustmentMatrix = balanceMatrixService.getBalanceMatrix(chatId, "weapon_handler_material_adjustment");
         val qualityAdjustmentMatrix = balanceMatrixService.getBalanceMatrix(chatId, "items_quality_adjustment");
-        val sizeAdjustmentMatrix = balanceMatrixService.getBalanceMatrix(chatId, "weapon_size_adjustment");
+        val sizeAdjustmentMatrix = balanceMatrixService.getBalanceMatrix(chatId, "items_size_adjustment");
         val weaponAttackTypeAdjustmentMatrix = balanceMatrixService.getBalanceMatrix(chatId, "weapon_attack_type_adjustment");
         Set<WeaponAttributes> generatedAttributesCombinations = new HashSet<>();
         while (generatedAttributesCombinations.size() < weaponAttributesPoolSize) {
@@ -533,7 +533,7 @@ public class ItemGenerator {
         log.debug("Weapon handler adjustment attributes: {}", weaponHandlerAdjustment);
         applyAdjustment(weapon, weaponHandlerAdjustment);
 
-        val sizeAdjustment = balanceMatrixService.getBalanceMatrixColumnVector(chatId, "weapon_size_adjustment", weapon.getAttributes().getSize().ordinal());
+        val sizeAdjustment = balanceMatrixService.getBalanceMatrixColumnVector(chatId, "items_size_adjustment", weapon.getAttributes().getSize().ordinal());
         log.debug("Size adjustment attributes: {}", sizeAdjustment);
         applyAdjustment(weapon, sizeAdjustment);
 
