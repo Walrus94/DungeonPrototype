@@ -16,7 +16,6 @@ on:
         - codex/introduce-single-consumer-for-asynctaskcompletionservice
         - codex/investigate-itemgenerator-class-failure
         - codex/investigate-weapon-generation-failure
-        - codex/investigate-weapons-and-items-generation-failure
         - codex/reset-async-state-on-/stop-command
         - develop
         - item-generation-refactoring
