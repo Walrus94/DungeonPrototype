@@ -8,6 +8,7 @@ import org.dungeon.prototype.exception.DungeonPrototypeException;
 import org.dungeon.prototype.model.inventory.Item;
 import org.dungeon.prototype.model.level.Level;
 import org.dungeon.prototype.model.Point;
+import org.dungeon.prototype.model.level.generation.GeneratedCluster;
 import org.dungeon.prototype.model.level.generation.LevelGridCluster;
 import org.dungeon.prototype.model.level.generation.NextRoomDto;
 import org.dungeon.prototype.model.level.ui.LevelMap;
@@ -25,12 +26,11 @@ import org.dungeon.prototype.properties.GenerationProperties;
 import org.dungeon.prototype.service.PlayerService;
 import org.dungeon.prototype.service.room.generation.room.content.RoomContentGenerationService;
 import org.dungeon.prototype.service.weight.WeightCalculationService;
+import org.dungeon.prototype.service.level.generation.ClusterGenerationTaskProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -43,7 +43,6 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -78,27 +77,28 @@ public class LevelGenerationService {
     private PlayerService playerService;
     @Autowired
     private GenerationProperties generationProperties;
+    @Autowired
+    private ClusterGenerationTaskProcessor clusterGenerationTaskProcessor;
+
+    private static final long LEVEL_GENERATION_TIMEOUT_MINUTES = 1L;
 
     public Level generateAndPopulateLevel(Long chatId, Integer levelNumber) {
         var levelMap = generateLevelMap(chatId, levelNumber);
         log.debug("Generated level map\n{}", printMapGridToLogs(levelMap.getGrid()));
         val futureLevel = asyncJobHandler.submitMapPopulationTask(() ->
                 populateLevel(chatId, levelNumber, levelMap), TaskType.LEVEL_GENERATION, chatId);
-        while (!futureLevel.isDone()) {
-            try {
-                return futureLevel.get(1, TimeUnit.MINUTES);
-            } catch (InterruptedException | ExecutionException e) {
-                throw new DungeonPrototypeException(e.getMessage());
-            } catch (TimeoutException e) {
-                log.info("Waiting for level generation...");
-            }
-        }
         try {
-            val level = futureLevel.get();
-            asyncJobHandler.clearLatch(chatId);
-            return level;
+            while (true) {
+                try {
+                    return futureLevel.get(LEVEL_GENERATION_TIMEOUT_MINUTES, TimeUnit.MINUTES);
+                } catch (TimeoutException e) {
+                    log.info("Level generation timed out, retrying...");
+                }
+            }
         } catch (InterruptedException | ExecutionException e) {
             throw new DungeonPrototypeException(e.getMessage());
+        } finally {
+            asyncJobHandler.removeChatState(chatId);
         }
     }
 
@@ -132,32 +132,21 @@ public class LevelGenerationService {
                         .get(clusterConnectionPoints.indexOf(point) - 1), point))
                 .collect(Collectors.toMap(LevelGridCluster::getId, Function.identity()));
 
-        val walkersMap = initializeWalkers(clusters.values());
-
         //empty level grid will be filled with rooms during generation
         GridSection[][] grid = generateEmptyMapGrid(gridSize);
         initConnectionSections(grid, clusterConnectionPoints);
         level.setClusterConnectionPoints(clusterConnectionPoints);
 
-        clusters.values().forEach(
-                cluster -> asyncJobHandler.executeMapGenerationTask(() ->
-                                generateGridSection(cluster, walkersMap.get(cluster)), TaskType.LEVEL_GENERATION, chatId, cluster.getId())
-        );
+        Map<Long, GeneratedCluster> clusterResults =
+                clusterGenerationTaskProcessor.process(chatId, clusters,
+                        cluster -> new GeneratedCluster(chatId, cluster.getId(),
+                                generateGridSectionWithRetries(cluster)));
 
-        AtomicInteger counter = new AtomicInteger(clusters.size());
-
-        while (counter.get() > 0) {
-            try {
-                val completedCluster = asyncJobHandler.retrieveMapGenerationResults(chatId).get();
-                if (nonNull(completedCluster)) {
-                    val clusterData = clusters.get(completedCluster.clusterId());
-                    copyGridSection(grid, clusterData.getStartConnectionPoint(), clusterData.getEndConnectionPoint(), completedCluster.clusterGrid());
-                    log.info("Cluster copied successfully, remaining clusters: {}", counter.getAndDecrement());
-                }
-            } catch (InterruptedException | ExecutionException e) {
-                log.warn("Error while retrieving cluster generation results: ", e);
-            }
-        }
+        clusterResults.forEach((id, result) -> {
+            var clusterData = clusters.get(id);
+            copyGridSection(grid, clusterData.getStartConnectionPoint(),
+                    clusterData.getEndConnectionPoint(), result.clusterGrid());
+        });
 
         log.info("All clusters generated, current grid state:\n{}", printMapGridToLogs(grid));
 
@@ -168,11 +157,31 @@ public class LevelGenerationService {
         return level;
     }
 
-    private GridSection[][] generateGridSection(LevelGridCluster cluster, List<WalkerBuilder> walkerBuilders) {
+    private GridSection[][] generateGridSectionWithRetries(LevelGridCluster cluster) {
+        int attempts = 0;
+        int maxAttempts = generationProperties.getLevel().getClusterGenerationRetries();
+        while (true) {
+            try {
+                cluster.reset();
+                cluster.initializeWalkers();
+                return generateGridSection(cluster);
+            } catch (Exception e) {
+                attempts++;
+                if (attempts >= maxAttempts) {
+                    log.warn("Cluster {} generation failed after {} attempts: {}", cluster.getId(), attempts, e.getMessage());
+                    throw e;
+                }
+                log.warn("Cluster {} generation attempt {} failed: {}. Retrying...", cluster.getId(), attempts, e.getMessage());
+            }
+        }
+    }
+
+    private GridSection[][] generateGridSection(LevelGridCluster cluster) {
         log.info("Generating cluster {} with start point {} and end point {}",
                 cluster.getId(), cluster.getStartConnectionPoint(), cluster.getEndConnectionPoint());
         GridSection[][] clusterGrid = generateEmptyMapGrid(cluster.getStartConnectionPoint(), cluster.getEndConnectionPoint());
         log.debug("Empty cluster grid:\n {}", printMapGridToLogs(clusterGrid));
+        List<WalkerBuilder> walkerBuilders = cluster.getWalkers();
         while (!walkerBuilders.isEmpty()) {
             for (WalkerBuilder walker : walkerBuilders) {
                 log.debug("Current walker: {}", walker);
@@ -194,7 +203,7 @@ public class LevelGenerationService {
         return clusterGrid;
     }
 
-    private GridSection[][] copyGridSection(GridSection[][] grid, Point startConnectionPoint, Point endConnectionPoint, GridSection[][] gridSection) {
+    private void copyGridSection(GridSection[][] grid, Point startConnectionPoint, Point endConnectionPoint, GridSection[][] gridSection) {
         log.info("Copying grid section from {} to {}",
                 startConnectionPoint, endConnectionPoint);
         log.debug("Grid section\n{}", printMapGridToLogs(gridSection));
@@ -208,7 +217,6 @@ public class LevelGenerationService {
                             }
                         }));
         log.debug("Grid after copying\n{}", printMapGridToLogs(grid));
-        return grid;
     }
 
     /**
@@ -559,7 +567,6 @@ public class LevelGenerationService {
     }
 
     private void processNegativeSections(GridSection[][] grid, LevelGridCluster cluster, GridSection currentSection) {
-        log.info("Processing section {} of cluster {}", currentSection, cluster);
         val adjacentSections = getAdjacentSections(currentSection.getPoint(), grid);
         var stepsFromStart = currentSection.getStepsFromStart();
         val negativeAdjacentSections = adjacentSections.stream()
@@ -575,7 +582,7 @@ public class LevelGenerationService {
                     .filter(section -> !currentSection.getPoint().equals(section.getPoint()))
                     .findFirst()
                     .ifPresent(section ->
-                            processNegativeSections(grid, cluster, currentSection));
+                            processNegativeSections(grid, cluster, section));
         }
         log.debug("Current grid state\n{}", printMapGridToLogs(grid));
     }
@@ -603,7 +610,7 @@ public class LevelGenerationService {
         cluster.addDeadEnd(negativeDeadEnd);
         currentSection = Optional.of(negativeDeadEnd);
         while (currentSection.isPresent()) {
-            currentSection.get().setStepsFromStart(counter);
+            currentSection.get().setStepsFromStart(stepsFromStart + counter + 1);
             Optional<GridSection> nextSection = Optional.empty();
             for (GridSection adjacentSection : getAdjacentSectionsInCluster(currentSection.get().getPoint(), grid, cluster)) {
                 if (adjacentSection.getStepsFromStart() < 0) {
@@ -619,74 +626,6 @@ public class LevelGenerationService {
         }
     }
 
-    private Map<LevelGridCluster, List<WalkerBuilder>> initializeWalkers(Collection<LevelGridCluster> clusters) {
-        log.info("Initializing walkers for clusters: {}", clusters);
-        return clusters.stream().collect(Collectors.toMap(Function.identity(), cluster -> {
-            log.info("Processing cluster: {}", cluster);
-            if (cluster.isSmallCluster()) {
-                log.info("Small cluster, adding two border walkers to start cluster...");
-                return Arrays.asList(WalkerBuilder.builder()
-                                .pathFromStart(0)
-                                .isReversed(false)
-                                .cluster(cluster)
-                                .longestPathDefault(true)
-                                .currentPoint(new Point(0, 0))
-                                .build(),
-                        WalkerBuilder.builder()
-                                .pathFromStart(0)
-                                .isReversed(false)
-                                .longestPathDefault(true)
-                                .cluster(cluster)
-                                .currentPoint(new Point(0, 0))
-                                .build());
-            } else if (cluster.hasSmallSide()) {
-                log.info("Small sided cluster...");
-                return Arrays.asList(WalkerBuilder.builder()
-                                .pathFromStart(0)
-                                .isReversed(false)
-                                .cluster(cluster)
-                                .longestPathDefault(false)
-                                .currentPoint(new Point(0, 0))
-                                .build(),
-                        WalkerBuilder.builder()
-                                .isReversed(true)
-                                .longestPathDefault(true)
-                                .pathFromStart(0)
-                                .cluster(cluster)
-                                .currentPoint(new Point(cluster.getEndConnectionPoint().getX() - cluster.getStartConnectionPoint().getX(),
-                                        cluster.getEndConnectionPoint().getY() - cluster.getStartConnectionPoint().getY()))
-                                .build());
-            }
-            int fromStartWalkersNumber = getRandomInt(1, 2);
-            int fromEndWalkersNumber = getRandomInt(1, 3 - fromStartWalkersNumber);
-
-            List<WalkerBuilder> walkers = new ArrayList<>();
-
-            log.info("Adding {} walkers to start of cluster, {} walkers to end of cluster",
-                    fromStartWalkersNumber, fromEndWalkersNumber);
-            IntStream.range(0, fromStartWalkersNumber + fromEndWalkersNumber).forEach(i -> {
-                if (i < fromStartWalkersNumber) {
-                    walkers.add(WalkerBuilder.builder()
-                            .pathFromStart(0)
-                            .isReversed(false)
-                            .longestPathDefault(fromStartWalkersNumber == 2 && i == 0)
-                            .cluster(cluster)
-                            .currentPoint(new Point(0, 0))
-                            .build());
-                } else {
-                    walkers.add(WalkerBuilder.builder()
-                            .isReversed(true)
-                            .pathFromStart(0)
-                            .longestPathDefault(fromEndWalkersNumber == 1 || i == 2)
-                            .cluster(cluster)
-                            .currentPoint(new Point(cluster.getEndConnectionPoint().getX() - cluster.getStartConnectionPoint().getX(),
-                                    cluster.getEndConnectionPoint().getY() - cluster.getStartConnectionPoint().getY()))
-                            .build());
-                }
-            });
-            return walkers;
-        }));
-    }
 
     private LinkedList<Point> generateClusterConnectionPoints(Point start, Point end) {
         log.info("Generating cluster connection points...");

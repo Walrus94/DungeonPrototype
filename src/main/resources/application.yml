@@ -211,6 +211,7 @@ generation:
     level-one-grid-size: 10
     grid-size-increment: 1
     increment-step: 10
+    cluster-generation-retries: 3
   monsters:
     zombie:
       primary-attack-type: slash

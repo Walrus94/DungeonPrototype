@@ -6,6 +6,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import io.micrometer.core.instrument.config.MeterFilter;
 import org.dungeon.prototype.async.metrics.TaskMetrics;
+import org.dungeon.prototype.async.scoped.ChatTaskManager;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
 import org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration;
@@ -44,6 +45,11 @@ public class AsyncConfig {
     @Bean
     public TaskMetrics taskMetrics(MeterRegistry meterRegistry) {
         return new TaskMetrics(meterRegistry);
+    }
+
+    @Bean
+    public ChatTaskManager chatTaskManager(TaskMetrics metrics) {
+        return new ChatTaskManager(metrics);
     }
 
     @Bean

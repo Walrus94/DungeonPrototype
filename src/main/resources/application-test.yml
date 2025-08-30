@@ -1,3 +1,25 @@
 logging:
   level:
-    root: debug
+    root: info
+    # Reduce MongoDB noise - only show WARN and ERROR
+    org.mongodb.driver: warn
+    org.mongodb.driver.cluster: warn
+    org.mongodb.driver.connection: warn
+    
+    # Reduce Spring framework noise
+    org.springframework.web: warn
+    org.springframework.web.servlet: warn
+    org.springframework.web.servlet.mvc.method.annotation: warn
+    
+    # Keep important application logs visible
+    org.dungeon.prototype: info
+    
+    # Reduce actuator noise
+    org.springframework.boot.actuator: warn
+    
+    # Reduce Kafka noise (if you have Kafka issues)
+    org.apache.kafka: warn
+    
+    # Reduce Tomcat noise
+    org.apache.tomcat: warn
+    org.apache.coyote: warn
