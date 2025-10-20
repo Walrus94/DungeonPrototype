@@ -6,7 +6,7 @@ from models.model_manager import ModelManager
 import numpy as np
 import logging
 
-async def generate_balance_matrix(chat_id, matrix_name, columns, rows):
+async def generate_balance_matrix(chat_id, matrix_name, rows, columns):
     """Generate a balanced matrix based on game results and template matrix."""
     # Load the template matrix and game results
     template_matrix = await load_template_matrix(matrix_name)

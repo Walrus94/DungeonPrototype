@@ -14,16 +14,16 @@ async def process_kafka_balance_message(message):
         for request in matrix_requests:
             try:
                 matrix_name = request['name']
-                columns = request['cols']
                 rows = request['rows']
+                columns = request['cols']
                 
                 logging.debug(f"Generating balance matrix for chatId: {chat_id}, name: {matrix_name}")
                 
                 new_matrix = await generate_balance_matrix(
                     chat_id=chat_id,
                     matrix_name=matrix_name,
-                    columns=columns,
-                    rows=rows
+                    rows=rows,
+                    columns=columns
                 )
                 
                 await save_balance_matrix(chat_id, matrix_name, new_matrix)
