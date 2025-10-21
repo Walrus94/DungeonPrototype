@@ -1894,6 +1894,30 @@
           "legendFormat": "process",
           "refId": "D",
           "step": 2400
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "jvm_threads_virtual_threads{application=\"$application\", instance=\"$instance\"}",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "virtual",
+          "refId": "E",
+          "step": 2400
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "jvm_threads_carrier_threads{application=\"$application\", instance=\"$instance\"}",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "carrier",
+          "refId": "F",
+          "step": 2400
         }
       ],
       "title": "Threads",
