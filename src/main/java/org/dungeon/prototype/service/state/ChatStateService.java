@@ -140,6 +140,7 @@ public class ChatStateService {
             if (!IDLE.equals(chatContext.getChatState()) &&
                     currentTime - chatContext.getLastActiveTime().get() > TIMEOUT_DURATION) {
                 messageService.sendStopMessage(chatId);
+                clearChatContext(chatId);
             }
         });
     }

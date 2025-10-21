@@ -64,6 +64,7 @@ public class BotCommandHandler {
     }
 
     public void processStopAction(long chatId) {
+        chatStateService.clearChatContext(chatId);
         messageService.sendStopMessage(chatId);
     }
 }
